@@ -99,7 +99,8 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 7. Remaining: DHCP reservation, then the unattended AC power-loss test.
 
 **Local decisions resolved in this phase** (brief §6): hostname `homelab`; admin user `aleix`;
-Secure Boot left enabled; swap left at the installer default (4 GB swapfile); DHCP reservation to be
-made at the router rather than a static address on the server.
+Secure Boot left enabled; swap left at the installer default (4 GB swapfile); DHCP reservation **not
+possible** — no router admin access; recorded as an unsatisfied ADR-016 control, superseded by
+Tailscale in Phase 03.
 7. Phase 01 is not complete until the unattended AC power-loss recovery test passes on all four
    proof points (boot, network, SSH, remote reachability).

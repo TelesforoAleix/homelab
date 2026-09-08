@@ -40,10 +40,31 @@ Required accompanying controls:
 
 - the netplan configuration file must be mode `0600`;
 - the real configuration must never be committed; only a redacted example belongs in the repository;
-- a router-side DHCP reservation should give the node a stable address;
+- a router-side DHCP reservation should give the node a stable address (**not satisfied** — see below);
 - Wi-Fi power saving should be disabled, since it is a common cause of idle disconnection on servers;
 - the phase is not complete until the node has survived an unattended power cycle and reconnected on
   its own.
+
+### Unsatisfied control: DHCP reservation (2026-09-08)
+
+The router's administration interface is **not available to the project owner**, so the reservation
+listed above could not be made. The node holds `192.168.1.57/21` by ordinary DHCP lease, and that
+address may change.
+
+Recorded as unsatisfied rather than quietly dropped. What compensates:
+
+1. **Phase 03 supersedes it.** Tailscale (ADR-005) gives the node a stable identity independent of
+   its LAN address, which is a better answer than a reservation.
+2. A monitor remains attached until Phase 03, so a changed address is immediately visible.
+3. Routers in practice re-offer the same lease to the same MAC.
+
+Rejected alternatives, deliberately:
+
+- **A static address in netplan.** Without router access the DHCP pool boundaries on this `/21` are
+  unknown, so a static address risks a conflict that is disproportionately painful to diagnose.
+- **mDNS / avahi.** Would make the node reachable as `homelab.local` regardless of address, but adds
+  a listening service to solve a problem that has not yet occurred. Held as the fallback if the
+  address proves unstable before Phase 03.
 
 ## Fallback path if the installer cannot use the Wi-Fi adapter
 
