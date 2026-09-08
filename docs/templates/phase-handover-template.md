@@ -4,6 +4,21 @@
 
 Complete / Partial / Blocked
 
+## What the next phase inherits
+
+**The section the next phase reads first.** Everything it must know before writing its own brief,
+consolidated here rather than scattered across the sections below:
+
+- **Verified starting state** — what actually exists and is running, with how to re-verify it.
+- **Open risks** — including which phase is expected to close each.
+- **Unsatisfied controls** — anything an accepted ADR requires that was not achieved, and why.
+- **Decisions that must not be silently inherited** — where an assumption behind an accepted ADR may
+  no longer hold for the next phase.
+- **Ground already covered** — work this phase did incidentally that the next phase should build on
+  rather than repeat.
+
+Under ADR-017 there is no planning context to reconcile this; if it is not written here, it is lost.
+
 ## What was implemented
 
 Concise description of the final working state.

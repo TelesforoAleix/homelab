@@ -10,6 +10,74 @@
 **Complete.** Every applicable Definition of Done item is satisfied, including the unattended AC
 power-loss recovery test, which passed on the first attempt.
 
+## What the next phase inherits
+
+> Added 2026-09-08 under ADR-017, which requires every handover to carry this section. Nothing here
+> is new — it consolidates facts already recorded below, so the next phase has one place to read
+> instead of reassembling them from four sections.
+
+### Verified starting state
+
+| Fact | Value |
+|---|---|
+| Host | `homelab`, Lenovo M700 Tiny |
+| OS | Ubuntu Server 26.04.1 LTS, kernel 7.0.0-31-generic |
+| Access | SSH from the MacBook, **password authentication**; console still attached |
+| Address | 192.168.1.57/21 over Wi-Fi `wlp1s0`, no DHCP reservation |
+| Admin user | `aleix`, sudo-capable; no direct root login |
+| Storage | LVM, 232 GB root, 214 GB free, **unencrypted** |
+| Health | `systemctl is-system-running` → `running`; boots in 23s |
+| Recovery | Returns unattended from AC power loss (validated) |
+
+Re-verify at any time with `scripts/server/verify-install.sh`.
+
+### Open risks, and who closes them
+
+| Risk | Closed by |
+|---|---|
+| **SSH accepts password authentication** — the principal open risk. Do not port-forward SSH. | Phase 03 |
+| No stable LAN address | Phase 03 (Tailscale) |
+| No encryption at rest; Wi-Fi passphrase cleartext on an unencrypted disk | Phase 13 — but see below |
+| No firewall | Phase 13 |
+| 2016 firmware; CPU-level exposure mitigated by `intel-microcode`, platform-level not | Phase 13, low priority |
+
+### Unsatisfied controls
+
+- **ADR-016 requires a router-side DHCP reservation.** Not made — no router admin access. Static IP
+  and mDNS both considered and rejected with reasons. Superseded by Tailscale in Phase 03.
+- **ISO checksum verification was never confirmed.** The install succeeded, which is strong evidence
+  of image integrity, but the formal check was not established.
+
+### Must not be silently inherited
+
+- **ADR-015 (no encryption at rest) rests on the premise that this node holds nothing sensitive.**
+  **Phase 10 breaks that premise** and must revisit the decision *before* storing real data —
+  converting afterwards generally means a reinstall. Written into the Phase 10 roadmap entry.
+- **Phase 03 must not cite Tailscale's Ubuntu documentation** — no 26.04 page exists; the URL returns
+  HTTP 200 serving a generic index. Use the `resolute` package repository (ADR-014).
+
+### Ground already covered — build on it, don't repeat it
+
+Phase 01 incidentally exercised several **Phase 02 (Linux Fundamentals)** topics in anger. Phase 02
+should treat these as worked examples rather than starting from zero:
+
+| Phase 02 topic | Already met in Phase 01 |
+|---|---|
+| Storage | LVM PV/VG/LV, live `lvextend` + `resize2fs`, GB vs GiB |
+| Permissions & ownership | `chmod 600` on netplan; the `chown root:root` privilege-escalation lesson |
+| Processes & services | systemd units, `enable --now`, socket activation, `systemctl --failed` |
+| Packages | `apt update`/`full-upgrade`/`autoremove`, unattended-upgrades |
+| Networking | netplan, `systemd-networkd`, `networkctl`, DHCP, interface naming |
+| Logs | `journalctl -u`, reading `/var/log/installer` to diagnose a real failure |
+| Shell workflow | Diagnosing a hung command as waiting-on-input rather than slow |
+
+### Conventions established, worth keeping
+
+- **Configuration that belongs in the repository is copied from the repository**, never pasted into a
+  terminal (`config/systemd/`, `config/netplan/`).
+- **State is captured from live output**, never from memory — `scripts/server/verify-install.sh`.
+- Nothing is recorded as installed or tested until real version output exists.
+
 ## What was implemented
 
 The reference node runs Ubuntu Server 26.04.1 LTS, installed on whole-disk LVM without encryption,
