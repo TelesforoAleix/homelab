@@ -18,6 +18,10 @@ Closure condition: when the Part A checklist in
 `docs/reference/hardware.md`, the Phase 00 prerequisite is **satisfied** and this phase closes.
 (Ratified by Project Planning, 2026-09-08, amendment 2.)
 
+**Progress 2026-09-08:** Part A *identification* complete — RAM layout resolved as 1 × 8 GB, wireless
+adapter resolved as Intel Wireless-AC 8260, storage and CPU confirmed. Recorded in
+`docs/reference/hardware.md`. Remaining: the physical checks (USB ports, video output, fan noise).
+
 Planned/pre-development guides may include:
 
 - `00-project-overview`

@@ -24,7 +24,7 @@ Canonical node:
 
 - Lenovo ThinkCentre M700 Tiny
 - Intel Core i5-6600T
-- 8 GB DDR4 at project bootstrap; layout not yet verified
+- 8 GB DDR4 at project bootstrap; verified in Phase 01 Part A as 1 × 8 GB with one slot free
 - 256 GB SSD
 - Wi-Fi + Bluetooth
 - Purchased used for 700 DKK

@@ -17,7 +17,7 @@
 | Guide | Written (`guide/01-ubuntu-server/README.md`); reference-build experience and tested versions still empty by design |
 | Scripts | Written and syntax-checked; USB writer safety guards tested |
 | ADR-014 / 015 / 016 | **Accepted**, all amended 2026-09-08 per ratification |
-| Phase 00 hardware prerequisite | Executed as Phase 01 Part A; **not yet performed** |
+| Phase 00 hardware prerequisite | Part A **identification complete** 2026-09-08; physical validation (USB / video / fan) still outstanding |
 | Installation on hardware | **Not started** |
 | Validation | **Not started** |
 
@@ -29,6 +29,11 @@ Part A** — there is no separate hardware implementation phase or working conte
 
 **Closure condition:** when the Part A checklist is recorded in `docs/reference/hardware.md`, the
 Phase 00 prerequisite is satisfied and both this file and `ROADMAP.md` must be updated to say so.
+
+**Status 2026-09-08:** the *identification* half of Part A is done and recorded — RAM layout,
+storage, wireless adapter and CPU are all confirmed. The *validation* half — USB ports, video
+output, fan noise under load — has not been reported. Phase 00 therefore remains open on that one
+item, which is quick to complete while the monitor is still attached.
 
 ## Accepted high-level decisions
 
@@ -53,12 +58,20 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - progressive automation;
 - known-working `main` branch.
 
+## Recently resolved (Phase 01 Part A, 2026-09-08)
+
+- ✅ **M700 RAM module layout** — **1 × 8 GB, one of two slots occupied.** Open since project
+  bootstrap. Upgrade path is now 8+8 = 16 GB, with 8+16 = 24 GB optional. **No upgrade is required
+  before or during Phase 01.**
+- ✅ **Wireless adapter model** — **Intel Dual Band Wireless-AC 8260 (802.11ac).** Uses the in-tree
+  `iwlwifi` driver with `iwlwifi-8000C` firmware, which ships in Ubuntu's `linux-firmware` package.
+  The ADR-016 risk that the installer cannot see the card is **substantially reduced**; the fallback
+  path is retained but is now unlikely to be needed.
+
 ## Known unknowns
 
-- M700 RAM module layout (1×8 GB vs 2×4 GB) — scheduled for Phase 01 Part A; also recoverable
-  afterwards via `sudo dmidecode -t memory`.
-- **Wireless adapter model** — newly identified as a Phase 01 risk. If the installer cannot detect
-  the card, ADR-016 must be revisited and the change escalated to Project Planning.
+- Whether the essential physical checks (USB ports, video output, fan noise) pass — the last item
+  gating Phase 00 closure.
 - Exact versions of tools to be installed in future phases.
 - Exact Claude/ChatGPT subscription costs to record in the ledger.
 - Public repository license.
@@ -77,8 +90,11 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 1. ~~Project Planning ratifies or amends the Phase 01 brief.~~ **Done 2026-09-08** — ratified with
    six amendments, all reconciled.
-2. Perform **Part A** on the M700 and record the results, closing the Phase 00 prerequisite.
-3. Perform Parts B–F following `guide/01-ubuntu-server/README.md`.
-4. Record real output into the guide, `hardware.md`, `software-stack.md` and the build log.
-5. Phase 01 is not complete until the unattended AC power-loss recovery test passes on all four
+2. ~~Perform Part A identification.~~ **Done 2026-09-08** — results recorded in
+   `docs/reference/hardware.md`.
+3. Complete the remaining Part A physical checks (USB, video, fan), closing Phase 00.
+4. In Part D, enable CPU virtualization, set `After Power Loss -> Power On`, and preserve UEFI boot.
+5. Perform Parts B–F following `guide/01-ubuntu-server/README.md`.
+6. Record real output into the guide, `hardware.md`, `software-stack.md` and the build log.
+7. Phase 01 is not complete until the unattended AC power-loss recovery test passes on all four
    proof points (boot, network, SSH, remote reachability).

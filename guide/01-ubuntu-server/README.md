@@ -134,19 +134,51 @@ this step — `sudo dmidecode -t memory` reads the module layout from Linux, and
 the wireless chipset — so this is a convenience step, not an irreversible gate. It is still much
 cheaper to do now.
 
+#### What the reference build found
+
+Performed 2026-09-08 on the M700, from Windows Task Manager:
+
+| Item | Result |
+|---|---|
+| CPU | Intel Core i5-6600T @ 2.70 GHz, 4 cores / 4 logical processors |
+| RAM | 8 GB DDR4 SO-DIMM @ 2133 MHz |
+| **RAM slots** | **1 of 2 used — a single 8 GB module, one slot free** |
+| Storage | Samsung `MZ7TY256HDHP-000L7` SATA SSD, 256 GB nominal / ~239 GiB usable |
+| **Wi-Fi** | **Intel Dual Band Wireless-AC 8260, 802.11ac** |
+| CPU virtualization | **Disabled** in firmware |
+
+Three of these changed something:
+
+- **The free RAM slot** settles the upgrade path: adding one 8 GB module gives 16 GB, and 8+16 = 24 GB
+  stays available if pricing ever favours it. Nothing needs upgrading for this phase — 8 GB is far
+  above Ubuntu Server's 1.5 GB minimum, and upgrades should follow observed pressure from real
+  services, not round numbers.
+- **The Wi-Fi adapter is a mainstream Intel part.** The AC 8260 uses the in-tree `iwlwifi` driver,
+  and its `iwlwifi-8000C` firmware ships in Ubuntu's `linux-firmware` package, which is on the
+  installer image. The fallback section below is therefore unlikely to be needed here — though it
+  stays documented, because "should work" is not "did work".
+- **Virtualization was found disabled**, which added a firmware task to Part D.
+
+If the 256 GB drive reporting ~239 GB looks like missing space: it is not. Manufacturers count
+decimal gigabytes (10⁹ bytes), operating systems report binary gibibytes (2³⁰). 256 × 10⁹ ≈ 238.4 GiB.
+
 #### Part A completion checklist
 
 Part A is the remaining Phase 00 hardware validation, carried out here because it has to happen
 before the disk is erased. There is no separate hardware phase; **completing this checklist closes
 the Phase 00 prerequisite.**
 
-- [ ] RAM module layout recorded (how many slots occupied, and each module's capacity)
-- [ ] Storage device model and size recorded
-- [ ] **Wireless adapter model and driver recorded** — the single most important item, because it
+- [x] RAM module layout recorded (how many slots occupied, and each module's capacity)
+- [x] Storage device model and size recorded
+- [x] **Wireless adapter model and driver recorded** — the single most important item, because it
       determines whether the installer can bring up a network at all
-- [ ] CPU model and core count confirmed against `docs/reference/hardware.md`
+- [x] CPU model and core count confirmed against `docs/reference/hardware.md`
 - [ ] Essential hardware validated: USB ports, video output, fan noise under load
-- [ ] Results written into `docs/reference/hardware.md`
+- [x] Results written into `docs/reference/hardware.md`
+
+*(Checkbox state reflects the reference build as of 2026-09-08. One item remains: the physical
+checks. Phase 00 does not close until it is done — and it is much easier while the monitor is still
+attached.)*
 
 Once these are recorded, update `ROADMAP.md` and `docs/reference/project-state.md` to mark the
 Phase 00 hardware prerequisite **satisfied**, so it does not linger as an open future phase.
@@ -220,9 +252,20 @@ by an exact path:
 | Setting | Set to | Why |
 |---|---|---|
 | **After Power Loss** / AC power recovery | **Power On** | The single most important setting in this phase, usually under a `Power` menu. Without it, a power cut leaves the lab off until you physically press the button — and the final validation test below cannot pass. **Configure this now**; do not defer it. |
-| Boot order / boot mode | UEFI, USB first (or use F12) | Needed to boot the installer. |
+| **Intel Virtualization Technology** (VT-x, and VT-d if listed separately) | **Enable** | Disabled by default on the reference node. See the note below — it is not required by anything on the roadmap, but this is the cheapest moment to turn it on. |
+| Boot order / boot mode | **UEFI** — preserve it; do not enable legacy/CSM. USB first, or use F12 | Needed to boot the installer, and the installed system must keep booting the same way. |
 | Secure Boot | **Leave enabled** | Ubuntu is signed and installs fine with it on. It only becomes awkward later if you need unsigned kernel modules, which this project does not currently plan. |
 | Wake on LAN | Optional | Of limited use on Wi-Fi; ignore for now. |
+
+> **Do all firmware changes in this one sitting.** After this phase the machine is headless. Every
+> later firmware change means finding a monitor, a keyboard and a cable, and physically going to the
+> machine. That is the real reason to enable virtualization now rather than when something needs it.
+
+**Why enable virtualization if nothing needs it?** Nothing on the roadmap requires it today. Linux
+containers — Docker in Phase 05 — use kernel namespaces and cgroups, *not* hardware virtualization,
+and run perfectly well with VT-x off. It is worth enabling anyway because the CPU supports it, it
+costs nothing, and it is what KVM/QEMU virtual machines would need if a later phase ever wants them.
+The alternative is a physical trip to a headless machine.
 
 Setting a firmware supervisor password is worth doing eventually, but it belongs to Phase 13
 hardening — and note that a forgotten ThinkCentre supervisor password is not trivially recoverable.
@@ -274,8 +317,13 @@ Let the installation finish, choose **Reboot Now**, and remove the USB stick whe
 
 ### If the installer cannot use the Wi-Fi adapter
 
-The reference node's wireless chipset is unknown until Part A, and there is a genuine chance the
-installer will not drive it. This does not block the installation. Work down this list — the aim is
+There is a genuine chance the installer will not drive a given wireless chipset. This does not block
+the installation.
+
+> **On the reference build specifically:** Part A identified an Intel Wireless-AC 8260, which is
+> well supported by the in-tree `iwlwifi` driver with firmware shipped in `linux-firmware`. This
+> section is therefore unlikely to be needed on the M700 — keep reading only if the interface does
+> not appear. It matters more if you are reproducing Home Lab on different hardware. Work down this list — the aim is
 simply to get *any* network link long enough to finish installing, after which the problem is far
 easier to solve on a running system with working package management.
 
@@ -482,9 +530,26 @@ not set to Power On. Re-enter setup with F1 and check.
 
 ## Reference-build experience
 
-> **Not yet recorded.** The installation has not been performed on the M700 at the time of writing.
-> This section must be filled in from what actually happened — including anything that went wrong —
-> before Phase 01 can be declared complete. See `docs/build-log/`.
+### Part A — hardware identification (2026-09-08)
+
+Completed on the M700 from Windows, before erasing anything. Results are in the table under Part A
+above and in `docs/reference/hardware.md`.
+
+Two long-standing project unknowns closed here: the RAM module layout (1 × 8 GB, one slot free) and
+the wireless adapter model (Intel AC 8260). Both had been open since project bootstrap, and both took
+minutes to resolve from Windows Task Manager — a good argument for doing this pass before wiping
+rather than reconstructing it afterwards from Linux.
+
+One thing was found that nobody had thought to look for: **CPU virtualization was disabled in
+firmware.** It was not on the original checklist. Nothing on the roadmap needs it, but finding it
+now — while a monitor is attached — is worth much more than finding it later on a headless machine.
+The checklist has been amended to look for it.
+
+### Parts B–F — installation
+
+> **Not yet recorded.** The installation has not been performed at the time of writing. This section
+> must be filled in from what actually happened — including anything that went wrong — before
+> Phase 01 can be declared complete. See `docs/build-log/`.
 
 ## Tested versions
 

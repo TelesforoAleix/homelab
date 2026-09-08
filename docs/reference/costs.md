@@ -18,6 +18,7 @@ Record it here if so; otherwise this phase closes with an explicit **none**.
 | Date | Item | Category | One-time / recurring / usage | Actual DKK | EUR equivalent | Notes |
 |---|---|---|---|---:|---:|---|
 | — | USB flash drive for installer | Hardware | One-time | *pending* | *pending* | Record actual spend, or "none — reused existing stick", after Phase 01 |
+| 2026-09-08 | RAM upgrade | Hardware | One-time | **0** | **0** | **Not required.** Part A confirmed 1 × 8 GB with a free slot; 8 GB is sufficient for Phase 01. Upgrade to 16 GB deferred until real services justify it. |
 
 ## Existing subscriptions used by the project
 

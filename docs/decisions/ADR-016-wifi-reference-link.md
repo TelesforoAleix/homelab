@@ -88,6 +88,27 @@ Project Planning, because it affects Phase 03.
 - The adapter model must be captured from Windows *before* the disk is wiped (Phase 01 Part A),
   while that information is still cheap to obtain.
 
+## Validation status (2026-09-08)
+
+Phase 01 Part A identified the reference node's wireless adapter as an **Intel Dual Band
+Wireless-AC 8260 (802.11ac)**.
+
+This materially reduces — but does not eliminate — the main risk recorded above:
+
+- the adapter uses the in-tree `iwlwifi` driver, present in the Linux kernel since well before this
+  project's target release;
+- its firmware series, `iwlwifi-8000C`, ships in Ubuntu's `linux-firmware` package
+  (`iwlwifi-8000C-34.ucode` and `-36.ucode`), and that package is present on the Ubuntu Server
+  installer image.
+
+So the specific failure this ADR worried about — *the installer cannot see the card* — is now
+unlikely. The fallback path above is **retained unchanged**: it costs nothing to keep, and the claim
+is a documentation-based expectation rather than a test result. It is not validated until the
+installer actually brings the interface up on this machine.
+
+The reliability question is untouched by this finding. An adapter being well supported says nothing
+about whether it reconnects dependably after a power cut, which remains the phase's real test.
+
 ## Validation / revisit trigger
 
 Revisit immediately if the adapter is undetected and cannot be made to work, or if the node
