@@ -118,7 +118,12 @@ Controls introduced: unprivileged sudo-capable admin user, no direct root login
 
 ## Costs
 
-**None.** No new one-time, recurring, or usage-based cost. No RAM upgrade required.
+**199 DKK (~27 EUR)**, one-time: a DisplayPort→HDMI cable, required to attach a monitor for the
+installation. The M700 Tiny outputs DisplayPort while most monitors take HDMI.
+
+No recurring or usage-based cost. The USB stick was reused (0 DKK) and no RAM upgrade was required
+(0 DKK) — both recorded explicitly in `costs.md` so the decisions are visible rather than merely
+absent. Reference-build running total: **899 DKK (~121 EUR)**.
 
 ## Problems / failures / lessons
 
@@ -176,7 +181,7 @@ No phase renumbering or re-sequencing is required.
 - [x] Guide updated
 - [x] Project docs updated
 - [x] ADRs handled
-- [x] Costs recorded (none)
+- [x] Costs recorded — 199 DKK, DisplayPort→HDMI cable
 - [x] Failures/lessons recorded
 - [x] Tested versions recorded
 - [x] Critical AI-generated components understood

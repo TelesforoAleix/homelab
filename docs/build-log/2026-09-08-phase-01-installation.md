@@ -159,8 +159,14 @@ supersedes it. Notably, the address survived the power-cut test unchanged.
 
 ## Costs
 
-**None.** Ubuntu Server is free; the install reused existing hardware. No RAM upgrade was required —
-Part A confirmed a free DIMM slot, and the base system uses 542 MB of 7.1 GB.
+**199 DKK (~27 EUR)** — a DisplayPort→HDMI cable, needed to attach a monitor. The M700 Tiny outputs
+DisplayPort; the available monitor took HDMI.
+
+Worth recording as a lesson as much as a cost: the phase was planned as zero-spend, and the actual
+spend was an accessory nobody had thought about. The guide's prerequisites now warn about it.
+
+The USB stick was reused (0 DKK). No RAM upgrade was required (0 DKK) — Part A confirmed a free DIMM
+slot, and the base system uses 542 MB of 7.1 GB.
 
 ## Next
 

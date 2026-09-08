@@ -85,7 +85,10 @@ publishes a `resolute` distribution. The risk was measured, not assumed. ADR-014
 
 ## Prerequisites
 
-- The M700, its power supply, and a temporary monitor, keyboard and HDMI/DisplayPort cable.
+- The M700, its power supply, and a temporary monitor and keyboard.
+- **A cable that matches both ends.** The M700 Tiny outputs **DisplayPort**; most monitors and TVs
+  take HDMI. The reference build had to buy a DisplayPort→HDMI cable for 199 DKK. Check before you
+  start — discovering it at the machine costs a trip to a shop.
 - A USB stick of **at least 4 GB** that you are willing to erase completely.
 - The MacBook, on the same Wi-Fi network the server will join.
 - The Wi-Fi SSID and passphrase.
