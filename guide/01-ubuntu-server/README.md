@@ -402,30 +402,34 @@ sudo chmod 600 /etc/netplan/*.yaml
 A redacted example of what this file looks like is kept at `config/netplan/50-wifi.example.yaml`.
 The real file must never be committed.
 
-**Stop Wi-Fi power saving from dropping the link.** Wireless drivers idle the radio to save power,
-which on a server shows up as a machine that becomes unreachable when nobody is using it. Replace
-`wlp1s0` below with your own interface name from `ip -br address` if it differs — the reference
-build's M700 reports `wlp1s0`:
+**Stop Wi-Fi power saving from dropping the link.** Wireless drivers idle the radio to save power.
+On a laptop that is sensible; on an always-on server it shows up as a machine that becomes
+unreachable when nobody is using it.
+
+The unit file lives in the repository at `config/systemd/wifi-powersave-off.service` rather than
+being typed at a terminal. Copy it across from the MacBook:
 
 ```bash
-sudo tee /etc/systemd/system/wifi-powersave-off.service >/dev/null <<'UNIT'
-[Unit]
-Description=Disable Wi-Fi power saving (always-on server)
-After=network-online.target
-Wants=network-online.target
+scp config/systemd/*.service <user>@<server-ip>:
+```
 
-[Service]
-Type=oneshot
-ExecStart=/usr/sbin/iw dev wlp1s0 set power_save off
-RemainAfterExit=yes
+Then on the server:
 
-[Install]
-WantedBy=multi-user.target
-UNIT
-
-sudo systemctl enable --now wifi-powersave-off.service
+```bash
+sudo mv wifi-powersave-off.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now wifi-powersave-off
 iw dev wlp1s0 get power_save     # expect: Power save: off
 ```
+
+Check the interface name in the unit matches your own from `ip -br address` — the reference build
+uses `wlp1s0`.
+
+> **Why not just paste a here-document?** An earlier version of this guide did exactly that, and it
+> failed on the reference build: the terminal split the pasted command at ~65 characters, `tee` ran
+> without its here-document, and wrote a corrupt file. Configuration that belongs in the repository
+> should be *copied* from the repository — it is reproducible, reviewable, and immune to how a
+> terminal handles a paste. See the build log for the full story.
 
 **Give the server a stable address.** On the router's admin page, add a DHCP reservation binding the
 server's MAC address (from `ip -br link`) to a fixed IP. Doing it at the router rather than as a
