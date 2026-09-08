@@ -65,6 +65,10 @@ Once Part A is recorded, the Phase 00 prerequisite is considered **satisfied**, 
 `docs/reference/project-state.md` must be updated to close it rather than leaving Phase 00 open as a
 future standalone implementation phase.
 
+> **Satisfied 2026-09-08.** Part A was completed — identification and physical validation both — and
+> Phase 00 is closed. The paragraphs above are preserved as the starting-state record for this phase,
+> per the project's rule against rewriting history.
+
 ## 3. Learning objectives
 
 By the end of this phase the owner should be able to explain:

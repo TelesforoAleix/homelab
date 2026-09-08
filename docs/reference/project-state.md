@@ -17,23 +17,22 @@
 | Guide | Written (`guide/01-ubuntu-server/README.md`); reference-build experience and tested versions still empty by design |
 | Scripts | Written and syntax-checked; USB writer safety guards tested |
 | ADR-014 / 015 / 016 | **Accepted**, all amended 2026-09-08 per ratification |
-| Phase 00 hardware prerequisite | Part A **identification complete** 2026-09-08; physical validation (USB / video / fan) still outstanding |
+| Phase 00 hardware prerequisite | ✅ **Closed** 2026-09-08 — identification and physical validation both complete |
 | Installation on hardware | **Not started** |
 | Validation | **Not started** |
 
 ### Phase 00 closure
 
-Phase 00's documentation and governance work is complete. Its only outstanding items are the
-hardware-verification checks, which Project Planning ruled (amendment 2) are executed as **Phase 01
-Part A** — there is no separate hardware implementation phase or working context.
+Phase 00's documentation and governance work was complete at bootstrap. Its remaining
+hardware-verification checks were executed as **Phase 01 Part A**, as Project Planning ruled in
+amendment 2 — no separate hardware implementation phase or working context was needed.
 
-**Closure condition:** when the Part A checklist is recorded in `docs/reference/hardware.md`, the
-Phase 00 prerequisite is satisfied and both this file and `ROADMAP.md` must be updated to say so.
+The agreed closure condition was that the Part A checklist be recorded in
+`docs/reference/hardware.md`, with this file and `ROADMAP.md` updated to say so. That has been done.
 
-**Status 2026-09-08:** the *identification* half of Part A is done and recorded — RAM layout,
-storage, wireless adapter and CPU are all confirmed. The *validation* half — USB ports, video
-output, fan noise under load — has not been reported. Phase 00 therefore remains open on that one
-item, which is quick to complete while the monitor is still attached.
+**Status 2026-09-08: CLOSED.** Both halves of Part A are complete. Identification recorded RAM
+layout, storage, wireless adapter and CPU; physical validation confirmed USB ports, video output and
+acceptable fan noise. **Phase 00 is finished** — see `ROADMAP.md`.
 
 ## Accepted high-level decisions
 
@@ -70,8 +69,6 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 ## Known unknowns
 
-- Whether the essential physical checks (USB ports, video output, fan noise) pass — the last item
-  gating Phase 00 closure.
 - Exact versions of tools to be installed in future phases.
 - Exact Claude/ChatGPT subscription costs to record in the ledger.
 - Public repository license.
@@ -92,9 +89,10 @@ See `docs/decisions/` for full ADRs. Current direction includes:
    six amendments, all reconciled.
 2. ~~Perform Part A identification.~~ **Done 2026-09-08** — results recorded in
    `docs/reference/hardware.md`.
-3. Complete the remaining Part A physical checks (USB, video, fan), closing Phase 00.
-4. In Part D, enable CPU virtualization, set `After Power Loss -> Power On`, and preserve UEFI boot.
-5. Perform Parts B–F following `guide/01-ubuntu-server/README.md`.
+3. ~~Complete the remaining Part A physical checks.~~ **Done 2026-09-08 — Phase 00 closed.**
+4. ~~Parts B and C — image verification and USB creation.~~ **Installation USB reported ready.**
+5. **Next:** Part D firmware — enable CPU virtualization, set `After Power Loss -> Power On`,
+   preserve UEFI boot. Then Part E (install) and Part F (first boot and validation).
 6. Record real output into the guide, `hardware.md`, `software-stack.md` and the build log.
 7. Phase 01 is not complete until the unattended AC power-loss recovery test passes on all four
    proof points (boot, network, SSH, remote reachability).

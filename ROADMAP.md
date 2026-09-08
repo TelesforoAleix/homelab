@@ -8,19 +8,18 @@ Multiple `00-*` guides may exist for pre-development documentation.
 
 Purpose: establish project scope, hardware rationale, governance, repository structure, budget tracking, architecture baseline, and documentation standards before implementation.
 
-Status: **In progress** — documentation and governance complete. The only outstanding items are the
-hardware-verification checks, which are executed as **Phase 01 Part A** because they must happen
-before the reference node's disk is erased. **No separate hardware implementation phase or working
-context is required.**
+Status: **Complete** (2026-09-08). Documentation and governance were finished at bootstrap; the
+remaining hardware-verification checks were executed as **Phase 01 Part A**, as ratified by Project
+Planning (amendment 2). No separate hardware implementation phase was required.
 
 Closure condition: when the Part A checklist in
 [`guide/01-ubuntu-server/`](guide/01-ubuntu-server/README.md) is recorded in
 `docs/reference/hardware.md`, the Phase 00 prerequisite is **satisfied** and this phase closes.
 (Ratified by Project Planning, 2026-09-08, amendment 2.)
 
-**Progress 2026-09-08:** Part A *identification* complete — RAM layout resolved as 1 × 8 GB, wireless
-adapter resolved as Intel Wireless-AC 8260, storage and CPU confirmed. Recorded in
-`docs/reference/hardware.md`. Remaining: the physical checks (USB ports, video output, fan noise).
+**Closed 2026-09-08.** Part A resolved the RAM layout (1 × 8 GB, one slot free) and the wireless
+adapter (Intel Wireless-AC 8260), confirmed storage and CPU, and validated USB ports, video output
+and fan noise. All recorded in `docs/reference/hardware.md`.
 
 Planned/pre-development guides may include:
 

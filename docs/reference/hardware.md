@@ -38,10 +38,13 @@ Newly discovered:
 - ⚠️ **CPU virtualization is disabled in firmware.** The CPU supports it; the setting is off. See
   *Firmware actions* below.
 
-Still outstanding before the disk is erased:
+Also validated:
 
-- ⬜ **Essential physical validation** — USB ports, video output, and fan noise under load. These were
-  not part of the identification pass. The Phase 00 prerequisite is not closed until they are done.
+- ✅ **Essential physical validation** — USB ports, video output and fan noise all checked. Fan noise
+  is unobtrusive, which matters for a machine that will live in a home rather than a rack. A monitor,
+  keyboard and mouse are attached and stay attached until the machine goes headless in Phase 03.
+
+> **Phase 00 hardware prerequisite: CLOSED** (2026-09-08).
 
 ## Linux support assessment
 

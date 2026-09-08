@@ -3,7 +3,7 @@
 - **Date:** 2026-09-08
 - **Phase:** 01 — Ubuntu Server (Part A)
 - **Branch:** `feature/01-ubuntu-server`
-- **Status:** Identification complete; physical validation outstanding
+- **Status:** Complete — Phase 00 hardware prerequisite closed
 
 ## Starting state
 
@@ -69,11 +69,18 @@ been marked as installed or tested anywhere in the repository.
 - *Lesson:* neighbouring SKUs in the same family produce believable-looking answers. The SKU number
   (88189 for the i5-6600T) is the thing to check, not the page's general shape.
 
-**3. Part A is only half done.**
+**3. Part A was initially only half done.**
 
-The identification pass is complete, but the essential *physical* validation — USB ports, video
-output, fan noise under load — was not performed. The Phase 00 prerequisite therefore stays open on
-that one item. It is recorded as outstanding rather than quietly assumed to have passed.
+The identification pass completed, but the essential *physical* validation — USB ports, video
+output, fan noise under load — had not been performed. It was recorded as outstanding rather than
+quietly assumed to have passed.
+
+> **Resolved later the same day.** The physical checks were completed: USB ports and video output
+> work, fan noise is unobtrusive. **Phase 00 hardware prerequisite closed 2026-09-08.**
+>
+> *Lesson:* separating "identify the components" from "validate they work" was worth doing. The two
+> are easy to conflate, and only the second would have caught a dead USB port before the installer
+> needed one.
 
 ## What we learned
 
@@ -102,6 +109,7 @@ is visible rather than merely absent.
 
 ## Next
 
-1. Complete the outstanding physical checks (USB, video output, fan noise) — closes Phase 00.
-2. Part D firmware: enable virtualization, set `After Power Loss -> Power On`, preserve UEFI boot.
-3. Parts B, C, E, F — image verification, USB creation, installation, first-boot validation.
+1. ~~Complete the outstanding physical checks.~~ Done — Phase 00 closed.
+2. ~~Parts B and C — image verification and USB creation.~~ Installation USB reported ready.
+3. **Part D firmware:** enable virtualization, set `After Power Loss -> Power On`, preserve UEFI boot.
+4. **Parts E and F:** installation, first boot, and the unattended power-loss validation.

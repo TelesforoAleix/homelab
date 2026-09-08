@@ -173,12 +173,11 @@ the Phase 00 prerequisite.**
 - [x] **Wireless adapter model and driver recorded** — the single most important item, because it
       determines whether the installer can bring up a network at all
 - [x] CPU model and core count confirmed against `docs/reference/hardware.md`
-- [ ] Essential hardware validated: USB ports, video output, fan noise under load
+- [x] Essential hardware validated: USB ports, video output, fan noise under load
 - [x] Results written into `docs/reference/hardware.md`
 
-*(Checkbox state reflects the reference build as of 2026-09-08. One item remains: the physical
-checks. Phase 00 does not close until it is done — and it is much easier while the monitor is still
-attached.)*
+*(All items complete on the reference build as of 2026-09-08. **This closed the Phase 00
+prerequisite.**)*
 
 Once these are recorded, update `ROADMAP.md` and `docs/reference/project-state.md` to mark the
 Phase 00 hardware prerequisite **satisfied**, so it does not linger as an open future phase.
@@ -478,10 +477,16 @@ about the firmware setting rather than about the operating system.
 Method:
 
 1. `sudo poweroff`
-2. Unplug the monitor and keyboard. **Unplug the power cable** — this simulates a real power cut,
-   which is not the same as pressing the power button.
-3. Plug the power back in. **Do not press the power button.**
+2. **Unplug the power cable** — this simulates a real power cut, which is not the same as pressing
+   the power button.
+3. Plug the power back in. **Do not press the power button, and do not touch the keyboard.**
 4. From the MacBook, wait a couple of minutes, then `ssh <username>@<server-ip>`.
+
+You may leave the monitor attached for this test. What the test forbids is *interaction* — a
+keypress, a power-button press, starting anything by hand — not the presence of a display. Keeping
+the screen connected is in fact useful: if the machine fails to come back, the console shows you
+where it stopped, which an unreachable headless box cannot. Re-confirm the test once more after the
+machine actually goes headless in Phase 03.
 
 The test passes only if **all four** of these are true:
 
@@ -539,6 +544,9 @@ Two long-standing project unknowns closed here: the RAM module layout (1 × 8 GB
 the wireless adapter model (Intel AC 8260). Both had been open since project bootstrap, and both took
 minutes to resolve from Windows Task Manager — a good argument for doing this pass before wiping
 rather than reconstructing it afterwards from Linux.
+
+Physical validation passed: USB ports and video output work, and fan noise is unobtrusive — worth
+confirming for a machine that will live in a home rather than a rack.
 
 One thing was found that nobody had thought to look for: **CPU virtualization was disabled in
 firmware.** It was not on the original checklist. Nothing on the roadmap needs it, but finding it
