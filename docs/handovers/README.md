@@ -27,4 +27,4 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 | File | Kind | Status |
 |---|---|---|
 | `project-planning.md` | Master governance context | Standing |
-| `01-ubuntu-server.md` | Phase 01 brief | **Proposed** — drafted by the phase context because no brief had been created; awaiting Project Planning ratification |
+| `01-ubuntu-server.md` | Phase 01 brief | **Ratified** 2026-09-08, subject to six amendments (recorded in its §0.1) — all reconciled |

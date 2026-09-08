@@ -12,6 +12,9 @@ This project uses this file for meaningful repository-level milestones rather th
 - Guide, build-log, budget, architecture, and handover templates.
 - Phase 01 brief, guide, ADRs (014 release, 015 disk layout, 016 network link), and
   install/verification scripts. The installation itself has not yet been performed.
+- Phase 01 brief ratified by Project Planning (2026-09-08) with six amendments, reconciled across
+  the brief, all three ADRs, the guide and project documentation. Remaining Phase 00 hardware
+  validation is now Phase 01 Part A rather than a standalone phase.
 
 ### Changed
 

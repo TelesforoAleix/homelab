@@ -1,8 +1,9 @@
 # Phase 01 Brief — Ubuntu Server
 
-- **Status:** Proposed by the Phase 01 working context, 2026-09-08. **Pending ratification by Project Planning.**
+- **Status:** **Ratified** by Project Planning on **2026-09-08**, subject to the amendments in §0.1.
+- **Drafted:** 2026-09-08 by the Phase 01 working context
 - **Phase:** 01 — Ubuntu Server
-- **Depends on:** Phase 00 (hardware verification items still open)
+- **Depends on:** Phase 00 hardware verification, now executed as Phase 01 Part A (§0.1, amendment 2)
 
 ## 0. Provenance note
 
@@ -11,10 +12,26 @@ This brief did not exist when Phase 01 work began. `docs/reference/project-state
 and that action had not been carried out.
 
 Per `PROJECT.md` §13, Project Planning owns phase briefs. This document was therefore drafted by the
-phase working context to avoid implementing against an unwritten specification, and is marked
-**Proposed** rather than accepted. Project Planning should ratify, amend, or replace it. If it is
-amended, the phase work must be reconciled against the amended version before the phase is declared
-complete.
+phase working context to avoid implementing against an unwritten specification, and was submitted as
+**Proposed**.
+
+Project Planning reviewed it on 2026-09-08 and **ratified it subject to six amendments**, recorded
+in §0.1. Those amendments have been reconciled into this brief and into the affected ADRs, guide and
+project documentation. This brief is now the accepted specification for Phase 01.
+
+## 0.1 Project Planning amendments (2026-09-08)
+
+| # | Amendment | Reconciled in |
+|---|---|---|
+| 1 | ADR-014 must distinguish the reference/tested version from a hard dependency, pin the reference ISO/checksum for reproducibility, and not imply followers require exactly 26.04.1 | ADR-014 rewritten with explicit *Requires* vs *Tested with* sections and a "Guidance for reproduction" section; `software-stack.md` and the guide aligned |
+| 2 | Remaining Phase 00 hardware validation becomes Phase 01 Part A; no separate hardware implementation chat; once complete, the Phase 00 prerequisite is satisfied rather than left as a standalone future phase | §2, §7 and §8 below; `ROADMAP.md` and `project-state.md` state the closure condition; guide Part A carries a completion checklist |
+| 3 | ADR-015 accepted; document as a reference-build trade-off rather than a universal recommendation, and add a revisit trigger for significant sensitive/personal Second Brain data | ADR-015 gains a "Scope of this decision" section and an explicit Phase 10 revisit trigger |
+| 4 | ADR-016 accepted with clarification: Wi-Fi is the *initial* connection; note Ethernet is preferable where practical; add a fallback path if the installer cannot use the Wi-Fi adapter | ADR-016 retitled and amended with a five-option fallback path; guide states the Ethernet preference and promotes the fallback to a first-class step |
+| 5 | Keep the unattended power-loss recovery test in the Definition of Done, but explicitly configure firmware `Power -> After Power Loss -> Power On` before relying on it; final validation must prove boot, network reconnect, SSH start and remote reachability with no physical interaction | §8 and §15 below; guide Part D marks the firmware setting as a prerequisite and the validation section enumerates the four proof points |
+| 6 | Add authoritative references to ADR-014 for the Ubuntu 26.04.1 release/status, Docker Engine support for Resolute, and Tailscale package support for Resolute | ADR-014 gains an "Authoritative references" section with URLs, what each establishes, and the date checked |
+
+Amendment 6 produced one finding worth carrying forward: Tailscale's *packages* support `resolute`,
+but its *documentation* does not yet mention it. See the note in ADR-014 before Phase 03.
 
 ## 1. Purpose
 
@@ -40,8 +57,13 @@ Verified from the repository and from planning sources on 2026-09-08:
 | Port / fan / peripheral checks | Not performed |
 | Accepted ADRs | ADR-001 … ADR-013 |
 
-Phase 00 hardware verification is therefore **not** complete, and its remaining checks are folded
-into this phase as Part A because they must happen before the disk is wiped.
+Phase 00 hardware verification is therefore **not** complete. Per amendment 2, its remaining checks
+are executed as **Phase 01 Part A** — they must happen before the disk is wiped, and **no separate
+hardware implementation phase or working context is required**.
+
+Once Part A is recorded, the Phase 00 prerequisite is considered **satisfied**, and `ROADMAP.md` and
+`docs/reference/project-state.md` must be updated to close it rather than leaving Phase 00 open as a
+future standalone implementation phase.
 
 ## 3. Learning objectives
 
@@ -105,11 +127,11 @@ consequences for Phase 03 (Remote Access), so it is a cross-phase change rather 
 
 | Part | Work | Executed by |
 |---|---|---|
-| A | Windows-side hardware verification (RAM layout, wireless adapter, storage, ports, fan) | Owner, on the M700 |
+| A | Windows-side hardware verification (RAM layout, storage, wireless adapter, essential hardware) — **closes the Phase 00 prerequisite** | Owner, on the M700 |
 | B | ISO download and checksum verification | Script, on the MacBook |
 | C | USB creation | Script, on the MacBook |
 | D | Firmware/BIOS configuration | Owner, on the M700 |
-| E | Ubuntu Server installation | Owner, on the M700 |
+| E | Ubuntu Server installation, using the ADR-016 fallback network path if the wireless adapter is not usable | Owner, on the M700 |
 | F | First-boot validation and state capture | Script, on the server |
 
 Explicitly **out of scope**, deferred to their own phases:
@@ -126,14 +148,33 @@ Explicitly **out of scope**, deferred to their own phases:
 The phase is not validated by "the installer finished". Required evidence:
 
 1. `lsb_release -a` reports the expected release.
-2. The machine survives a full power cycle and returns to a reachable state with no keyboard or
-   monitor attached.
-3. Wi-Fi reconnects automatically after that power cycle.
-4. `ssh` from the MacBook reaches the server.
-5. `systemctl is-active ssh` and the unattended-upgrades timer are confirmed active.
-6. No Windows partition remains.
-7. RAM module layout is recorded from `dmidecode`, closing the open Phase 00 unknown.
-8. Recorded versions in `docs/reference/software-stack.md` match live command output.
+2. `systemctl is-active ssh` and the unattended-upgrades timer are confirmed active.
+3. No Windows partition remains.
+4. RAM module layout is recorded from `dmidecode`, closing the open Phase 00 unknown.
+5. Recorded versions in `docs/reference/software-stack.md` match live command output.
+6. Part A hardware results are recorded, closing the Phase 00 prerequisite.
+
+### The unattended AC power-loss recovery test
+
+This is the test that proves the machine is a server rather than a computer that happens to be on.
+
+**Prerequisite (amendment 5):** the firmware setting `Power -> After Power Loss -> Power On` must be
+explicitly configured in Part D *before* this test is run. Without it the test measures nothing —
+the machine will simply stay off, and the failure tells you about the firmware rather than about the
+operating system.
+
+Method: with no monitor or keyboard attached, remove AC power, restore it, and **do not press the
+power button**.
+
+The test passes only if all four of the following are true:
+
+1. the machine **boots without any physical interaction**;
+2. it **reconnects to the network** on its own;
+3. **SSH starts** unattended;
+4. it is **remotely reachable** from the MacBook.
+
+A failure at any of the four is a genuine phase finding and belongs in the build log. It must not be
+worked around by leaving a keyboard attached or by starting anything by hand.
 
 ## 9. Security considerations
 
@@ -176,12 +217,12 @@ section populated from what actually happened rather than what was expected.
 
 ## 13. ADRs required / possible
 
-| ADR | Subject |
-|---|---|
-| ADR-014 | Pin the reference release to Ubuntu Server 26.04.1 LTS (refines ADR-003) |
-| ADR-015 | Whole-disk LVM without full-disk encryption on the reference node |
-| ADR-016 | Wi-Fi as the reference network link, with its risks stated |
-| ADR-017 | *Conditional* — only if Wi-Fi fails and the network approach must change |
+| ADR | Subject | Status |
+|---|---|---|
+| ADR-014 | Ubuntu Server release for the reference build — *Tested with* 26.04.1 LTS, *Requires* any supported LTS (refines ADR-003) | **Accepted**, amended 2026-09-08 |
+| ADR-015 | Whole-disk LVM without full-disk encryption on the reference node | **Accepted**, amended 2026-09-08 |
+| ADR-016 | Wi-Fi as the reference node's *initial* network link | **Accepted**, amended 2026-09-08 |
+| ADR-017 | *Conditional* — only if Wi-Fi proves unworkable and the network approach must change | Not created |
 
 ## 14. Costs
 
@@ -191,6 +232,10 @@ had to be purchased. Record actual spend or explicitly record none.
 ## 15. Definition of Done
 
 - [ ] Functional objective works — server installed, headless, reachable.
+- [ ] Phase 01 Part A recorded, closing the Phase 00 hardware prerequisite.
+- [ ] Firmware `After Power Loss -> Power On` explicitly configured.
+- [ ] **Unattended AC power-loss recovery test passed** — boots with no physical interaction,
+      reconnects to the network, starts SSH, and is remotely reachable.
 - [ ] Configuration/setup is reproducible.
 - [ ] Validation/tests have passed with recorded output.
 - [ ] Important security implications were considered and open risks named.

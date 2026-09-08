@@ -28,6 +28,13 @@
 
 set -euo pipefail
 
+# Version policy note (ADR-014): the values below are what the *reference build*
+# was tested with, pinned so it can be reproduced exactly and so this script can
+# refuse an unverified file. They are NOT a hard requirement. The actual
+# requirement is "Ubuntu Server LTS still in standard support" — 24.04 LTS is a
+# perfectly valid choice, it is simply untested by this project. If you change
+# these values, change them together and record the deviation in the build log.
+
 # --- What we are downloading (see ADR-014) ----------------------------------
 ISO_RELEASE="26.04"
 ISO_VERSION="26.04.1"

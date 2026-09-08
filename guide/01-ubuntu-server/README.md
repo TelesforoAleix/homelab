@@ -40,25 +40,42 @@ with the cost written down. See ADR-015.
 
 | Decision | Choice | Recorded in |
 |---|---|---|
-| Operating system | Ubuntu Server 26.04.1 LTS (amd64) | ADR-014 |
+| Operating system | *Tested with* Ubuntu Server 26.04.1 LTS (amd64) | ADR-014 |
 | Support horizon | Standard support to April 2031 | ADR-014 |
 | Disk layout | Whole disk, guided LVM, **no** full-disk encryption | ADR-015 |
-| Network link | Wi-Fi, configured via netplan | ADR-016 |
+| Network link | Wi-Fi initially; Ethernet preferable where practical | ADR-016 |
 | Remote access | `openssh-server` installed now, hardened in Phase 03 | Phase 01 brief §7 |
 | Windows | Removed entirely | ADR-003 |
 
 The version choice deserves one note. The usual reason to avoid the newest LTS is that third-party
 package repositories take months to publish for a new codename — which would have blocked Tailscale
-in Phase 03 and Docker in Phase 05. Both were checked before committing: Docker publishes a
-`resolute` repository, and Tailscale serves a `resolute` keyring. The risk was measured, not assumed.
+in Phase 03 and Docker in Phase 05. Both were checked before committing: Docker's install
+documentation lists "Ubuntu Resolute 26.04 (LTS)" as supported, and Tailscale's package repository
+publishes a `resolute` distribution. The risk was measured, not assumed. ADR-014 records the sources.
+
+> **"Tested with" is not "Requires".** This project's version policy (`PROJECT.md` §9) separates the
+> version the reference build actually used from a hard compatibility requirement. The only real
+> requirement here is **Ubuntu Server LTS, amd64, still in standard support**. 26.04.1 is what this
+> guide was written and tested against; the exact ISO and checksum are pinned so the reference build
+> can be reproduced exactly, not to constrain you. If you prefer 24.04 LTS, that is a supported
+> choice — expect small differences in installer wording and package versions, and please record any
+> you hit in your own build log.
+
+> **On Wi-Fi.** The reference build uses Wi-Fi because no cable reaches the machine's location — not
+> because it is the better choice. For a stationary always-on server, **wired Ethernet is preferable
+> wherever it is practical**: nothing to associate at boot, no passphrase on disk, and far more
+> predictable reconnection. If you can run a cable, do. See ADR-016.
 
 ## Alternatives
 
 - **Ubuntu 24.04 LTS instead of 26.04.** More mature, and a much larger pool of blog posts and forum
   answers when something goes wrong — a real advantage while learning. Costs two years of support
   life. A defensible choice; ADR-014 explains why the longer runway won.
-- **Ethernet instead of Wi-Fi.** Better in every technical respect. Rejected only because no cable
-  reaches the machine's location. If that changes, revisit ADR-016.
+- **Ethernet instead of Wi-Fi.** Better in every technical respect and the recommended choice for a
+  stationary server wherever a cable is practical. Rejected here only because no cable reaches the
+  machine's location — a physical constraint, not a technical judgement. Moving to Ethernet later is
+  an improvement rather than a deviation, and needs no new decision record. A powerline or MoCA
+  adapter is a realistic middle path if running cable is impossible.
 - **Full-disk encryption.** Right for a laptop, wrong for an unattended headless server, unless you
   add TPM-backed unlock or an initramfs SSH unlock — both worth revisiting in Phase 13, once remote
   access actually exists.
@@ -116,6 +133,23 @@ Write the results into `docs/reference/hardware.md`. Two of these are recoverabl
 this step — `sudo dmidecode -t memory` reads the module layout from Linux, and `lspci -nnk` reads
 the wireless chipset — so this is a convenience step, not an irreversible gate. It is still much
 cheaper to do now.
+
+#### Part A completion checklist
+
+Part A is the remaining Phase 00 hardware validation, carried out here because it has to happen
+before the disk is erased. There is no separate hardware phase; **completing this checklist closes
+the Phase 00 prerequisite.**
+
+- [ ] RAM module layout recorded (how many slots occupied, and each module's capacity)
+- [ ] Storage device model and size recorded
+- [ ] **Wireless adapter model and driver recorded** — the single most important item, because it
+      determines whether the installer can bring up a network at all
+- [ ] CPU model and core count confirmed against `docs/reference/hardware.md`
+- [ ] Essential hardware validated: USB ports, video output, fan noise under load
+- [ ] Results written into `docs/reference/hardware.md`
+
+Once these are recorded, update `ROADMAP.md` and `docs/reference/project-state.md` to mark the
+Phase 00 hardware prerequisite **satisfied**, so it does not linger as an open future phase.
 
 ### Part B — Download and verify the image
 
@@ -185,13 +219,17 @@ by an exact path:
 
 | Setting | Set to | Why |
 |---|---|---|
-| **After Power Loss** / AC power recovery | **Power On** | The single most important setting in this phase. Without it, a power cut leaves the lab off until you physically press the button. Usually under a Power menu. |
+| **After Power Loss** / AC power recovery | **Power On** | The single most important setting in this phase, usually under a `Power` menu. Without it, a power cut leaves the lab off until you physically press the button — and the final validation test below cannot pass. **Configure this now**; do not defer it. |
 | Boot order / boot mode | UEFI, USB first (or use F12) | Needed to boot the installer. |
 | Secure Boot | **Leave enabled** | Ubuntu is signed and installs fine with it on. It only becomes awkward later if you need unsigned kernel modules, which this project does not currently plan. |
 | Wake on LAN | Optional | Of limited use on Wi-Fi; ignore for now. |
 
 Setting a firmware supervisor password is worth doing eventually, but it belongs to Phase 13
 hardening — and note that a forgotten ThinkCentre supervisor password is not trivially recoverable.
+
+> **Do not skip the power-loss setting.** The phase's final validation deliberately tests unattended
+> recovery from AC power loss. That test is only meaningful once `After Power Loss -> Power On` is
+> actually configured — otherwise it just measures a firmware default, and the machine stays dark.
 
 Save and exit, leaving the USB stick inserted.
 
@@ -210,9 +248,10 @@ The installer is text-based; navigate with arrow keys, Tab and Enter. Work throu
      your wireless card.
    - Select it, choose the Wi-Fi configuration option, enter the SSID and passphrase.
    - Wait until the interface shows an IP address before continuing. Do not move on without one.
-   - **If no wireless interface is listed**, the card is unsupported by the installer. Stop and see
-     *What can go wrong* below rather than pushing forward — an install with no network is a dead
-     end.
+   - **If no wireless interface is listed**, the card is not usable by the installer. Do not push
+     forward — an install with no network is a dead end. Go to *If the installer cannot use the
+     Wi-Fi adapter*, immediately after this section. Installation is **not** blocked by this; there
+     are several straightforward ways through it.
 5. **Proxy.** Leave blank.
 6. **Mirror.** Accept the default.
 7. **Storage.** Choose **"Use an entire disk"**, select the 256 GB SSD, and tick **"Set up this disk
@@ -232,6 +271,41 @@ The installer is text-based; navigate with arrow keys, Tab and Enter. Work throu
 11. **Featured snaps.** Select none. Docker arrives properly in Phase 05.
 
 Let the installation finish, choose **Reboot Now**, and remove the USB stick when prompted.
+
+### If the installer cannot use the Wi-Fi adapter
+
+The reference node's wireless chipset is unknown until Part A, and there is a genuine chance the
+installer will not drive it. This does not block the installation. Work down this list — the aim is
+simply to get *any* network link long enough to finish installing, after which the problem is far
+easier to solve on a running system with working package management.
+
+1. **Temporary wired Ethernet.** Move the machine next to the router for the install, or run a cable
+   temporarily. Simplest and most reliable; it goes back to its permanent spot afterwards.
+2. **USB-Ethernet adapter.** Most common USB Ethernet chipsets work in the installer with no
+   configuration. Useful when the machine cannot be moved.
+3. **USB tethering from a phone.** Connect the phone by USB and enable USB tethering; it appears as
+   a wired network device and is usually recognised immediately.
+4. **Install first, fix wireless afterwards.** With any temporary link, complete the installation and
+   then run a full update — a newer kernel and `linux-firmware` package frequently add support that
+   the installer image lacked. Then identify the chipset and work from there:
+
+   ```bash
+   sudo apt update && sudo apt full-upgrade -y
+   sudo reboot
+
+   # After reboot, identify the wireless hardware:
+   lspci -nnk | grep -iA3 'network\|wireless'   # internal (PCIe) cards
+   lsusb                                          # USB adapters
+   dmesg | grep -i firmware                       # missing firmware complaints
+   ```
+
+   The `[1234:5678]` vendor/device identifier from `lspci -nnk` is the thing to search for; it
+   identifies the chipset exactly, where a marketing name often does not.
+5. **USB Wi-Fi dongle with known Linux support**, if the internal card cannot be made to work.
+
+Record which path you used, and the chipset identifier, in the build log. If Wi-Fi cannot be made
+reliable at all, that is a cross-phase finding: ADR-016 needs revisiting and the question goes back
+to Project Planning, because it changes Phase 03.
 
 ### Part F — First boot, updates, and state capture
 
@@ -344,17 +418,35 @@ lsblk -o NAME,FSTYPE | grep -i ntfs
 ssh <username>@<server-ip>
 ```
 
-**The test that actually matters — unattended recovery.** Everything above can pass on a machine
-that still needs a human present. This is the one that proves otherwise:
+### The test that actually matters — unattended AC power-loss recovery
+
+Everything above can pass on a machine that still needs a human present. This is the test that
+proves otherwise, and it is a required item in the Definition of Done.
+
+**Prerequisite:** `Power -> After Power Loss -> Power On` must already be configured in the firmware
+(Part D). Without it this test measures nothing — the machine simply stays off, which tells you
+about the firmware setting rather than about the operating system.
+
+Method:
 
 1. `sudo poweroff`
-2. Unplug the monitor and keyboard. Unplug the power cable.
-3. Plug the power back in and **do not press the power button**.
+2. Unplug the monitor and keyboard. **Unplug the power cable** — this simulates a real power cut,
+   which is not the same as pressing the power button.
+3. Plug the power back in. **Do not press the power button.**
 4. From the MacBook, wait a couple of minutes, then `ssh <username>@<server-ip>`.
 
-If that connects, the firmware power-on setting works, Wi-Fi reassociates on its own, and SSH starts
-unattended. If it does not, that failure is the phase's real finding and belongs in the build log —
-not something to work around by leaving a keyboard attached.
+The test passes only if **all four** of these are true:
+
+| # | Must be true | What it proves |
+|---|---|---|
+| 1 | The machine boots with **no physical interaction** | Firmware AC power recovery is correctly configured |
+| 2 | It **reconnects to the network** on its own | netplan/wpa_supplicant bring the Wi-Fi link up unattended |
+| 3 | **SSH starts** unattended | The service is enabled, not merely running from your last login |
+| 4 | It is **remotely reachable** from the MacBook | The whole chain works end to end, with nobody in the room |
+
+If any of the four fails, that is the phase's real finding and belongs in the build log. Do not work
+around it by leaving a keyboard attached, starting a service by hand, or pressing the power button —
+those hide exactly the failure this test exists to catch.
 
 ## Security notes
 
@@ -369,12 +461,9 @@ not something to work around by leaving a keyboard attached.
 
 ## What can go wrong
 
-**No wireless interface appears in the installer.** The card is not supported by the installer's
-kernel. Options, cheapest first: temporarily borrow an Ethernet cable to complete the install and
-sort Wi-Fi out afterwards with a fully updated kernel; use a USB Wi-Fi dongle with known Linux
-support; or check whether the missing piece is firmware in the `linux-firmware` package. Whichever
-path you take, record it — and if Wi-Fi turns out to be unworkable, ADR-016 needs revisiting and the
-question goes back to Project Planning, because it changes Phase 03.
+**No wireless interface appears in the installer.** The card is not usable by the installer's
+kernel. This is expected often enough to have its own section: see *If the installer cannot use the
+Wi-Fi adapter*, between Parts E and F.
 
 **The machine boots back into Windows.** The USB stick was not selected at boot, or the firmware is
 still in legacy/CSM mode. Use F12 for the one-time boot menu and pick the UEFI entry for the stick.
@@ -402,6 +491,9 @@ not set to Power On. Re-enter setup with F1 and check.
 > **Not yet recorded.** Per `docs/standards/documentation.md`, software is not documented as
 > installed until real version output exists. Populate this table from
 > `scripts/server/verify-install.sh` output after the install.
+
+These are **Tested with** values, not requirements. The only hard requirement is Ubuntu Server LTS
+on a release still in standard support (ADR-014).
 
 | Component | Tested with | Notes |
 |---|---|---|

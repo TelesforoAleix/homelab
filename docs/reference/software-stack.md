@@ -4,7 +4,7 @@ This file records the actual tested stack as phases are completed. Do not mark p
 
 | Component | State | Tested version | Hard requirement? | Notes |
 |---|---|---|---|---|
-| Ubuntu Server LTS | Planned | — | Project standard | Phase 01; target pinned to 26.04.1 LTS by ADR-014. Record the real version from `scripts/server/verify-install.sh` once installed. |
+| Ubuntu Server LTS | Planned | — | **Requires:** Ubuntu Server LTS in standard support. Exact point release **not** required. | Phase 01. **Tested with (reference build):** 26.04.1 LTS, ISO/checksum pinned in ADR-014 for reproducibility. Record the real version from `scripts/server/verify-install.sh` once installed. |
 | OpenSSH | Planned | — | Required for target workflow | Installed during Phase 01; key-only auth and hardening deferred to Phase 03 |
 | Git | Planned | — | Yes for repository workflow | Fundamentals in Phase 04 |
 | Tailscale | Planned | — | Chosen remote-access approach | Phase 03; `resolute` repository confirmed available 2026-09-08 |
@@ -22,3 +22,8 @@ This file records the actual tested stack as phases are completed. Do not mark p
 ## Version rule
 
 Use **Tested with X** unless compatibility genuinely requires an exact version. Verify current installation guidance in the phase that introduces each tool.
+
+A pinned artefact is not automatically a requirement. ADR-014 pins an exact ISO and checksum so the
+reference build can be reproduced byte-for-byte and so the download script can refuse an unverified
+file — but the hard requirement remains "Ubuntu Server LTS in standard support". Where a pin exists
+for reproducibility rather than compatibility, say so explicitly in the Notes column.

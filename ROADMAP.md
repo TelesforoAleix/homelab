@@ -8,8 +8,15 @@ Multiple `00-*` guides may exist for pre-development documentation.
 
 Purpose: establish project scope, hardware rationale, governance, repository structure, budget tracking, architecture baseline, and documentation standards before implementation.
 
-Status: **In progress** — remaining hardware-verification items are folded into Phase 01 Part A,
-because they must be performed before the reference node's disk is erased.
+Status: **In progress** — documentation and governance complete. The only outstanding items are the
+hardware-verification checks, which are executed as **Phase 01 Part A** because they must happen
+before the reference node's disk is erased. **No separate hardware implementation phase or working
+context is required.**
+
+Closure condition: when the Part A checklist in
+[`guide/01-ubuntu-server/`](guide/01-ubuntu-server/README.md) is recorded in
+`docs/reference/hardware.md`, the Phase 00 prerequisite is **satisfied** and this phase closes.
+(Ratified by Project Planning, 2026-09-08, amendment 2.)
 
 Planned/pre-development guides may include:
 
@@ -23,11 +30,14 @@ Planned/pre-development guides may include:
 
 Install Ubuntu Server LTS on the reference node, establish a reproducible base installation, and verify the resulting server state.
 
-Status: **In progress** — brief, guide, scripts and ADRs prepared; installation not yet performed.
+Status: **In progress** — brief **ratified** by Project Planning on 2026-09-08 with six amendments,
+now reconciled. Guide, scripts and ADRs prepared. **Installation not yet performed.**
 
-- Brief: [`docs/handovers/01-ubuntu-server.md`](docs/handovers/01-ubuntu-server.md)
+Absorbs the remaining Phase 00 hardware validation as Part A.
+
+- Brief: [`docs/handovers/01-ubuntu-server.md`](docs/handovers/01-ubuntu-server.md) (Ratified)
 - Guide: [`guide/01-ubuntu-server/`](guide/01-ubuntu-server/README.md)
-- Decisions: ADR-014 (release), ADR-015 (disk layout), ADR-016 (network link)
+- Decisions: ADR-014 (release), ADR-015 (disk layout), ADR-016 (network link) — all Accepted
 
 ## Phase 02 — Linux Fundamentals
 

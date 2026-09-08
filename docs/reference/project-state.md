@@ -13,12 +13,22 @@
 
 | Item | State |
 |---|---|
-| Phase 01 brief | Drafted by the phase context, **pending Project Planning ratification** (`docs/handovers/01-ubuntu-server.md`) |
+| Phase 01 brief | **Ratified** by Project Planning 2026-09-08 with six amendments, all reconciled (`docs/handovers/01-ubuntu-server.md` §0.1) |
 | Guide | Written (`guide/01-ubuntu-server/README.md`); reference-build experience and tested versions still empty by design |
 | Scripts | Written and syntax-checked; USB writer safety guards tested |
-| ADR-014 / 015 / 016 | Accepted |
+| ADR-014 / 015 / 016 | **Accepted**, all amended 2026-09-08 per ratification |
+| Phase 00 hardware prerequisite | Executed as Phase 01 Part A; **not yet performed** |
 | Installation on hardware | **Not started** |
 | Validation | **Not started** |
+
+### Phase 00 closure
+
+Phase 00's documentation and governance work is complete. Its only outstanding items are the
+hardware-verification checks, which Project Planning ruled (amendment 2) are executed as **Phase 01
+Part A** — there is no separate hardware implementation phase or working context.
+
+**Closure condition:** when the Part A checklist is recorded in `docs/reference/hardware.md`, the
+Phase 00 prerequisite is satisfied and both this file and `ROADMAP.md` must be updated to say so.
 
 ## Accepted high-level decisions
 
@@ -26,9 +36,12 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 - used budget hardware as the reference platform;
 - M700 as orchestration/infrastructure node;
-- Ubuntu Server LTS, pinned to 26.04.1 LTS (ADR-014);
-- whole-disk LVM without full-disk encryption, chosen for unattended headless boot (ADR-015);
-- Wi-Fi as the reference network link, with reliability to be validated (ADR-016);
+- Ubuntu Server LTS as the hard requirement; 26.04.1 LTS as the *tested* reference build, with its
+  ISO and checksum pinned for reproducibility rather than as a constraint (ADR-014);
+- whole-disk LVM without full-disk encryption, chosen for unattended headless boot — a
+  reference-build trade-off rather than a universal recommendation (ADR-015);
+- Wi-Fi as the reference node's *initial* network link, with Ethernet preferred where practical, a
+  documented installer fallback path, and reliability to be validated (ADR-016);
 - MacBook-driven remote development;
 - SSH keys + Tailscale + VS Code Remote SSH;
 - model-agnostic architecture;
@@ -56,10 +69,16 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - SSH password authentication will be enabled by the Phase 01 install and is only closed in Phase 03.
 - No encryption at rest (ADR-015), which compounds with the cleartext Wi-Fi passphrase (ADR-016).
   Phase 13 should treat these together.
+- **Phase 10 must not silently inherit ADR-015.** Once the node stores significant sensitive or
+  personal Second Brain data, encryption at rest must be reconsidered on its merits — and converting
+  an unencrypted root filesystem after the fact usually means a reinstall.
 
 ## Immediate next planning action
 
-1. Project Planning ratifies or amends the Phase 01 brief.
-2. The install is performed on the M700 following `guide/01-ubuntu-server/README.md`.
-3. Real output is recorded into the guide, `hardware.md`, `software-stack.md` and the build log
-   before Phase 01 is declared complete.
+1. ~~Project Planning ratifies or amends the Phase 01 brief.~~ **Done 2026-09-08** — ratified with
+   six amendments, all reconciled.
+2. Perform **Part A** on the M700 and record the results, closing the Phase 00 prerequisite.
+3. Perform Parts B–F following `guide/01-ubuntu-server/README.md`.
+4. Record real output into the guide, `hardware.md`, `software-stack.md` and the build log.
+5. Phase 01 is not complete until the unattended AC power-loss recovery test passes on all four
+   proof points (boot, network, SSH, remote reachability).

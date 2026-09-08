@@ -3,7 +3,7 @@
 - **Date:** 2026-09-08
 - **Phase:** 01 — Ubuntu Server
 - **Branch:** `feature/01-ubuntu-server`
-- **Status:** In progress — preparation complete, installation not yet performed
+- **Status:** In progress — preparation complete and ratified; installation not yet performed
 
 ## Starting state
 
@@ -122,10 +122,42 @@ association, the unattended power-cycle recovery, and every version number remai
 None. No new spending was incurred by preparation. A USB flash drive is the only possible one-time
 cost for this phase and is pending confirmation in `docs/reference/costs.md`.
 
+## Ratification (Project Planning, 2026-09-08)
+
+The brief was **ratified subject to six amendments**, all reconciled in this branch. Full list in
+`docs/handovers/01-ubuntu-server.md` §0.1. Substantive effects:
+
+- **ADR-014 restructured** around the project's `Tested with` vs `Requires` standard. The previous
+  draft pinned 26.04.1 without saying whether that was a requirement — which would have quietly
+  told followers they needed an exact point release. The requirement is now stated as "Ubuntu Server
+  LTS in standard support"; the ISO/checksum pin is explicitly a reproducibility mechanism.
+- **ADR-015 reframed** as a reference-build trade-off rather than a recommendation, with a table of
+  situations where the opposite answer is correct, and a hard revisit trigger at Phase 10.
+- **ADR-016 clarified** as the *initial* link, with the Ethernet preference stated plainly and a
+  five-option installer fallback path so a missing wireless driver cannot block the install.
+- **Phase 00 closed out properly.** Its remaining hardware checks are Phase 01 Part A, with a
+  completion checklist and an explicit closure condition, rather than an open standalone phase.
+- **The power-loss test hardened** into a prerequisite (firmware setting configured first) plus four
+  named proof points, so it cannot pass vacuously.
+
+### Problem found while adding references (amendment 6)
+
+- *Assumption:* Tailscale would have a 26.04 install page to cite, since its packages support
+  `resolute`.
+- *What happened:* `tailscale.com/kb/1187/install-ubuntu-2604` returns **HTTP 200** but serves a
+  generic documentation index with no Ubuntu 26.04 content — a soft 404. Tailscale's Linux download
+  pages still reference only Noble 24.04, while the package repository carries
+  `Origin: Tailscale, Codename: resolute` dated 2026-09-03.
+- *What we learned:* an HTTP 200 is not evidence a page says what you expect. Vendor documentation
+  can lag vendor packages by months, and citing the docs would have been weaker evidence than citing
+  the repository.
+- *What changed:* ADR-014 cites the package repository metadata as authoritative, and carries an
+  explicit warning for Phase 03 not to cite that KB URL.
+
 ## Next
 
-1. Project Planning ratifies or amends the Phase 01 brief.
-2. Perform Parts A–F on the M700 following the guide.
+1. ~~Project Planning ratifies or amends the Phase 01 brief.~~ Done 2026-09-08.
+2. Perform Parts A–F on the M700 following the guide. Part A closes the Phase 00 prerequisite.
 3. Record real output into the guide's *Reference-build experience* and *Tested versions* sections,
    `hardware.md`, `software-stack.md`, and a completion build-log entry.
 4. Complete the phase handover. Phase 01 is **not** complete until the unattended power-cycle test
