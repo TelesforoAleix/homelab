@@ -112,6 +112,22 @@ Practical notes for when an upgrade does happen:
 - The CPU's own limit is 64 GB, but the M700 Tiny has two SO-DIMM slots, so 32 GB is the practical
   platform ceiling.
 
+## Swap
+
+| Property | Value |
+|---|---|
+| Type | Swapfile, `/swap.img` |
+| Size | 4 GB |
+| In use | 0 B at first measurement (RAM 542 MB / 7.1 GB used) |
+
+**Decision: accept the installer default** (closes the open item in Phase 01 brief §6). 4 GB against
+8 GB of RAM is a reasonable ratio, and a *file* rather than a partition can be resized later without
+disturbing the disk layout — which complements the LVM choice in ADR-015.
+
+No tuning applied. `vm.swappiness` remains at the distribution default of 60, which is more eager to
+swap than a server typically wants. That is worth revisiting only if real memory pressure appears —
+likely Phase 05, when containers arrive — rather than pre-emptively.
+
 ## Storage capacity note
 
 The drive is sold as 256 GB but reports roughly 239 GB in Windows. Nothing is wrong or missing: the

@@ -95,6 +95,11 @@ See `docs/decisions/` for full ADRs. Current direction includes:
    `After Power Loss -> Power On` set, UEFI boot preserved. To be confirmed from live output
    (`lscpu | grep -i virtual`) once Ubuntu is installed, per the project's truthfulness rule.
 6. **Next:** Part E (installation) and Part F (first boot, state capture, power-loss validation).
-6. Record real output into the guide, `hardware.md`, `software-stack.md` and the build log.
+6. ~~Record real output.~~ **Done** — versions in `software-stack.md`, hardware in `hardware.md`.
+7. Remaining: DHCP reservation, then the unattended AC power-loss test.
+
+**Local decisions resolved in this phase** (brief §6): hostname `homelab`; admin user `aleix`;
+Secure Boot left enabled; swap left at the installer default (4 GB swapfile); DHCP reservation to be
+made at the router rather than a static address on the server.
 7. Phase 01 is not complete until the unattended AC power-loss recovery test passes on all four
    proof points (boot, network, SSH, remote reachability).
