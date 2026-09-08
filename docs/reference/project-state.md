@@ -87,26 +87,38 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 ## Immediate next planning action
 
-1. ~~Project Planning ratifies or amends the Phase 01 brief.~~ **Done 2026-09-08** — ratified with
-   six amendments, all reconciled.
-2. ~~Perform Part A identification.~~ **Done 2026-09-08** — results recorded in
-   `docs/reference/hardware.md`.
-3. ~~Complete the remaining Part A physical checks.~~ **Done 2026-09-08 — Phase 00 closed.**
-4. ~~Parts B and C — image verification and USB creation.~~ **Installation USB reported ready.**
-5. ~~Part D firmware.~~ **Reported complete 2026-09-08** — CPU virtualization enabled,
-   `After Power Loss -> Power On` set, UEFI boot preserved. To be confirmed from live output
-   (`lscpu | grep -i virtual`) once Ubuntu is installed, per the project's truthfulness rule.
-6. **Next:** Part E (installation) and Part F (first boot, state capture, power-loss validation).
-6. ~~Record real output.~~ **Done** — versions in `software-stack.md`, hardware in `hardware.md`.
-7. ~~DHCP reservation and power-loss test.~~ **Power-loss test passed.** DHCP reservation not
-   possible (no router access) — recorded as an unsatisfied ADR-016 control, superseded by Phase 03.
+**Phase 01 is complete and merged. Phase 02 has not started.**
 
-**Next:** merge `feature/01-ubuntu-server` into `main`, then begin Phase 02 or Phase 03. Phase 03
-closes this phase's principal open risk (SSH password authentication).
+1. **Project Planning must create the Phase 02 brief** at `docs/handovers/02-linux-fundamentals.md`,
+   using `docs/templates/phase-brief-template.md`.
 
-**Local decisions resolved in this phase** (brief §6): hostname `homelab`; admin user `aleix`;
-Secure Boot left enabled; swap left at the installer default (4 GB swapfile); DHCP reservation **not
-possible** — no router admin access; recorded as an unsatisfied ADR-016 control, superseded by
-Tailscale in Phase 03.
-7. Phase 01 is not complete until the unattended AC power-loss recovery test passes on all four
-   proof points (boot, network, SSH, remote reachability).
+   > This is deliberately the first item. Phase 01 began with no brief — `project-state.md` had
+   > listed creating one as the next planning action and it had never been done, so the phase context
+   > had to draft its own and mark it *Proposed*. Nothing in the process detects a missing brief; the
+   > phase context is the first to notice. Do not repeat that.
+
+2. Review the three recommendations in the Phase 01 handover (§ Recommended roadmap changes),
+   especially **adding a system-health assertion to the project-wide Definition of Done** in
+   `PROJECT.md`. Phase 01 demonstrated that every functional test can pass on a degraded machine.
+
+3. Decide sequencing. Phase 02 (Linux Fundamentals) and Phase 03 (Remote Access) are both unblocked.
+   Phase 03 closes this phase's principal open risk — SSH password authentication — so if that risk
+   is a concern it should come first.
+
+## Starting state for the next phase
+
+Verified as of 2026-09-08:
+
+| Fact | Value |
+|---|---|
+| Host | `homelab`, Lenovo M700 Tiny |
+| OS | Ubuntu Server 26.04.1 LTS, kernel 7.0.0-31-generic |
+| Access | SSH from the MacBook, **password authentication** |
+| Address | 192.168.1.57/21 over Wi-Fi `wlp1s0` (no DHCP reservation) |
+| Admin user | `aleix`, sudo-capable; no direct root login |
+| Storage | LVM, 232 GB root, 214 GB free, unencrypted |
+| Health | `systemctl is-system-running` → `running`; boots in 23s |
+| Recovery | Returns unattended from AC power loss (validated) |
+| Console | Monitor and keyboard still attached; removed once Phase 03 proves remote access |
+
+Reproduce this state check at any time with `scripts/server/verify-install.sh`.
