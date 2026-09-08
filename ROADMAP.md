@@ -33,8 +33,8 @@ Planned/pre-development guides may include:
 
 Install Ubuntu Server LTS on the reference node, establish a reproducible base installation, and verify the resulting server state.
 
-Status: **In progress** — brief **ratified** by Project Planning on 2026-09-08 with six amendments,
-now reconciled. Guide, scripts and ADRs prepared. **Installation not yet performed.**
+Status: **Complete** (2026-09-08). Ubuntu Server 26.04.1 LTS installed and validated, including the
+unattended AC power-loss recovery test. Handover returned to Project Planning.
 
 Absorbs the remaining Phase 00 hardware validation as Part A.
 

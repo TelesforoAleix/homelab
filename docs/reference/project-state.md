@@ -2,12 +2,12 @@
 
 - **Project:** Home Lab
 - **Master planning context:** Project Planning
-- **Current phase:** 01 — Ubuntu Server (**in progress**)
+- **Current phase:** 01 — Ubuntu Server (**complete**, 2026-09-08). Next: Phase 02 / 03.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
 - **Target OS:** Ubuntu Server 26.04.1 LTS (ADR-014)
-- **Current implementation state:** Repository, Phase 01 brief, guide, scripts and ADRs prepared.
-  **The operating system has not yet been installed** — the reference node still runs its original
-  Windows installation.
+- **Current implementation state:** Ubuntu Server 26.04.1 LTS installed and validated on the
+  reference node. Reachable over SSH from the MacBook and recovers unattended from AC power loss.
+  Windows removed.
 
 ## Phase 01 status
 
@@ -18,8 +18,10 @@
 | Scripts | Written and syntax-checked; USB writer safety guards tested |
 | ADR-014 / 015 / 016 | **Accepted**, all amended 2026-09-08 per ratification |
 | Phase 00 hardware prerequisite | ✅ **Closed** 2026-09-08 — identification and physical validation both complete |
-| Installation on hardware | **Not started** |
-| Validation | **Not started** |
+| Installation on hardware | ✅ **Complete** 2026-09-08 |
+| Validation | ✅ **Passed**, including unattended power-loss recovery |
+| Handover | ✅ [`01-ubuntu-server-handover.md`](../handovers/01-ubuntu-server-handover.md) |
+| `main` known-working | ⏳ pending merge of `feature/01-ubuntu-server` |
 
 ### Phase 00 closure
 
@@ -96,7 +98,11 @@ See `docs/decisions/` for full ADRs. Current direction includes:
    (`lscpu | grep -i virtual`) once Ubuntu is installed, per the project's truthfulness rule.
 6. **Next:** Part E (installation) and Part F (first boot, state capture, power-loss validation).
 6. ~~Record real output.~~ **Done** — versions in `software-stack.md`, hardware in `hardware.md`.
-7. Remaining: DHCP reservation, then the unattended AC power-loss test.
+7. ~~DHCP reservation and power-loss test.~~ **Power-loss test passed.** DHCP reservation not
+   possible (no router access) — recorded as an unsatisfied ADR-016 control, superseded by Phase 03.
+
+**Next:** merge `feature/01-ubuntu-server` into `main`, then begin Phase 02 or Phase 03. Phase 03
+closes this phase's principal open risk (SSH password authentication).
 
 **Local decisions resolved in this phase** (brief §6): hostname `homelab`; admin user `aleix`;
 Secure Boot left enabled; swap left at the installer default (4 GB swapfile); DHCP reservation **not

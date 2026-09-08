@@ -624,28 +624,51 @@ firmware.** It was not on the original checklist. Nothing on the roadmap needs i
 now — while a monitor is attached — is worth much more than finding it later on a headless machine.
 The checklist has been amended to look for it.
 
-### Parts B–F — installation
+### Parts B–F — installation (2026-09-08)
 
-> **Not yet recorded.** The installation has not been performed at the time of writing. This section
-> must be filled in from what actually happened — including anything that went wrong — before
-> Phase 01 can be declared complete. See `docs/build-log/`.
+The installation itself was uneventful and took about six minutes. Everything interesting happened
+either side of it. Full detail in `docs/build-log/2026-09-08-phase-01-installation.md`; the short
+version:
+
+- **The installer showed "An error occurred during installation" — and the install was fine.** The
+  log held one traceback: subiquity asking snapd whether a newer *installer* was available, before
+  the network existed. Non-fatal by design. Read the log before assuming the worst.
+- **Guided LVM allocated 100 GB of a 235 GB group**, exactly as warned above. Fixed live with
+  `lvextend` + `resize2fs`, no reboot — ADR-015's choice of LVM justifying itself within the hour.
+- **The machine booted, answered SSH, and was still degraded.** `systemd-networkd-wait-online` waited
+  the full 120-second timeout for an unplugged Ethernet port on every boot. Invisible from outside.
+  Fixing it took boot time from ~145s to **23s**.
+- **Following this guide produced a root-owned-file mistake**, since `scp` + `sudo mv` preserves the
+  copying user. The `chown` steps above exist because of it.
+- **The power-loss test passed first time**, on the same IP address.
+
+Five defects in this guide were found by using it. None would have surfaced from writing alone.
+
+### Reference-build timings
+
+| Stage | Actual |
+|---|---|
+| Installation | ~6 minutes |
+| First-boot upgrade | ~1 minute (only 5 packages — the point-release ISO was 2 weeks old) |
+| Boot time, before the wait-online fix | ~145 seconds |
+| Boot time, after | **23.0 seconds** (11.1s firmware, 3.7s loader, 0.8s kernel, 3.1s initrd, 4.4s userspace) |
 
 ## Tested versions
 
-> **Not yet recorded.** Per `docs/standards/documentation.md`, software is not documented as
-> installed until real version output exists. Populate this table from
-> `scripts/server/verify-install.sh` output after the install.
+Captured from `scripts/server/verify-install.sh` on the running system, 2026-09-08.
 
 These are **Tested with** values, not requirements. The only hard requirement is Ubuntu Server LTS
 on a release still in standard support (ADR-014).
 
 | Component | Tested with | Notes |
 |---|---|---|
-| Ubuntu Server | *pending install* | Target: 26.04.1 LTS (ADR-014) |
-| Linux kernel | *pending install* | |
-| OpenSSH server | *pending install* | |
-| netplan | *pending install* | |
-| wpasupplicant | *pending install* | Required by the networkd renderer for Wi-Fi |
+| Ubuntu Server | 26.04.1 LTS (Resolute Raccoon) | ADR-014 |
+| Linux kernel | 7.0.0-31-generic | x86_64 |
+| OpenSSH server | OpenSSH_10.2p1 Ubuntu-2ubuntu3.6 | OpenSSL 3.5.5; socket-activated |
+| systemd | 259 | |
+| netplan | 1.2-1ubuntu5 | |
+| wpasupplicant | 2:2.11-0ubuntu5 | Required by the networkd renderer for Wi-Fi |
+| intel-microcode | 3.20260210.1ubuntu2 | Mitigates the 2016-era firmware |
 
 ## Next phase
 

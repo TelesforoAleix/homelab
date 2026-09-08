@@ -28,3 +28,4 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 |---|---|---|
 | `project-planning.md` | Master governance context | Standing |
 | `01-ubuntu-server.md` | Phase 01 brief | **Ratified** 2026-09-08, subject to six amendments (recorded in its §0.1) — all reconciled |
+| `01-ubuntu-server-handover.md` | Phase 01 completion handover | **Returned to Project Planning** 2026-09-08 — outcome Complete |
