@@ -18,11 +18,11 @@ What must work.
 
 ## 5. Decisions already fixed
 
-Relevant accepted ADRs and Project Planning constraints.
+Relevant accepted ADRs, and constraints inherited from the previous phase's handover.
 
 ## 6. Decisions still open
 
-Questions the phase may resolve locally. Escalate cross-phase architectural changes to Project Planning.
+Questions the phase may resolve locally. Record cross-phase architectural changes as ADRs and carry them into the next phase's brief (ADR-017).
 
 ## 7. Implementation scope
 
@@ -62,4 +62,4 @@ Copy/adjust the project-wide checklist from `PROJECT.md`.
 
 ## 16. Return handover requirements
 
-Specify exactly what Project Planning must receive at phase completion.
+Specify exactly what the next phase must receive: open risks, unsatisfied controls, and decisions it must not silently inherit.

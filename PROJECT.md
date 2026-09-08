@@ -145,12 +145,26 @@ A phase is complete when all applicable items are satisfied:
 - [ ] Tested versions are recorded.
 - [ ] No unexplained critical AI-generated component remains.
 - [ ] `main` represents a known-working state.
-- [ ] A structured handover is returned to Project Planning.
+- [ ] The system reports no failed units and no degraded state.
+- [ ] A structured handover is written into `docs/handovers/`, stating what the next phase inherits.
 
 ## 13. Governance
 
-The master planning context is the **Project Planning** conversation/workstream.
+**The repository is the sole governance authority.** Phases are self-contained and run one after
+another; each phase context owns its own brief, implementation and handover. See ADR-017, which
+supersedes the earlier two-context model.
 
-Each major roadmap phase should normally have its own dedicated working context. Project Planning defines the phase brief and receives the final structured handover.
+Each phase:
 
-If a major cross-phase architectural decision is needed, return it to Project Planning rather than silently changing project direction inside a phase.
+1. **Writes its brief first**, from `docs/templates/phase-brief-template.md`, and commits it *before*
+   implementation begins. A brief written afterwards is documentation, not governance.
+2. Implements, validating against the Definition of Done in §12 **literally, item by item**. It is
+   now the only standing check on phase quality.
+3. **Writes a handover** into `docs/handovers/`, addressed to the next phase, explicitly stating open
+   risks, unsatisfied controls, and decisions the next phase must not silently inherit.
+
+A cross-phase architectural decision is **recorded as an ADR** and carried into the next phase's
+brief. It is never applied silently inside a phase.
+
+Where an older document says "escalate to Project Planning", read it as "record an ADR and carry it
+into the next phase's brief". Those documents are historical and are not rewritten (§11).

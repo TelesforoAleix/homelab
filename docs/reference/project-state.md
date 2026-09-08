@@ -1,7 +1,7 @@
 # Current Project State
 
 - **Project:** Home Lab
-- **Master planning context:** Project Planning
+- **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
 - **Current phase:** 01 — Ubuntu Server (**complete**, 2026-09-08). Next: Phase 02 / 03.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
 - **Target OS:** Ubuntu Server 26.04.1 LTS (ADR-014)
@@ -89,21 +89,23 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 **Phase 01 is complete and merged. Phase 02 has not started.**
 
-1. **Project Planning must create the Phase 02 brief** at `docs/handovers/02-linux-fundamentals.md`,
-   using `docs/templates/phase-brief-template.md`.
+1. **The Phase 02 context writes its own brief** at `docs/handovers/02-linux-fundamentals.md`, using
+   `docs/templates/phase-brief-template.md`, and **commits it before implementation begins**
+   (ADR-017).
 
-   > This is deliberately the first item. Phase 01 began with no brief — `project-state.md` had
-   > listed creating one as the next planning action and it had never been done, so the phase context
-   > had to draft its own and mark it *Proposed*. Nothing in the process detects a missing brief; the
-   > phase context is the first to notice. Do not repeat that.
+   > Phase 01 began with no brief at all and the phase context had to draft one mid-flight. Under
+   > the new model nobody else will write it, so this is now the phase's own first task rather than
+   > something to wait for.
 
-2. Review the three recommendations in the Phase 01 handover (§ Recommended roadmap changes),
-   especially **adding a system-health assertion to the project-wide Definition of Done** in
-   `PROJECT.md`. Phase 01 demonstrated that every functional test can pass on a degraded machine.
+2. ~~Review Phase 01's recommended roadmap changes.~~ **Actioned 2026-09-08**, since ADR-017 left
+   them with no recipient:
+   - system-health assertion added to the Definition of Done in `PROJECT.md` and
+     `docs/standards/definition-of-done.md`;
+   - the Tailscale documentation warning written into the Phase 03 roadmap entry;
+   - the ADR-015 revisit requirement written into the Phase 10 roadmap entry.
 
-3. Decide sequencing. Phase 02 (Linux Fundamentals) and Phase 03 (Remote Access) are both unblocked.
-   Phase 03 closes this phase's principal open risk — SSH password authentication — so if that risk
-   is a concern it should come first.
+3. Sequencing is the owner's call. Phase 02 (Linux Fundamentals) is next by number; Phase 03 (Remote
+   Access) closes Phase 01's principal open risk — SSH password authentication.
 
 ## Starting state for the next phase
 

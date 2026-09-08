@@ -24,4 +24,10 @@ This project uses this file for meaningful repository-level milestones rather th
 
 ### Changed
 
+- **Governance model replaced (ADR-017).** The separate Project Planning context is retired; phases
+  are self-contained and sequential, and the repository is the sole governance authority. Each phase
+  now writes its own brief before implementation and a handover addressed to the next phase.
+  Historical documents referencing the old model are retained unchanged.
+- Definition of Done gains a system-health item — Phase 01 passed every functional test on a machine
+  that was quietly degraded.
 - Repository bootstrap moved into Phase 00 so implementation history can be documented from the beginning.

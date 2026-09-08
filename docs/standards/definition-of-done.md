@@ -17,4 +17,13 @@ A phase is complete when all applicable items are satisfied:
 - [ ] Tested versions are recorded.
 - [ ] No unexplained critical AI-generated component remains.
 - [ ] `main` represents a known-working state.
-- [ ] A structured handover is returned to Project Planning.
+- [ ] The system reports no failed units and no degraded state.
+- [ ] A structured handover is written into `docs/handovers/`, stating what the next phase inherits.
+
+## Note on the health check
+
+The "no failed units / no degraded state" item was added after Phase 01 (ADR-017). That phase
+produced a machine which passed every functional test — installed, reachable over SSH, surviving a
+power cut — while a boot unit failed and every startup wasted two minutes. Functional success does
+not imply a healthy system. On Linux, `systemctl is-system-running` and `systemctl --failed` are the
+cheap check.

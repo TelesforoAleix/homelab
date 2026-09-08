@@ -2,23 +2,29 @@
 
 This directory keeps cross-context project memory inside the repository.
 
-The master Project Planning context creates the brief for a dedicated phase. The phase-specific working context implements the work and returns a structured handover.
+Phases are **self-contained and sequential** (ADR-017). Each phase context writes its own brief,
+implements the work, and writes a handover addressed to the next phase. There is no separate
+planning context.
 
-Suggested lifecycle:
+Lifecycle:
 
 ```text
-Project Planning
+previous phase's handover
     ↓
-phase brief / handover file
-    ↓
-phase-specific chat + IDE/AI tools
+phase context writes its brief  ← committed BEFORE implementation
     ↓
 implementation + tests + docs
     ↓
-completed handover
+Definition of Done, applied literally
     ↓
-Project Planning
+handover written into this directory
+    ↓
+next phase reads it
 ```
+
+The brief must be committed before implementation begins. Written afterwards it is documentation,
+not governance — and it was Project Planning's review of the brief that caught the most valuable
+corrections in Phase 01, a check that no longer exists.
 
 Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/phase-handover-template.md` at phase completion.
 

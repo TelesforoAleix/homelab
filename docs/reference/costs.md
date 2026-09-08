@@ -30,7 +30,7 @@ free, and no subscription or usage-based cost was introduced.
 
 ## Existing subscriptions used by the project
 
-These should be recorded as costs even when they pre-date Home Lab, but the exact subscription prices have not been supplied in Project Planning yet.
+These should be recorded as costs even when they pre-date Home Lab. The exact subscription prices have not yet been supplied by the owner; record them in the phase that first depends on them (Phase 06, AI CLI access).
 
 | Service | Category | Billing model | Actual cost | Project-specific incremental cost | Notes |
 |---|---|---|---|---|---|

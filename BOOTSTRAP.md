@@ -31,10 +31,15 @@ git commit -m "chore: bootstrap Home Lab repository"
 
 ## 4. Create the public GitHub repository
 
-The repository name, owner, visibility details, and license have not been fixed by Project Planning. Do not invent these decisions.
+The repository name, owner, visibility details, and license have not been fixed by the owner. Do not invent these decisions.
 
 Once the GitHub repository exists, add it as the remote and push `main` using the instructions GitHub provides for the repository you created.
 
-## 5. Before Phase 01
+## 5. Status
 
-Update any known hardware inspection details and complete the Phase 00 build log. Then Project Planning should create the dedicated Phase 01 handover/brief for Ubuntu Server.
+**Phase 00 and Phase 01 are complete** (2026-09-08). This file describes the original bootstrap and
+is retained as history; it is not a current task list.
+
+Governance has since changed: phases are self-contained and sequential, and each phase writes its own
+brief before implementation. See [ADR-017](docs/decisions/ADR-017-self-contained-sequential-phases.md)
+and `PROJECT.md` §13. For current state, read `docs/reference/project-state.md`.

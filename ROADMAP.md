@@ -50,6 +50,15 @@ Learn and document the Linux concepts required to operate Home Lab safely: files
 
 Establish SSH keys, Tailscale, and VS Code Remote SSH so the server can run headless and be safely administered from the MacBook.
 
+**Inherited from Phase 01:**
+
+- Closes Phase 01's principal open risk: **SSH currently accepts password authentication.**
+- **Do not cite Tailscale's Ubuntu documentation.** It still references Noble 24.04 and has no 26.04
+  page; `tailscale.com/kb/1187/install-ubuntu-2604` returns HTTP 200 but serves a generic index. The
+  `resolute` package repository is the authoritative source — see ADR-014.
+- Supersedes the unsatisfied DHCP-reservation control in ADR-016: Tailscale gives the node a stable
+  identity independent of its LAN address.
+
 ## Phase 04 — Git & GitHub Fundamentals
 
 Use the already-bootstrapped repository to deliberately learn and formalize commits, branches, merges, pull requests, conflict handling, tags/releases, `.gitignore`, and repository hygiene.
@@ -77,6 +86,13 @@ Receive Telegram voice notes, transcribe them, and route the resulting text thro
 ## Phase 10 — Knowledge / Second Brain
 
 Introduce file ingestion/indexing/retrieval while keeping source storage separate from agent intelligence. Begin with a simple RAG-style architecture before comparing more complex retrieval systems.
+
+**Inherited from Phase 01 — must be addressed, not inherited silently:**
+
+**ADR-015 must be explicitly revisited before this phase stores real data.** The reference node has
+no encryption at rest, accepted on the premise that it holds nothing sensitive. A Second Brain breaks
+that premise. Converting an unencrypted root filesystem afterwards generally means a reinstall, so
+the decision belongs at the start of this phase, not the end.
 
 ## Phase 11 — Agent Framework Experiments
 
@@ -115,4 +131,6 @@ A later phase may be split into sub-phases when scope becomes too large. Example
 10.3-hybrid-search
 ```
 
-Changes that materially affect multiple phases should be returned to Project Planning and captured through ADRs where appropriate.
+Changes that materially affect multiple phases are **captured as ADRs and carried into the next
+phase's brief** (ADR-017). There is no separate planning context to return them to; the phase that
+discovers the change is the phase that records it.

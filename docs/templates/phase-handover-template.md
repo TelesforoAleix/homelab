@@ -58,7 +58,7 @@ Anything deliberately deferred.
 
 ## Recommended roadmap changes
 
-Cross-phase consequences for Project Planning.
+Cross-phase consequences. Action them directly into `ROADMAP.md`/`PROJECT.md` — there is no planning context to receive them (ADR-017).
 
 ## Definition of Done
 
@@ -75,4 +75,5 @@ Cross-phase consequences for Project Planning.
 - [ ] Tested versions recorded
 - [ ] Critical AI-generated components understood
 - [ ] `main` known-working
-- [ ] Handover returned to Project Planning
+- [ ] System reports no failed units / not degraded
+- [ ] Handover written into `docs/handovers/`, stating what the next phase inherits

@@ -1,4 +1,19 @@
-# Project Planning Handover
+# Project Planning Handover — HISTORICAL
+
+> **Superseded 2026-09-08 by [ADR-017](../decisions/ADR-017-self-contained-sequential-phases.md).**
+> The separate Project Planning context has been retired; phases are now self-contained and
+> sequential, and the repository is the sole governance authority.
+>
+> This file is **retained unchanged below** as project history. It describes the model under which
+> Phase 00 and Phase 01 were actually run, including the ratification of the Phase 01 brief. Per
+> `PROJECT.md` §11, project history is not rewritten to look linear.
+>
+> Much of its standing content — the audience definition, documentation model, hardware tiers,
+> budget model and completion standard — remains valid and is reflected in `PROJECT.md`,
+> `docs/standards/` and `docs/reference/`. Where this file and `PROJECT.md` disagree about
+> *governance*, `PROJECT.md` and ADR-017 win.
+
+---
 
 ## Role of Project Planning
 
