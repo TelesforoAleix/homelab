@@ -21,8 +21,9 @@ network:
   renderer: networkd
   wifis:
     # Replace with the real interface name from `ip -br address`
-    # (predictable names look like wlp2s0, not wlan0).
-    wlp2s0:
+    # (predictable names look like wlp1s0, not wlan0).
+    # The reference build's M700 uses: wlp1s0
+    wlp1s0:
       dhcp4: true
       dhcp6: false
       # Prefer a DHCP *reservation* on the router over a static address here:

@@ -16,6 +16,9 @@ Verified in **Phase 01 Part A** on 2026-09-08 from Windows Task Manager, before 
 | Storage capacity | 256 GB nominal / ~239 GiB usable | Confirmed — Part A |
 | Wi-Fi | **Intel Dual Band Wireless-AC 8260**, 802.11ac | **Resolved** — Part A |
 | Bluetooth | Present | Confirmed |
+| Wireless interface name | `wlp1s0` | Confirmed from installed system |
+| Ethernet interface | `eno1` — present, DOWN (unused, ADR-016) | Confirmed from installed system |
+| BIOS/firmware | LENOVO **FWKT63A**, release date **2016-12-08** | Confirmed from installer probe |
 | Purchase price | 700 DKK | Confirmed |
 | Target OS | Ubuntu Server 26.04.1 LTS | **Planned — not installed** |
 | Primary role | Orchestration / infrastructure | Accepted decision (ADR-002) |
@@ -109,6 +112,21 @@ Practical notes for when an upgrade does happen:
 The drive is sold as 256 GB but reports roughly 239 GB in Windows. Nothing is wrong or missing: the
 manufacturer counts decimal gigabytes (10⁹ bytes) while the operating system reports binary
 gibibytes (2³⁰ bytes). 256 × 10⁹ bytes ≈ 238.4 GiB. Linux will report the same figure.
+
+## Firmware age — open security observation
+
+The node's BIOS is **FWKT63A, dated 2016-12-08**, and has never been updated. It therefore predates
+the January 2018 Spectre/Meltdown disclosures and carries no corrected CPU microcode.
+
+Ubuntu can mitigate this in software: the `intel-microcode` package loads updated microcode at boot,
+independently of the firmware. Whether it is installed must be confirmed from the running system.
+
+This is recorded as a **Phase 13 hardening item**, not a Phase 01 task. Two options exist and both
+carry trade-offs worth weighing deliberately rather than now:
+
+1. Rely on `intel-microcode` — no risk to the machine, handles the CPU-level issues.
+2. Flash a newer Lenovo BIOS — addresses firmware-level fixes too, but a failed flash on the
+   project's only node is a genuinely bad outcome. Not to be done casually.
 
 ## Local AI
 

@@ -404,7 +404,8 @@ The real file must never be committed.
 
 **Stop Wi-Fi power saving from dropping the link.** Wireless drivers idle the radio to save power,
 which on a server shows up as a machine that becomes unreachable when nobody is using it. Replace
-`wlp2s0` with your interface name from `ip -br address`:
+`wlp1s0` below with your own interface name from `ip -br address` if it differs — the reference
+build's M700 reports `wlp1s0`:
 
 ```bash
 sudo tee /etc/systemd/system/wifi-powersave-off.service >/dev/null <<'UNIT'
@@ -415,7 +416,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/sbin/iw dev wlp2s0 set power_save off
+ExecStart=/usr/sbin/iw dev wlp1s0 set power_save off
 RemainAfterExit=yes
 
 [Install]
@@ -423,7 +424,7 @@ WantedBy=multi-user.target
 UNIT
 
 sudo systemctl enable --now wifi-powersave-off.service
-iw dev wlp2s0 get power_save     # expect: Power save: off
+iw dev wlp1s0 get power_save     # expect: Power save: off
 ```
 
 **Give the server a stable address.** On the router's admin page, add a DHCP reservation binding the
