@@ -1,0 +1,708 @@
+## Home Lab — Project Handover
+
+### Project purpose
+
+The **Home Lab** is a learning-first infrastructure project for experimenting with AI systems, agents, orchestration, model access, RAG/knowledge systems, automation, and eventually local models.
+
+The objective is **not simply to install an existing AI agent**. The goal is to understand the different layers of an AI system by building and evolving them deliberately.
+
+Long term, the Home Lab should become a small, self-hosted AI platform where different interfaces can send requests into the system, different AI models/agents can process them, and different tools/services can execute work.
+
+It should also become a **public portfolio project** with a repository that documents the architecture, decisions, setup, code, experiments, and enough instructions for someone else to reproduce it.
+
+---
+
+# 1. Hardware
+
+Selected machine:
+
+**Lenovo ThinkCentre M700 Tiny**
+
+Current known configuration:
+
+* Intel **Core i5-6600T**
+* 4 cores / 4 threads
+* **8GB DDR4**
+* **256GB SSD**
+* built-in **Wi-Fi**
+* Bluetooth
+* Tiny form factor
+* purchased for **700 DKK**
+
+The machine is deliberately inexpensive because the first version is primarily an **orchestration/server machine**, not an AI inference workstation.
+
+The existing Windows installation is temporary.
+
+### RAM
+
+The M700 has two SO-DIMM slots and supports up to **32GB DDR4**.
+
+The current 8GB configuration is not yet known to be:
+
+* 1×8GB, or
+* 2×4GB.
+
+This should be checked in Windows Task Manager before wiping Windows.
+
+If it is **1×8GB**, likely upgrade paths are:
+
+```text
+8 + 8 = 16GB
+```
+
+or, if a cheap used 16GB SO-DIMM appears:
+
+```text
+8 + 16 = 24GB
+```
+
+32GB is not currently necessary.
+
+There is an active plan to look for inexpensive used DDR4 SO-DIMM RAM on DBA, prioritizing good-value 16GB sticks rather than overpaying.
+
+### Future hardware philosophy
+
+Do not over-upgrade this machine.
+
+Its role is:
+
+> orchestration + infrastructure + agents + storage/services
+
+not:
+
+> local LLM inference.
+
+If CUDA/local models become a major part of the project, the preferred architecture is eventually to add a **second GPU node**, rather than trying to turn the M700 Tiny into a GPU workstation.
+
+Possible future architecture:
+
+```text
+M700
+AI orchestration / control node
+        │
+        ├── cloud models
+        ├── services
+        ├── storage
+        └── future CUDA GPU node
+```
+
+---
+
+# 2. Operating system
+
+Preferred OS:
+
+**Ubuntu Server LTS**
+
+Not Ubuntu Desktop.
+
+The M700 should eventually operate completely **headless**.
+
+Initial installation process:
+
+1. Boot existing Windows.
+2. Verify hardware:
+
+   * CPU
+   * RAM
+   * RAM slots used
+   * SSD
+   * Wi-Fi
+   * Bluetooth
+   * USB
+   * DisplayPort
+   * fan/noise
+3. Create Ubuntu Server installation USB from MacBook.
+4. Completely wipe the existing Windows installation.
+5. Install Ubuntu Server.
+6. Enable OpenSSH during installation.
+7. Once remote access works, disconnect the monitor/keyboard.
+
+Windows has little value for this project.
+
+---
+
+# 3. Development workflow
+
+The M700 is the **execution environment**, not the primary computer used for editing code.
+
+The MacBook Pro remains the main development interface.
+
+Preferred architecture:
+
+```text
+MacBook Pro
+    │
+    │ VS Code Remote SSH / Terminal
+    ▼
+M700
+Ubuntu Server
+    │
+    ├── source code
+    ├── Git
+    ├── Docker
+    ├── agents
+    ├── databases
+    └── services
+```
+
+The code can physically live on the M700 while being edited comfortably from the MacBook.
+
+Primary remote-access tools:
+
+* SSH
+* SSH keys
+* **Tailscale**
+* VS Code Remote SSH
+
+Tailscale should make the M700 securely accessible from outside the home network without directly exposing SSH to the public internet.
+
+---
+
+# 4. Git and public repository
+
+Git is an important part of the project.
+
+The Home Lab should eventually have a **public repository**, both as:
+
+1. version control for the actual system;
+2. a portfolio artifact;
+3. documentation for others who want to reproduce it.
+
+Potential structure:
+
+```text
+homelab/
+│
+├── README.md
+├── docs/
+│   ├── architecture/
+│   ├── decisions/
+│   └── experiments/
+│
+├── infrastructure/
+├── docker/
+├── scripts/
+├── telegram/
+├── agents/
+├── services/
+├── knowledge/
+└── examples/
+```
+
+The repository should progressively explain:
+
+* what was built;
+* why each technology was selected;
+* alternative approaches considered;
+* architecture diagrams;
+* setup instructions;
+* security decisions;
+* experiments;
+* failures;
+* benchmarks where relevant.
+
+A long-term objective is **reproducibility**:
+
+> If the M700 dies, another machine should eventually be capable of replacing it with minimal manual reconfiguration.
+
+This introduces infrastructure-as-code as a later learning area.
+
+---
+
+# 5. Base infrastructure
+
+Initial software foundation:
+
+```text
+Ubuntu Server
+│
+├── Git
+├── Docker
+├── Docker Compose
+├── Python
+├── Node.js
+├── SSH
+├── Tailscale
+├── tmux
+└── basic Linux tooling
+```
+
+Services should increasingly be containerized rather than installed directly into Ubuntu.
+
+Potential services later include:
+
+```text
+Docker
+├── Telegram service
+├── PostgreSQL
+├── Redis
+├── n8n
+├── knowledge/indexing service
+├── APIs
+├── monitoring
+└── custom applications
+```
+
+Docker itself is an explicit learning objective.
+
+---
+
+# 6. AI model access
+
+The system should remain **model-agnostic**.
+
+Initial models/tools:
+
+### Claude
+
+Use **Claude Code CLI**.
+
+Authentication should initially use the existing Claude subscription rather than API billing where supported by the official CLI.
+
+### OpenAI
+
+Use **Codex CLI**.
+
+Authentication should initially use the existing ChatGPT subscription where supported by the official CLI.
+
+Therefore the first version does **not need API credits simply to experiment with Claude Code and Codex**.
+
+Conceptually:
+
+```text
+Router
+├── Claude Code CLI
+├── Codex CLI
+└── future executors
+```
+
+Later, proper APIs should intentionally be introduced as another learning stage.
+
+This allows comparison between:
+
+* subscription-backed CLI tools;
+* direct API integrations;
+* local models;
+* hosted third-party models;
+* model gateways.
+
+The architecture should avoid hard-coding the entire system around one provider.
+
+---
+
+# 7. Telegram interface
+
+Telegram is currently the preferred first remote interface.
+
+A dedicated telephone number is **not required**.
+
+Use a **Telegram Bot**.
+
+Initial architecture:
+
+```text
+Telegram
+   │
+   ▼
+Telegram Bot
+   │
+   ▼
+Router
+   │
+   ├── Claude executor
+   ├── Codex executor
+   ├── shell/tools
+   ├── knowledge search
+   └── other services
+```
+
+The first implementation should be deliberately simple.
+
+Possible early commands:
+
+```text
+/status
+/uptime
+/disk
+/docker
+```
+
+Then progress toward:
+
+```text
+/claude ...
+/codex ...
+```
+
+Eventually natural-language routing can replace explicit commands.
+
+Example future request:
+
+> Check why the API container is crashing, fix it and explain what happened.
+
+The router should determine which executor/tool should handle it.
+
+---
+
+# 8. Voice
+
+Telegram voice messages should eventually be supported.
+
+Initial pipeline:
+
+```text
+Telegram voice note
+        │
+        ▼
+audio downloaded by M700
+        │
+        ▼
+speech-to-text
+        │
+        ▼
+transcript
+        │
+        ▼
+router
+        │
+        ▼
+agent / tool
+```
+
+Initially, transcription should probably use a cloud speech-to-text service.
+
+The M700 is intended to **orchestrate**, not perform expensive AI computation.
+
+Local speech-to-text can be explored later.
+
+---
+
+# 9. Agent architecture
+
+There has been an important design decision:
+
+**Do not begin by installing a giant autonomous agent framework and hiding all the infrastructure underneath it.**
+
+Because this is a learning project, first build a simple version of the essential layers:
+
+```text
+interface
+    ↓
+router
+    ↓
+executor
+    ↓
+tool/system
+```
+
+For example:
+
+```text
+Telegram
+↓
+Python router
+↓
+Claude CLI
+↓
+output
+↓
+Telegram
+```
+
+Once this works, introduce an existing agent framework and compare:
+
+> What does the framework replace?
+
+> What abstractions does it provide?
+
+> What problems does it solve?
+
+> What complexity does it introduce?
+
+This should provide much stronger understanding than starting with a black-box agent framework.
+
+The long-term system is better understood as an **agent platform** rather than one single agent.
+
+---
+
+# 10. Knowledge system / “second brain”
+
+A later component should provide agents with access to personal/project knowledge.
+
+Potential sources:
+
+* PDFs
+* notes
+* code
+* documents
+* project files
+* datasets
+* other user-owned information.
+
+Conceptual architecture:
+
+```text
+Files
+  │
+  ▼
+Indexer
+  │
+  ▼
+Knowledge layer
+  │
+  ▼
+Agent retrieval
+```
+
+Initially this will likely resemble a RAG architecture.
+
+Later experiments can include:
+
+* different embedding models;
+* vector databases;
+* hybrid search;
+* reranking;
+* metadata filters;
+* graph-based retrieval;
+* KAG/GraphRAG-style systems;
+* alternative memory architectures.
+
+The important design principle is:
+
+> **storage and intelligence should be separated.**
+
+Agents query knowledge; they do not own the underlying files.
+
+---
+
+# 11. File access
+
+The M700 may eventually host files that should also be accessible from the MacBook.
+
+Possible approaches include:
+
+* SSH/SFTP;
+* mounted remote directories;
+* syncing selected folders;
+* network file sharing;
+* Tailscale-based access;
+* later NAS/storage architecture.
+
+The M700 can therefore become part server, part personal knowledge infrastructure.
+
+---
+
+# 12. Security model
+
+The project will eventually give AI systems significant execution capability, so security is part of the learning project rather than something to bolt on at the end.
+
+Important principle:
+
+**Do not make the Telegram bot itself root.**
+
+Prefer separation such as:
+
+```text
+Telegram
+   │
+bot service
+   │
+router
+   │
+controlled executor
+   │
+privileged operations
+```
+
+Potentially destructive actions should initially require explicit confirmation:
+
+* `sudo`
+* deleting files;
+* removing packages;
+* shutdown/reboot;
+* firewall changes;
+* Docker pruning;
+* destructive database actions.
+
+Other areas to learn:
+
+* Linux permissions;
+* service users;
+* SSH keys;
+* environment variables;
+* secret management;
+* API key management;
+* logging;
+* audit trails;
+* container isolation;
+* network segmentation;
+* backups.
+
+The server should eventually be treated as replaceable infrastructure.
+
+---
+
+# 13. Longer-term experimentation
+
+The Home Lab is intentionally open-ended.
+
+Areas to explore over time include:
+
+### Models
+
+* OpenAI
+* Anthropic
+* other hosted providers
+* local models
+* different LLM sizes
+* multimodal models
+
+### Model gateways
+
+Experiment with routing between multiple model providers and eventually potentially use/model a unified gateway.
+
+### Agent architectures
+
+* single agent;
+* router + specialists;
+* tool-using agents;
+* multi-agent systems;
+* autonomous workflows;
+* human-in-the-loop systems.
+
+### Knowledge architectures
+
+* conventional RAG;
+* hybrid retrieval;
+* graph-based retrieval;
+* structured knowledge;
+* long-term memory systems.
+
+### Infrastructure
+
+* Docker
+* queues
+* databases
+* observability
+* APIs
+* networking
+* reverse proxies
+* authentication
+* CI/CD
+* infrastructure-as-code.
+
+### Local AI
+
+Not a priority for the M700 itself.
+
+Later, potentially add an NVIDIA/CUDA node and experiment with:
+
+* PyTorch CUDA;
+* quantization;
+* Ollama;
+* llama.cpp;
+* Hugging Face;
+* GGUF;
+* bitsandbytes;
+* local inference;
+* fine-tuning / QLoRA;
+* GPU serving.
+
+---
+
+# 14. Development philosophy
+
+The project should optimize for **learning rather than fastest possible implementation**.
+
+The objective is not:
+
+> Get a personal AI assistant running as quickly as possible.
+
+It is:
+
+> Understand how modern AI systems are assembled, where the abstractions are, and how the components interact.
+
+Therefore:
+
+* use AI heavily to help write/build the system;
+* but understand what the AI is creating;
+* introduce abstractions progressively;
+* build simple implementations before sophisticated frameworks;
+* document architectural decisions;
+* intentionally replace components to understand trade-offs;
+* experiment rather than prematurely optimize for production.
+
+---
+
+# 15. Suggested progression
+
+### Phase 0 — Hardware
+
+M700, inspect RAM, hardware testing.
+
+### Phase 1 — Linux
+
+Ubuntu Server, users, permissions, SSH, networking.
+
+### Phase 2 — Remote development
+
+Tailscale, SSH keys, VS Code Remote.
+
+### Phase 3 — Infrastructure
+
+Git, Docker, Docker Compose.
+
+### Phase 4 — AI CLI
+
+Claude Code + Codex.
+
+### Phase 5 — Telegram
+
+Basic bot and deterministic commands.
+
+### Phase 6 — Router
+
+Multiple executors/models.
+
+### Phase 7 — Voice
+
+Speech-to-text → router.
+
+### Phase 8 — Knowledge
+
+Files + indexing + retrieval.
+
+### Phase 9 — Agent framework
+
+Compare existing frameworks with the manually built infrastructure.
+
+### Phase 10 — Automation
+
+Scheduled/event-triggered workflows.
+
+### Phase 11 — Security
+
+Permissions, secrets, sandboxing, auditing.
+
+### Phase 12 — Reproducibility
+
+Infrastructure-as-code + automated deployment.
+
+### Phase 13 — Local AI
+
+Add a separate CUDA node when/if justified.
+
+---
+
+## Core project positioning
+
+A concise description of the project:
+
+> **Home Lab is a self-hosted AI systems laboratory built on inexpensive hardware. The project explores how interfaces, agents, model providers, tool execution, knowledge retrieval, automation and infrastructure fit together. Rather than optimizing for a single finished assistant, the goal is to progressively build and document an extensible AI platform, experiment with different architectures and providers, and make the system reproducible through a public repository.**
+
+And an even shorter portfolio framing:
+
+> **Building a reproducible self-hosted AI lab for experimenting with agents, model routing, RAG, automation and AI infrastructure.**
+
+I can use this as the working handover whenever we continue the Home Lab project. I can’t directly force a permanent account-memory update from this chat; if you want this reflected in your persistent Memory summary, that can be reviewed/edited under **Settings → Personalization → Memory summary → Manage**.
