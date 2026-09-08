@@ -440,6 +440,52 @@ uses `wlp1s0`.
 > should be *copied* from the repository — it is reproducible, reviewable, and immune to how a
 > terminal handles a paste. See the build log for the full story.
 
+**Stop boot waiting two minutes for an unplugged Ethernet port.** This one is easy to miss, because
+the machine works perfectly well despite it. Check:
+
+```bash
+systemctl is-system-running
+```
+
+If that says `degraded` rather than `running`, look at what failed:
+
+```bash
+systemctl --failed
+networkctl
+```
+
+On the reference build, `systemd-networkd-wait-online.service` had failed. The cause is visible in
+`networkctl`: the unused Ethernet port sits at `no-carrier / configuring`, and `wait-online` waits
+for *every* managed link before releasing `network-online.target`. With no cable it waits the full
+120-second timeout, then fails — on every single boot.
+
+The consequences are worse than the cosmetic `degraded` flag suggests: two minutes added to every
+startup, and anything ordered `After=network-online.target` — including the Wi-Fi power-save unit
+above — starts two minutes late.
+
+The fix marks that interface optional. Copy the file from the repository:
+
+```bash
+scp config/netplan/99-*.yaml <user>@<server-ip>:
+```
+
+Then on the server:
+
+```bash
+sudo mv 99-eno1-optional.yaml /etc/netplan/
+sudo chmod 600 /etc/netplan/99-eno1-optional.yaml
+sudo netplan generate
+sudo reboot
+```
+
+After it comes back, `systemctl is-system-running` should report `running`. Change `eno1` in the
+file if your Ethernet interface is named differently.
+
+> Note this is a *second* netplan file rather than an edit to the installer's. netplan merges every
+> file in `/etc/netplan/` in filename order, so a separate file keeps this non-secret configuration
+> in version control while the installer's file — which holds the Wi-Fi passphrase — stays untouched
+> and uncommitted.
+
 **Give the server a stable address.** On the router's admin page, add a DHCP reservation binding the
 server's MAC address (from `ip -br link`) to a fixed IP. Doing it at the router rather than as a
 static address on the server keeps one source of truth for addressing, and avoids the classic
