@@ -91,8 +91,10 @@ See `docs/decisions/` for full ADRs. Current direction includes:
    `docs/reference/hardware.md`.
 3. ~~Complete the remaining Part A physical checks.~~ **Done 2026-09-08 — Phase 00 closed.**
 4. ~~Parts B and C — image verification and USB creation.~~ **Installation USB reported ready.**
-5. **Next:** Part D firmware — enable CPU virtualization, set `After Power Loss -> Power On`,
-   preserve UEFI boot. Then Part E (install) and Part F (first boot and validation).
+5. ~~Part D firmware.~~ **Reported complete 2026-09-08** — CPU virtualization enabled,
+   `After Power Loss -> Power On` set, UEFI boot preserved. To be confirmed from live output
+   (`lscpu | grep -i virtual`) once Ubuntu is installed, per the project's truthfulness rule.
+6. **Next:** Part E (installation) and Part F (first boot, state capture, power-loss validation).
 6. Record real output into the guide, `hardware.md`, `software-stack.md` and the build log.
 7. Phase 01 is not complete until the unattended AC power-loss recovery test passes on all four
    proof points (boot, network, SSH, remote reachability).
