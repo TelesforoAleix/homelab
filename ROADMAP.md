@@ -8,7 +8,18 @@ Multiple `00-*` guides may exist for pre-development documentation.
 
 Purpose: establish project scope, hardware rationale, governance, repository structure, budget tracking, architecture baseline, and documentation standards before implementation.
 
-Status: **In progress**
+Status: **Complete** (2026-09-08). Documentation and governance were finished at bootstrap; the
+remaining hardware-verification checks were executed as **Phase 01 Part A**, as ratified by Project
+Planning (amendment 2). No separate hardware implementation phase was required.
+
+Closure condition: when the Part A checklist in
+[`guide/01-ubuntu-server/`](guide/01-ubuntu-server/README.md) is recorded in
+`docs/reference/hardware.md`, the Phase 00 prerequisite is **satisfied** and this phase closes.
+(Ratified by Project Planning, 2026-09-08, amendment 2.)
+
+**Closed 2026-09-08.** Part A resolved the RAM layout (1 × 8 GB, one slot free) and the wireless
+adapter (Intel Wireless-AC 8260), confirmed storage and CPU, and validated USB ports, video output
+and fan noise. All recorded in `docs/reference/hardware.md`.
 
 Planned/pre-development guides may include:
 
@@ -21,6 +32,15 @@ Planned/pre-development guides may include:
 ## Phase 01 — Ubuntu Server
 
 Install Ubuntu Server LTS on the reference node, establish a reproducible base installation, and verify the resulting server state.
+
+Status: **Complete** (2026-09-08). Ubuntu Server 26.04.1 LTS installed and validated, including the
+unattended AC power-loss recovery test. Handover returned to Project Planning.
+
+Absorbs the remaining Phase 00 hardware validation as Part A.
+
+- Brief: [`docs/handovers/01-ubuntu-server.md`](docs/handovers/01-ubuntu-server.md) (Ratified)
+- Guide: [`guide/01-ubuntu-server/`](guide/01-ubuntu-server/README.md)
+- Decisions: ADR-014 (release), ADR-015 (disk layout), ADR-016 (network link) — all Accepted
 
 ## Phase 02 — Linux Fundamentals
 

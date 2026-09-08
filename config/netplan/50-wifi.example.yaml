@@ -1,0 +1,36 @@
+# Example netplan configuration for the Home Lab reference node.
+#
+# This is a REDACTED EXAMPLE. The real file must NEVER be committed to this
+# repository: netplan stores the Wi-Fi passphrase in cleartext. See ADR-016.
+#
+# On the reference build (Ubuntu 26.04.1) the installer writes it to
+#     /etc/netplan/00-installer-config.yaml
+# already at mode 0600. Verify rather than assume:
+#     ls -l /etc/netplan/
+#     sudo chmod 600 /etc/netplan/*.yaml    # only if too permissive
+#
+# Apply changes with:
+#     sudo netplan try     # reverts automatically if it breaks connectivity
+#     sudo netplan apply
+#
+# Note: Ubuntu Server's default renderer is systemd-networkd, which has no
+# native Wi-Fi support. The wpasupplicant package must be installed for a
+# wireless link to come up at all.
+
+network:
+  version: 2
+  renderer: networkd
+  wifis:
+    # Replace with the real interface name from `ip -br address`
+    # (predictable names look like wlp1s0, not wlan0).
+    # The reference build's M700 uses: wlp1s0
+    wlp1s0:
+      dhcp4: true
+      dhcp6: false
+      # Prefer a DHCP *reservation* on the router over a static address here:
+      # the router stays the single source of truth for addressing.
+      access-points:
+        "YOUR_SSID_HERE":
+          auth:
+            key-management: psk
+            password: "REDACTED_DO_NOT_COMMIT_THE_REAL_PASSPHRASE"

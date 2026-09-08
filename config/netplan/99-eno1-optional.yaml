@@ -1,0 +1,39 @@
+# Mark the unused Ethernet interface as optional at boot.
+#
+# The problem this solves
+# -----------------------
+# systemd-networkd-wait-online waits for every *managed* link to come online
+# before releasing network-online.target. The reference node's Ethernet port
+# (eno1) has no cable, so it sits in "no-carrier / configuring" forever, and
+# wait-online times out after 120 seconds and fails.
+#
+# Symptoms:
+#   - `systemctl is-system-running` reports "degraded" on every boot
+#   - `systemd-networkd-wait-online.service` appears in `systemctl --failed`
+#   - ~2 minutes added to every boot
+#   - anything ordered After=network-online.target starts ~2 minutes late,
+#     including this project's wifi-powersave-off.service
+#
+# `optional: true` sets RequiredForOnline=no for this link, so boot no longer
+# waits for it. The port still works normally if a cable is ever connected.
+#
+# This file contains NO secrets, which is why it can live in the repository —
+# unlike the installer's netplan file, which holds the Wi-Fi passphrase.
+#
+# Install:
+#   sudo mv 99-eno1-optional.yaml /etc/netplan/
+#   sudo chown root:root /etc/netplan/99-eno1-optional.yaml
+#   sudo chmod 600 /etc/netplan/99-eno1-optional.yaml
+#   sudo netplan generate
+#   sudo reboot
+#
+# Verify afterwards:
+#   systemctl is-system-running     # expect: running
+#   networkctl                      # eno1 should no longer block
+
+network:
+  version: 2
+  ethernets:
+    eno1:
+      dhcp4: true
+      optional: true
