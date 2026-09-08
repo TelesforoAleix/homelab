@@ -4,8 +4,12 @@ This file records the actual tested stack as phases are completed. Do not mark p
 
 | Component | State | Tested version | Hard requirement? | Notes |
 |---|---|---|---|---|
-| Ubuntu Server LTS | Planned | — | **Requires:** Ubuntu Server LTS in standard support. Exact point release **not** required. | Phase 01. **Tested with (reference build):** 26.04.1 LTS, ISO/checksum pinned in ADR-014 for reproducibility. Record the real version from `scripts/server/verify-install.sh` once installed. |
-| OpenSSH | Planned | — | Required for target workflow | Installed during Phase 01; key-only auth and hardening deferred to Phase 03 |
+| Ubuntu Server LTS | **Active** | 26.04.1 LTS (Resolute Raccoon) | **Requires:** Ubuntu Server LTS in standard support. Exact point release **not** required. | Installed 2026-09-08. ISO/checksum pinned in ADR-014 for reproducibility, not as a constraint. |
+| Linux kernel | **Active** | 7.0.0-31-generic | Ships with the release | x86_64 |
+| systemd | **Active** | 259 | Ships with the release | Socket activation used for SSH |
+| intel-microcode | **Active** | 3.20260210.1ubuntu2 | No | Mitigates the 2016-era firmware; see `hardware.md` |
+| unattended-upgrades | **Active** | — | No | Enabled; `apt-daily-upgrade.timer` confirmed scheduled |
+| OpenSSH server | **Active** | OpenSSH_10.2p1 Ubuntu-2ubuntu3.6 (OpenSSL 3.5.5) | Required for target workflow | Installed Phase 01 via socket activation (`ssh.socket` enabled). **Password auth still on** — key-only auth and hardening are Phase 03. |
 | Git | Planned | — | Yes for repository workflow | Fundamentals in Phase 04 |
 | Tailscale | Planned | — | Chosen remote-access approach | Phase 03; `resolute` repository confirmed available 2026-09-08 |
 | VS Code Remote SSH | Planned | — | Development workflow | Phase 03 |
@@ -16,8 +20,8 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | Claude Code CLI | Planned | — | Initial AI tool | Phase 06 |
 | OpenAI Codex CLI | Planned | — | Initial AI tool | Phase 06 |
 | Telegram Bot | Planned | — | First remote interface | Phase 07 |
-| netplan | Planned | — | Ships with Ubuntu Server | Declares the Wi-Fi link (ADR-016) |
-| wpasupplicant | Planned | — | Required for Wi-Fi under `systemd-networkd` | Without it the networkd renderer cannot drive a wireless link |
+| netplan | **Active** | 1.2-1ubuntu5 | Ships with Ubuntu Server | Declares the Wi-Fi link (ADR-016). Config at `/etc/netplan/00-installer-config.yaml`, mode `0600`. |
+| wpasupplicant | **Active** | 2:2.11-0ubuntu5 | Required for Wi-Fi under `systemd-networkd` | Confirmed active and enabled; without it the networkd renderer cannot drive a wireless link |
 
 ## Version rule
 

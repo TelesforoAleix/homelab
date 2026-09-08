@@ -11,7 +11,8 @@ Verified in **Phase 01 Part A** on 2026-09-08 from Windows Task Manager, before 
 | CPU cores/threads | 4 / 4 | Confirmed — Part A |
 | CPU virtualization | VT-x, VT-d and EPT supported by the CPU; **currently disabled in firmware** | To enable in Phase 01 Part D |
 | RAM | 8 GB DDR4 SO-DIMM @ 2133 MHz | Confirmed — Part A |
-| RAM module layout | **1 × 8 GB — 1 of 2 slots occupied** | **Resolved** — Part A |
+| RAM module layout | **1 × 8 GB in ChannelA-DIMM0; ChannelB-DIMM0 empty** | **Resolved** — confirmed by `dmidecode` |
+| RAM module part | Samsung `M471A1K43BB0-CPB`, DDR4-2133 | Confirmed by `dmidecode` |
 | Storage | Samsung `MZ7TY256HDHP-000L7`, SATA SSD | Confirmed — Part A |
 | Storage capacity | 256 GB nominal / ~239 GiB usable | Confirmed — Part A |
 | Wi-Fi | **Intel Dual Band Wireless-AC 8260**, 802.11ac | **Resolved** — Part A |
@@ -98,6 +99,10 @@ KVM/QEMU virtual machines.
 1.5 GB minimum, and the upgrade should be driven by observed pressure from real services rather than
 by reaching a round number.
 
+The installed module is a **Samsung `M471A1K43BB0-CPB`** (8 GB DDR4-2133). Sourcing an identical
+part for the empty ChannelB slot would give a matched pair, which is the least surprising upgrade —
+though matching is a convenience, not a requirement.
+
 Practical notes for when an upgrade does happen:
 
 - The CPU supports DDR4-2133 as its maximum speed, so a faster module will simply run at 2133 MHz.
@@ -112,6 +117,26 @@ Practical notes for when an upgrade does happen:
 The drive is sold as 256 GB but reports roughly 239 GB in Windows. Nothing is wrong or missing: the
 manufacturer counts decimal gigabytes (10⁹ bytes) while the operating system reports binary
 gibibytes (2³⁰ bytes). 256 × 10⁹ bytes ≈ 238.4 GiB. Linux will report the same figure.
+
+## Wireless link — observed characteristics
+
+Measured on the running system, 2026-09-08:
+
+| Property | Value |
+|---|---|
+| Band | **2.4 GHz** (2412 MHz, channel 1) |
+| Rate | rx 117 Mbit/s / tx 144.4 Mbit/s (802.11n rates) |
+| Signal | −55 dBm (good) |
+
+The Intel AC 8260 is a dual-band 802.11ac adapter, but the link came up on **2.4 GHz using 802.11n**,
+not 5 GHz/802.11ac. Signal quality is good and throughput is far beyond anything this node's
+workload needs, so this is **not a problem to fix** — but it is worth knowing:
+
+- 2.4 GHz is more congested, and channel 1 is among the busiest.
+- 5 GHz would offer higher throughput and less interference, at shorter range.
+
+If the link ever proves unreliable — the risk ADR-016 actually cares about — the band is the first
+thing to examine, before deeper causes.
 
 ## Firmware age — open security observation
 

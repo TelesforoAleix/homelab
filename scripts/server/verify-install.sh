@@ -57,6 +57,8 @@ block "$(
     "$(lscpu 2>/dev/null | awk -F': +' '/^Core\(s\) per socket/{print $2}')" \
     "$(nproc)"
   printf 'Memory total : %s\n' "$(free -h | awk '/^Mem:/{print $2}')"
+  printf 'Swap         : %s\n' "$(free -h | awk '/^Swap:/{print $2}')"
+  printf 'Swap devices : %s\n' "$(swapon --show=NAME,SIZE,TYPE --noheadings 2>/dev/null | tr '\n' ' ')"
 )"
 
 printf '\n**Memory module layout** — this closes the open Phase 00 unknown (1x8GB vs 2x4GB):\n\n'
@@ -120,8 +122,15 @@ if [ -n "$LOOSE" ]; then
 fi
 
 section "5. Services"
+printf 'Note: modern Ubuntu uses **socket activation** for SSH. `ssh.service` showing
+'
+printf '`enabled=disabled` is normal and correct **provided `ssh.socket` is enabled** —
+'
+printf 'that is what starts sshd on demand at boot.
+
+'
 block "$(
-  for unit in ssh wpa_supplicant systemd-networkd unattended-upgrades; do
+  for unit in ssh ssh.socket wpa_supplicant systemd-networkd unattended-upgrades; do
     printf '%-24s active=%-10s enabled=%s\n' "$unit" \
       "$(systemctl is-active "$unit" 2>/dev/null)" \
       "$(systemctl is-enabled "$unit" 2>/dev/null)"
