@@ -426,10 +426,17 @@ Then on the server:
 
 ```bash
 sudo mv wifi-powersave-off.service /etc/systemd/system/
+sudo chown root:root /etc/systemd/system/wifi-powersave-off.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now wifi-powersave-off
 iw dev wlp1s0 get power_save     # expect: Power save: off
 ```
+
+> **Why the `chown`.** `scp` copies the file as *you*, and `sudo mv` preserves that ownership — so
+> without this the unit ends up owned by your user inside `/etc/systemd/system/`. systemd executes
+> unit files **as root**, so one writable by a non-root user is a privilege-escalation path. Harmless
+> if you are the only (sudo-capable) user, genuinely dangerous otherwise. Always `chown root:root`
+> after moving a file into a system directory.
 
 Check the interface name in the unit matches your own from `ip -br address` — the reference build
 uses `wlp1s0`.
@@ -473,10 +480,14 @@ Then on the server:
 
 ```bash
 sudo mv 99-eno1-optional.yaml /etc/netplan/
+sudo chown root:root /etc/netplan/99-eno1-optional.yaml
 sudo chmod 600 /etc/netplan/99-eno1-optional.yaml
 sudo netplan generate
 sudo reboot
 ```
+
+The `chown` matters for the same reason as the systemd unit above: a network configuration file that
+a non-root user can rewrite is a file that lets them influence what root applies at boot.
 
 After it comes back, `systemctl is-system-running` should report `running`. Change `eno1` in the
 file if your Ethernet interface is named differently.

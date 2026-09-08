@@ -22,6 +22,7 @@
 #
 # Install:
 #   sudo mv 99-eno1-optional.yaml /etc/netplan/
+#   sudo chown root:root /etc/netplan/99-eno1-optional.yaml
 #   sudo chmod 600 /etc/netplan/99-eno1-optional.yaml
 #   sudo netplan generate
 #   sudo reboot

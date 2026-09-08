@@ -113,6 +113,15 @@ printf '\nnetplan configuration files — **contents deliberately not printed**,
 printf 'contain the Wi-Fi passphrase in cleartext (ADR-016). Permissions only:\n\n'
 block "$(run ls -l /etc/netplan/)"
 
+printf '\nOwnership check — files in system directories must be owned by root.\n'
+printf '`scp` + `sudo mv` preserves the copying user, which is a privilege-escalation\n'
+printf 'risk for anything root executes or applies:\n\n'
+block "$(
+  find /etc/netplan /etc/systemd/system -maxdepth 1 -type f ! -user root \
+    -printf '%p  owner=%u group=%g  <-- SHOULD BE root:root\n' 2>/dev/null \
+    || echo '(all files owned by root)'
+)"
+
 # Warn loudly if any netplan file is world- or group-readable.
 LOOSE="$(find /etc/netplan -maxdepth 1 -type f \( -perm -g=r -o -perm -o=r \) 2>/dev/null)"
 if [ -n "$LOOSE" ]; then
