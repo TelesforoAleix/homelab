@@ -1,12 +1,13 @@
 # Example netplan configuration for the Home Lab reference node.
 #
-# This is a REDACTED EXAMPLE. The real file lives on the server at
-# /etc/netplan/50-cloud-init.yaml (written by the installer) and must NEVER be
-# committed to this repository: netplan stores the Wi-Fi passphrase in
-# cleartext. See ADR-016.
+# This is a REDACTED EXAMPLE. The real file must NEVER be committed to this
+# repository: netplan stores the Wi-Fi passphrase in cleartext. See ADR-016.
 #
-# On the server the real file must be mode 0600:
-#     sudo chmod 600 /etc/netplan/*.yaml
+# On the reference build (Ubuntu 26.04.1) the installer writes it to
+#     /etc/netplan/00-installer-config.yaml
+# already at mode 0600. Verify rather than assume:
+#     ls -l /etc/netplan/
+#     sudo chmod 600 /etc/netplan/*.yaml    # only if too permissive
 #
 # Apply changes with:
 #     sudo netplan try     # reverts automatically if it breaks connectivity

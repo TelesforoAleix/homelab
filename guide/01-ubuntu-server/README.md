@@ -392,15 +392,24 @@ df -h /          # confirm the root filesystem grew
 This is LVM earning its place already: growing a live root filesystem with no reboot and no
 repartitioning is exactly the flexibility ADR-015 chose it for.
 
-**Protect the Wi-Fi passphrase.** netplan stores it in cleartext:
+**Check the Wi-Fi passphrase is protected.** netplan stores it in cleartext, so the file's
+permissions are the only thing keeping it from every user on the machine:
 
 ```bash
 ls -l /etc/netplan/
+```
+
+On the reference build the installer had already written
+`/etc/netplan/00-installer-config.yaml` as `-rw-------` (mode `0600`), which is correct — owner-only.
+**Verify rather than assume**; if yours is more permissive, tighten it:
+
+```bash
 sudo chmod 600 /etc/netplan/*.yaml
 ```
 
-A redacted example of what this file looks like is kept at `config/netplan/50-wifi.example.yaml`.
-The real file must never be committed.
+A redacted example is kept at `config/netplan/50-wifi.example.yaml`. The real file must never be
+committed. Note that `0600` protects the passphrase from other users on the machine, not from anyone
+holding the disk — the volume is unencrypted by ADR-015, and these two decisions compound.
 
 **Stop Wi-Fi power saving from dropping the link.** Wireless drivers idle the radio to save power.
 On a laptop that is sensible; on an always-on server it shows up as a machine that becomes
