@@ -10,6 +10,8 @@ This project uses this file for meaningful repository-level milestones rather th
 - Project governance and contributor rules.
 - Initial ADR set based on pre-development planning.
 - Guide, build-log, budget, architecture, and handover templates.
+- Phase 01 brief, guide, ADRs (014 release, 015 disk layout, 016 network link), and
+  install/verification scripts. The installation itself has not yet been performed.
 
 ### Changed
 

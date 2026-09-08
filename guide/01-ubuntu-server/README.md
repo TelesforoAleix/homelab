@@ -1,0 +1,418 @@
+# 01 — Ubuntu Server
+
+## Goal
+
+Turn the reference node — a used Lenovo ThinkCentre M700 Tiny still running Windows — into a
+headless Ubuntu Server that starts on its own after a power cut, joins the network over Wi-Fi
+without anyone touching it, and can be reached over SSH from the MacBook.
+
+By the end, the monitor and keyboard come off and never go back on.
+
+## Why this matters
+
+Four ideas do most of the work in this phase.
+
+**A server installation is defined by what it leaves out.** Ubuntu Server ships no desktop, no
+display manager, no browser. On an 8 GB machine that is not a small saving, but the real benefit is
+narrower: fewer installed packages means fewer things listening on the network, fewer things to
+update, and fewer moving parts to reason about when something breaks. Everything you interact with
+will be a command, which is exactly the skill Phase 02 goes on to build.
+
+**LTS is a promise about time, not about features.** Ubuntu publishes a Long Term Support release
+every two years with five years of free security updates. A normal release gets nine months. For a
+machine meant to sit in a corner and stay useful, the support window matters far more than having
+newer package versions, because the alternative to a long support window is reinstalling the
+foundation of your lab every year.
+
+**A checksum catches accidents; a signature catches attackers.** Comparing the SHA256 of a
+downloaded ISO against the published value proves the file you have is the file the project
+documented. It does not prove the file came from Canonical — anyone who could serve you a modified
+ISO could serve a matching checksum alongside it. Verifying the GPG signature on the checksum file
+is what closes that gap. Both are shown below; understanding the difference is the point.
+
+**Headless changes what "secure" means.** Full-disk encryption is normally the obvious choice. On a
+machine with no keyboard attached it is close to the opposite: every boot would stop and wait for a
+passphrase nobody is there to type, so a power cut would take the whole lab offline until someone
+physically visited it. This phase chooses availability over encryption at rest, deliberately and
+with the cost written down. See ADR-015.
+
+## Reference-build choice
+
+| Decision | Choice | Recorded in |
+|---|---|---|
+| Operating system | Ubuntu Server 26.04.1 LTS (amd64) | ADR-014 |
+| Support horizon | Standard support to April 2031 | ADR-014 |
+| Disk layout | Whole disk, guided LVM, **no** full-disk encryption | ADR-015 |
+| Network link | Wi-Fi, configured via netplan | ADR-016 |
+| Remote access | `openssh-server` installed now, hardened in Phase 03 | Phase 01 brief §7 |
+| Windows | Removed entirely | ADR-003 |
+
+The version choice deserves one note. The usual reason to avoid the newest LTS is that third-party
+package repositories take months to publish for a new codename — which would have blocked Tailscale
+in Phase 03 and Docker in Phase 05. Both were checked before committing: Docker publishes a
+`resolute` repository, and Tailscale serves a `resolute` keyring. The risk was measured, not assumed.
+
+## Alternatives
+
+- **Ubuntu 24.04 LTS instead of 26.04.** More mature, and a much larger pool of blog posts and forum
+  answers when something goes wrong — a real advantage while learning. Costs two years of support
+  life. A defensible choice; ADR-014 explains why the longer runway won.
+- **Ethernet instead of Wi-Fi.** Better in every technical respect. Rejected only because no cable
+  reaches the machine's location. If that changes, revisit ADR-016.
+- **Full-disk encryption.** Right for a laptop, wrong for an unattended headless server, unless you
+  add TPM-backed unlock or an initramfs SSH unlock — both worth revisiting in Phase 13, once remote
+  access actually exists.
+- **Automated installation** (autoinstall / cloud-init). This is the reproducible way to install a
+  fleet. It is deliberately *not* used here: per ADR-012 the project performs a process manually
+  while that teaches something, and automates once the mechanism is understood. Phase 14 revisits it.
+
+## Prerequisites
+
+- The M700, its power supply, and a temporary monitor, keyboard and HDMI/DisplayPort cable.
+- A USB stick of **at least 4 GB** that you are willing to erase completely.
+- The MacBook, on the same Wi-Fi network the server will join.
+- The Wi-Fi SSID and passphrase.
+- Access to the router's admin page (for a DHCP reservation later).
+
+---
+
+## Implementation
+
+### Part A — Record the hardware before erasing Windows
+
+Windows is about to be destroyed, and with it the easiest way to read certain hardware facts. Two of
+them matter to this project:
+
+1. **The memory module layout.** `docs/reference/hardware.md` records this as an open unknown: 8 GB
+   could be one module (leaving a free slot for a cheap upgrade) or two (meaning any upgrade means
+   discarding both). This single fact decides the upgrade path.
+2. **The wireless adapter model.** ADR-016 makes Wi-Fi the only network link, so if the Ubuntu
+   installer cannot see the card, the install stalls with no network. Knowing the chipset now lets
+   you prepare a fallback — a USB Wi-Fi dongle, or a temporary cable — instead of discovering the
+   problem halfway through.
+
+Boot Windows and open PowerShell:
+
+```powershell
+# Memory: one row per physical module. Two rows means both slots are occupied.
+Get-CimInstance Win32_PhysicalMemory |
+  Select-Object BankLabel, DeviceLocator, Capacity, Speed, Manufacturer, PartNumber
+
+# Wireless adapter model and driver
+Get-NetAdapter | Where-Object { $_.Name -match 'Wi-Fi|Wireless' } |
+  Select-Object Name, InterfaceDescription, LinkSpeed
+
+# Storage device model and size
+Get-PhysicalDisk | Select-Object FriendlyName, MediaType, Size
+
+# CPU confirmation
+Get-CimInstance Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors
+```
+
+While the machine is open and running, also check the physical things a command cannot tell you:
+that all USB ports work, that the DisplayPort output works, and how loud the fan is under load.
+
+Write the results into `docs/reference/hardware.md`. Two of these are recoverable later if you skip
+this step — `sudo dmidecode -t memory` reads the module layout from Linux, and `lspci -nnk` reads
+the wireless chipset — so this is a convenience step, not an irreversible gate. It is still much
+cheaper to do now.
+
+### Part B — Download and verify the image
+
+On the MacBook, from the repository root:
+
+```bash
+./scripts/macos/download-ubuntu-iso.sh
+```
+
+The script downloads `ubuntu-26.04.1-live-server-amd64.iso` into `~/Downloads` and performs the two
+checks described earlier: it confirms the checksum pinned in ADR-014 still matches what Ubuntu
+publishes today, then confirms the file on disk matches that checksum. Any mismatch aborts.
+
+Downloading manually instead is fine; the point is that a 2.7 GB file arriving over the network is
+verified before it becomes the base of everything else.
+
+**Optional but instructive — verify the signature, not just the checksum.** This is the step that
+proves Canonical published the checksums:
+
+```bash
+brew install gnupg     # if you do not already have it
+
+cd ~/Downloads
+curl -fLO https://releases.ubuntu.com/26.04/SHA256SUMS
+curl -fLO https://releases.ubuntu.com/26.04/SHA256SUMS.gpg
+
+# Fetch Canonical's signing key, then check the signature over the checksum file
+gpg --keyserver keyserver.ubuntu.com --recv-keys "843938DF228D22F7B3742BC0D94AA3F0EFE21092"
+gpg --verify SHA256SUMS.gpg SHA256SUMS
+```
+
+Expect `Good signature from "Ubuntu CD Image Automatic Signing Key (2012)"`. A warning that the key
+is not certified with a trusted signature is normal and expected — it means you have not personally
+vouched for Canonical's key, not that the signature failed.
+
+### Part C — Write the USB stick
+
+Plug the stick in and identify it. Run this **before and after** plugging it in and look for the
+line that appears:
+
+```bash
+diskutil list external physical
+```
+
+Then write it:
+
+```bash
+./scripts/macos/write-ubuntu-usb.sh ~/Downloads/ubuntu-26.04.1-live-server-amd64.iso disk4
+```
+
+Replace `disk4` with your actual identifier. The script refuses to run against a disk that reports
+as internal, rejects partition identifiers like `disk4s1`, and requires you to retype the disk
+identifier before writing — because the classic unrecoverable mistake in this whole phase is
+pointing `dd` at your own laptop's drive.
+
+Writing takes several minutes and prints nothing while it works. Press **Ctrl-T** to see progress;
+macOS's `dd` has no progress flag. When macOS afterwards complains that the disk is unreadable,
+that is expected — it cannot read the Linux filesystem. Eject, do not initialise.
+
+### Part D — Configure the firmware
+
+Connect monitor and keyboard to the M700, power it on, and press **F1** repeatedly at the Lenovo
+logo to enter firmware setup. (**F12** gives a one-time boot menu instead, which is often quicker.)
+
+Exact menu wording varies between ThinkCentre firmware versions, so navigate by meaning rather than
+by an exact path:
+
+| Setting | Set to | Why |
+|---|---|---|
+| **After Power Loss** / AC power recovery | **Power On** | The single most important setting in this phase. Without it, a power cut leaves the lab off until you physically press the button. Usually under a Power menu. |
+| Boot order / boot mode | UEFI, USB first (or use F12) | Needed to boot the installer. |
+| Secure Boot | **Leave enabled** | Ubuntu is signed and installs fine with it on. It only becomes awkward later if you need unsigned kernel modules, which this project does not currently plan. |
+| Wake on LAN | Optional | Of limited use on Wi-Fi; ignore for now. |
+
+Setting a firmware supervisor password is worth doing eventually, but it belongs to Phase 13
+hardening — and note that a forgotten ThinkCentre supervisor password is not trivially recoverable.
+
+Save and exit, leaving the USB stick inserted.
+
+### Part E — Install Ubuntu Server
+
+The installer is text-based; navigate with arrow keys, Tab and Enter. Work through it as follows.
+
+1. **Language, then keyboard layout.** Choose the layout that matches the keyboard physically in
+   front of you. This matters more than it looks: the password you set later is typed with this
+   layout, and getting it wrong is a common cause of "the password I just set does not work."
+2. **Installer update.** If it offers to update itself, either answer is fine.
+3. **Type of install.** Choose the full **Ubuntu Server**, not "minimized". Minimized strips out
+   tooling that is genuinely useful while learning, for a saving that does not matter here.
+4. **Network connections.** This is the step to watch closely.
+   - Look for a `wl…` interface (for example `wlp2s0`). Its presence means the kernel recognised
+     your wireless card.
+   - Select it, choose the Wi-Fi configuration option, enter the SSID and passphrase.
+   - Wait until the interface shows an IP address before continuing. Do not move on without one.
+   - **If no wireless interface is listed**, the card is unsupported by the installer. Stop and see
+     *What can go wrong* below rather than pushing forward — an install with no network is a dead
+     end.
+5. **Proxy.** Leave blank.
+6. **Mirror.** Accept the default.
+7. **Storage.** Choose **"Use an entire disk"**, select the 256 GB SSD, and tick **"Set up this disk
+   as an LVM group"**. Leave the LUKS encryption option **unticked** (ADR-015).
+   - On the summary screen, check the size of the root logical volume against the disk size. The
+     guided LVM layout does not necessarily hand the whole volume group to the root volume, and
+     ending up with a root filesystem far smaller than the disk is a well-known surprise. You can
+     edit the logical volume size here, or fix it after boot — Part F shows how.
+   - The next confirmation is the destructive one. Windows is gone after this point.
+8. **Profile.** Set your name, a server hostname, a username and a strong password. The reference
+   build uses a short, memorable hostname; you will type it often in Phase 03.
+9. **Ubuntu Pro.** Skip for now. It is free for personal use on up to five machines and extends
+   security coverage; it can be enabled at any later time.
+10. **SSH.** Tick **"Install OpenSSH server"**. Leave "Import SSH identity" set to no — SSH keys are
+    the subject of Phase 03, and doing them there is deliberate rather than an oversight. This does
+    mean the server temporarily accepts password logins; see *Security notes*.
+11. **Featured snaps.** Select none. Docker arrives properly in Phase 05.
+
+Let the installation finish, choose **Reboot Now**, and remove the USB stick when prompted.
+
+### Part F — First boot, updates, and state capture
+
+Log in at the console with the username and password you set.
+
+**Bring the system up to date.** A freshly installed system is already behind on security updates,
+because the ISO was built months ago:
+
+```bash
+sudo apt update
+sudo apt full-upgrade -y
+```
+
+**Install the small tools this phase's checks need:**
+
+```bash
+sudo apt install -y dmidecode iw
+```
+
+**Check that the disk is fully allocated.** Compare the free space in the volume group against the
+root volume:
+
+```bash
+sudo vgs        # look at VFree — if it is large, the disk is not fully used
+sudo lvs
+df -h /
+```
+
+If the volume group has substantial free space, claim it:
+
+```bash
+sudo lvextend -l +100%FREE /dev/ubuntu-vg/ubuntu-lv
+sudo resize2fs /dev/ubuntu-vg/ubuntu-lv
+df -h /          # confirm the root filesystem grew
+```
+
+This is LVM earning its place already: growing a live root filesystem with no reboot and no
+repartitioning is exactly the flexibility ADR-015 chose it for.
+
+**Protect the Wi-Fi passphrase.** netplan stores it in cleartext:
+
+```bash
+ls -l /etc/netplan/
+sudo chmod 600 /etc/netplan/*.yaml
+```
+
+A redacted example of what this file looks like is kept at `config/netplan/50-wifi.example.yaml`.
+The real file must never be committed.
+
+**Stop Wi-Fi power saving from dropping the link.** Wireless drivers idle the radio to save power,
+which on a server shows up as a machine that becomes unreachable when nobody is using it. Replace
+`wlp2s0` with your interface name from `ip -br address`:
+
+```bash
+sudo tee /etc/systemd/system/wifi-powersave-off.service >/dev/null <<'UNIT'
+[Unit]
+Description=Disable Wi-Fi power saving (always-on server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/iw dev wlp2s0 set power_save off
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+sudo systemctl enable --now wifi-powersave-off.service
+iw dev wlp2s0 get power_save     # expect: Power save: off
+```
+
+**Give the server a stable address.** On the router's admin page, add a DHCP reservation binding the
+server's MAC address (from `ip -br link`) to a fixed IP. Doing it at the router rather than as a
+static address on the server keeps one source of truth for addressing, and avoids the classic
+conflict where a statically-assigned address gets handed to another device.
+
+**Capture the real state into the repository:**
+
+```bash
+./scripts/server/verify-install.sh --out server-state.md
+```
+
+Copy the results into `docs/reference/hardware.md`, `docs/reference/software-stack.md` and the phase
+handover. The script never prints the netplan file contents, so its output is safe to paste — it
+reports permissions instead.
+
+---
+
+## Validation
+
+The install is not finished when the installer says so. It is finished when the machine behaves the
+way an always-on headless node has to.
+
+```bash
+# 1. The right release is running
+lsb_release -a
+
+# 2. SSH is up
+systemctl is-active ssh
+
+# 3. Automatic security updates are actually scheduled
+systemctl list-timers --all | grep apt-daily
+
+# 4. Windows is gone — this must return nothing
+lsblk -o NAME,FSTYPE | grep -i ntfs
+
+# 5. Reachable from the MacBook (run this on the MacBook)
+ssh <username>@<server-ip>
+```
+
+**The test that actually matters — unattended recovery.** Everything above can pass on a machine
+that still needs a human present. This is the one that proves otherwise:
+
+1. `sudo poweroff`
+2. Unplug the monitor and keyboard. Unplug the power cable.
+3. Plug the power back in and **do not press the power button**.
+4. From the MacBook, wait a couple of minutes, then `ssh <username>@<server-ip>`.
+
+If that connects, the firmware power-on setting works, Wi-Fi reassociates on its own, and SSH starts
+unattended. If it does not, that failure is the phase's real finding and belongs in the build log —
+not something to work around by leaving a keyboard attached.
+
+## Security notes
+
+| Risk | Status in this phase |
+|---|---|
+| **SSH accepts passwords** | Known and time-boxed. Phase 03 replaces this with key-only authentication. Until then the server is only as protected as your password and the fact that it is not exposed to the internet. Do not port-forward SSH from the router. |
+| **No encryption at rest** | Accepted trade-off (ADR-015). Anyone with physical possession of the SSD has everything on it. |
+| **Wi-Fi passphrase in cleartext** | Mitigated to `0600` file permissions — which protects it from other users on the machine, but not from someone holding the unencrypted disk. These two risks compound; Phase 13 should treat them together. |
+| **No firewall yet** | The server is behind the router's NAT and exposes only SSH on the LAN. UFW arrives in Phase 13. |
+| **Root login** | Not used. Administration goes through a `sudo`-capable user. |
+| **Physical access** | Equals full access. Documented, not mitigated, at this stage. |
+
+## What can go wrong
+
+**No wireless interface appears in the installer.** The card is not supported by the installer's
+kernel. Options, cheapest first: temporarily borrow an Ethernet cable to complete the install and
+sort Wi-Fi out afterwards with a fully updated kernel; use a USB Wi-Fi dongle with known Linux
+support; or check whether the missing piece is firmware in the `linux-firmware` package. Whichever
+path you take, record it — and if Wi-Fi turns out to be unworkable, ADR-016 needs revisiting and the
+question goes back to Project Planning, because it changes Phase 03.
+
+**The machine boots back into Windows.** The USB stick was not selected at boot, or the firmware is
+still in legacy/CSM mode. Use F12 for the one-time boot menu and pick the UEFI entry for the stick.
+
+**The password does not work at first login.** Almost always a keyboard layout mismatch between the
+installer and the running system. Try typing the password into the username field once, so you can
+see the characters that actually appear.
+
+**The root filesystem is much smaller than the disk.** Expected with guided LVM; see the
+`lvextend` / `resize2fs` steps in Part F.
+
+**SSH works, then stops when idle.** Wi-Fi power saving. See the systemd unit in Part F.
+
+**The server does not come back after a power cut.** The firmware's "After Power Loss" setting is
+not set to Power On. Re-enter setup with F1 and check.
+
+## Reference-build experience
+
+> **Not yet recorded.** The installation has not been performed on the M700 at the time of writing.
+> This section must be filled in from what actually happened — including anything that went wrong —
+> before Phase 01 can be declared complete. See `docs/build-log/`.
+
+## Tested versions
+
+> **Not yet recorded.** Per `docs/standards/documentation.md`, software is not documented as
+> installed until real version output exists. Populate this table from
+> `scripts/server/verify-install.sh` output after the install.
+
+| Component | Tested with | Notes |
+|---|---|---|
+| Ubuntu Server | *pending install* | Target: 26.04.1 LTS (ADR-014) |
+| Linux kernel | *pending install* | |
+| OpenSSH server | *pending install* | |
+| netplan | *pending install* | |
+| wpasupplicant | *pending install* | Required by the networkd renderer for Wi-Fi |
+
+## Next phase
+
+[Phase 02 — Linux Fundamentals](../../ROADMAP.md), which takes the shell you now have and builds the
+operating knowledge to use it safely, followed by Phase 03 — Remote Access, which closes this
+phase's open SSH risk.

@@ -21,3 +21,10 @@ Project Planning
 ```
 
 Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/phase-handover-template.md` at phase completion.
+
+## Current documents
+
+| File | Kind | Status |
+|---|---|---|
+| `project-planning.md` | Master governance context | Standing |
+| `01-ubuntu-server.md` | Phase 01 brief | **Proposed** — drafted by the phase context because no brief had been created; awaiting Project Planning ratification |

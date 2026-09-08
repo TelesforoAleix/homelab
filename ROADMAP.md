@@ -8,7 +8,8 @@ Multiple `00-*` guides may exist for pre-development documentation.
 
 Purpose: establish project scope, hardware rationale, governance, repository structure, budget tracking, architecture baseline, and documentation standards before implementation.
 
-Status: **In progress**
+Status: **In progress** — remaining hardware-verification items are folded into Phase 01 Part A,
+because they must be performed before the reference node's disk is erased.
 
 Planned/pre-development guides may include:
 
@@ -21,6 +22,12 @@ Planned/pre-development guides may include:
 ## Phase 01 — Ubuntu Server
 
 Install Ubuntu Server LTS on the reference node, establish a reproducible base installation, and verify the resulting server state.
+
+Status: **In progress** — brief, guide, scripts and ADRs prepared; installation not yet performed.
+
+- Brief: [`docs/handovers/01-ubuntu-server.md`](docs/handovers/01-ubuntu-server.md)
+- Guide: [`guide/01-ubuntu-server/`](guide/01-ubuntu-server/README.md)
+- Decisions: ADR-014 (release), ADR-015 (disk layout), ADR-016 (network link)
 
 ## Phase 02 — Linux Fundamentals
 

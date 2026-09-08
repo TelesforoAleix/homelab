@@ -8,6 +8,17 @@ Track actual reference-build costs first. Add rough reproduction estimates only 
 |---|---|---|---|---:|---:|---|
 | 2026-09 | Lenovo ThinkCentre M700 Tiny | Hardware | One-time | 700 | TBD | Used; canonical orchestration node |
 
+### Phase 01 — Ubuntu Server
+
+No new spending is expected. Ubuntu Server is free, and the installation reuses existing hardware.
+
+The only possible one-time cost is a USB flash drive, if one had to be bought rather than reused.
+Record it here if so; otherwise this phase closes with an explicit **none**.
+
+| Date | Item | Category | One-time / recurring / usage | Actual DKK | EUR equivalent | Notes |
+|---|---|---|---|---:|---:|---|
+| — | USB flash drive for installer | Hardware | One-time | *pending* | *pending* | Record actual spend, or "none — reused existing stick", after Phase 01 |
+
 ## Existing subscriptions used by the project
 
 These should be recorded as costs even when they pre-date Home Lab, but the exact subscription prices have not been supplied in Project Planning yet.

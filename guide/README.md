@@ -33,4 +33,9 @@ Current bootstrap topics:
 - [`00-reference-build`](00-reference-build/README.md)
 - [`00-budget-and-costs`](00-budget-and-costs/README.md)
 
-Implementation-phase guides will mirror the numbered project roadmap as they are developed.
+## Implementation-phase guides
+
+These mirror the numbered project roadmap.
+
+- [`01-ubuntu-server`](01-ubuntu-server/README.md) — installing Ubuntu Server on the reference node
+  and making it boot headless and unattended. *(In progress: written, not yet executed on hardware.)*
