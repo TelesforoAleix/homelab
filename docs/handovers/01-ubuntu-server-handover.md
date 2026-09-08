@@ -185,5 +185,5 @@ No phase renumbering or re-sequencing is required.
 - [x] Failures/lessons recorded
 - [x] Tested versions recorded
 - [x] Critical AI-generated components understood
-- [ ] `main` known-working — **pending merge** of `feature/01-ubuntu-server`
+- [x] `main` known-working — `feature/01-ubuntu-server` merged 2026-09-08
 - [x] Handover returned to Project Planning
