@@ -118,15 +118,19 @@ gibibytes (2³⁰ bytes). 256 × 10⁹ bytes ≈ 238.4 GiB. Linux will report th
 The node's BIOS is **FWKT63A, dated 2016-12-08**, and has never been updated. It therefore predates
 the January 2018 Spectre/Meltdown disclosures and carries no corrected CPU microcode.
 
-Ubuntu can mitigate this in software: the `intel-microcode` package loads updated microcode at boot,
-independently of the firmware. Whether it is installed must be confirmed from the running system.
+**Mitigation confirmed (2026-09-08).** `intel-microcode` version `3.20260210.1ubuntu2` is installed
+and active — microcode dated February 2026, loaded at boot independently of the firmware. `needrestart`
+also reports the processor microcode as up to date. The CPU-level Spectre/Meltdown-class issues are
+therefore addressed in software despite the firmware's age.
 
-This is recorded as a **Phase 13 hardening item**, not a Phase 01 task. Two options exist and both
-carry trade-offs worth weighing deliberately rather than now:
+**Residual gap.** Microcode does not cover firmware-level fixes — platform mitigations, Intel ME
+updates, and any Lenovo-specific fixes issued since 2016. This remains a **Phase 13 hardening item**,
+now lower priority than it first appeared. When it is revisited, the trade-off is:
 
-1. Rely on `intel-microcode` — no risk to the machine, handles the CPU-level issues.
-2. Flash a newer Lenovo BIOS — addresses firmware-level fixes too, but a failed flash on the
-   project's only node is a genuinely bad outcome. Not to be done casually.
+1. Do nothing further — `intel-microcode` already handles the CPU-level exposure.
+2. Flash a newer Lenovo BIOS — closes the firmware-level gap, but a failed flash on the project's
+   only node is a genuinely bad outcome, and this machine has no redundancy. Not to be done casually,
+   and arguably not worth it for a home LAN node behind NAT.
 
 ## Local AI
 
