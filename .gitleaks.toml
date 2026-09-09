@@ -1,0 +1,36 @@
+# gitleaks configuration for this repository.
+#
+# gitleaks is used here as an INDEPENDENT CROSS-CHECK on
+# scripts/macos/scan-history.sh, not as a replacement for it. Two scanners
+# built on different assumptions catch different things; agreement between
+# them is worth more than confidence from either alone.
+#
+# Known difference worth remembering: gitleaks scans commit DIFFS, so it skips
+# merge commits. On 2026-09-09 it scanned 34 of this repository's 38 commits --
+# exactly the 4 merge commits missing. Those merges are this project's phase
+# boundaries. Nothing was missed, because --no-ff merges of already-scanned
+# branches introduce no new content, but the blind spot is real.
+# scan-history.sh walks reachable blobs instead, so commit topology cannot hide
+# anything from it.
+
+[extend]
+useDefault = true
+
+[[rules]]
+  id = "generic-api-key"
+  [rules.allowlist]
+    description = """
+      The generic-api-key rule fires on ordinary English prose in this
+      repository. On 2026-09-09 it flagged the word RAG in the sentence
+      "orchestration, model access, RAG/knowledge systems, automation" as a
+      secret, at entropy 3.55.
+
+      This allowlist exists so that a run with a real finding is visibly
+      different from a run without one. A scanner that always reports the same
+      known-false result trains its reader to ignore it, which is worse than
+      not running it. Each entry below is a specific adjudicated string, never
+      a blanket path or rule exclusion.
+    """
+    regexes = [
+      '''RAG/knowledge''',
+    ]

@@ -43,9 +43,21 @@ This repository is aimed at people with a business and some technical background
 
 ## Current status
 
-**Phase 00 — Repository Bootstrap / Pre-development planning**
+**Phases 00–03 complete. Phase 04 — Git & GitHub Fundamentals in progress.**
 
-The repository structure and project governance are being established before Ubuntu Server installation begins.
+| Phase | State |
+|---|---|
+| 00 — Repository bootstrap & planning | ✅ Complete |
+| 01 — Ubuntu Server on the reference node | ✅ Complete |
+| 03 — Remote access (SSH keys, Tailscale, VS Code) | ✅ Complete — run ahead of 02 by choice |
+| 02 — Linux fundamentals | ✅ Complete |
+| 04 — Git & GitHub fundamentals | 🔄 In progress |
+
+The reference node runs Ubuntu Server 26.04.1 LTS, is administered entirely
+remotely over Tailscale with key-only SSH, and has **no monitor or keyboard
+attached**. See [`ROADMAP.md`](ROADMAP.md) for what comes next and
+[`docs/reference/project-state.md`](docs/reference/project-state.md) for the
+verified current state.
 
 ## Start here
 
@@ -55,4 +67,15 @@ If you are contributing or using an AI coding agent, read [`PROJECT.md`](PROJECT
 
 ## License
 
-A public repository license has **not yet been selected**. Do not assume reuse rights until a license is explicitly added.
+This repository uses **two licences**, because it is mostly writing and partly code.
+
+| What | Licence |
+|---|---|
+| **Documentation** — `guide/`, `docs/`, and the root Markdown files | [CC BY-SA 4.0](LICENSE-docs) |
+| **Code** — `scripts/`, `config/`, `infrastructure/`, `services/`, `experiments/` | [MIT](LICENSE) |
+
+In short: you may reuse and adapt the guide, including commercially, if you
+give credit and share adaptations under the same terms. The scripts carry no
+share-alike obligation. Full detail, including why the licences are split, is
+in [`LICENSE-docs`](LICENSE-docs) and
+[`ADR-021`](docs/decisions/ADR-021-repository-publication.md).
