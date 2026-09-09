@@ -1,0 +1,104 @@
+# Home Lab Telegram status bot — Phase 07, ADR-023.
+#
+# Installed to /etc/systemd/system/homelab-telegram-bot.service
+#
+# THIS UNIT IS THE SECURITY BOUNDARY.
+#
+# The bot is read-only Python that never forks a process, so almost everything
+# below can be forbidden outright without breaking it. The rule applied here:
+# deny by default, and re-enable only what was demonstrably needed.
+#
+# Verify with `systemd-analyze security homelab-telegram-bot.service`, and
+# check the RUNNING service rather than this file -- a directive that failed to
+# apply is silent (Phase 03's lesson about configuration versus daemon).
+
+[Unit]
+Description=Home Lab Telegram status bot (read-only)
+Documentation=https://github.com/TelesforoAleix/homelab
+
+# Network, not network-online. The bot backs off and retries by design, so it
+# does not need to wait for full connectivity -- and depending on
+# network-online.target would tie a non-essential service to a boot-time
+# ordering barrier on a node with no console (ADR-020).
+After=network.target
+
+[Service]
+Type=simple
+User=homelab-bot
+Group=homelab-bot
+
+ExecStart=/usr/bin/python3 /opt/homelab-telegram-bot/bot.py
+
+# --- The token -----------------------------------------------------------
+#
+# LoadCredential puts the file in $CREDENTIALS_DIRECTORY, mode 0400, owned by
+# the service user, on a tmpfs unmounted when the unit stops.
+#
+# Deliberately NOT Environment= or EnvironmentFile=. Anything that can read
+# /proc/PID/environ would see an environment variable, and environment
+# variables leak into crash dumps, `systemctl show`, and logs. A bot token is a
+# bearer credential: whoever holds it IS the bot.
+LoadCredential=bot-token:/etc/homelab-telegram-bot/token
+
+Environment=HOMELAB_BOT_ALLOWLIST=/etc/homelab-telegram-bot/allowlist
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+# --- Restart policy ------------------------------------------------------
+#
+# on-failure, not always: a clean exit is deliberate and should stay stopped.
+# The rate limit exists because a tight restart loop on a console-less node is
+# a self-inflicted denial of service, and journald is not free on a volume
+# group with no free extents.
+Restart=on-failure
+RestartSec=10
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# --- Privilege -----------------------------------------------------------
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+# --- Filesystem ----------------------------------------------------------
+#
+# ProtectHome=yes is load-bearing, not decorative. The Phase 06 handover
+# requires that this process cannot reach /home/aleix or either AI OAuth file.
+# This is the directive that enforces it.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectProc=invisible
+ProcSubset=pid
+ReadOnlyPaths=/etc/homelab-telegram-bot
+
+# --- Kernel and system ---------------------------------------------------
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+# --- Network -------------------------------------------------------------
+#
+# Outbound HTTPS only. AF_UNIX is NOT permitted: the bot talks to nothing
+# locally, and denying it removes any path to the Docker socket even if the
+# account were somehow added to the docker group by mistake.
+RestrictAddressFamilies=AF_INET AF_INET6
+
+# --- System calls --------------------------------------------------------
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete @mount @swap @reboot @raw-io @debug @module @cpu-emulation
+
+[Install]
+WantedBy=multi-user.target
