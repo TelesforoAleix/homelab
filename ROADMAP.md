@@ -180,9 +180,18 @@ subscription-backed *interactive* access and is silent on unattended use. **Phas
 that on its merits and record it as an ADR** — not by copying a personal OAuth credential to a
 service account.
 
-## Phase 09 — Voice
+## Phase 09 — Model Executor (subscription-backed)
 
-Receive Telegram voice notes, transcribe them, and route the resulting text through the existing architecture. Cloud transcription may be used first.
+Connect the model executor that Phase 08 registered and deliberately left inert, so the bot can
+answer open questions rather than only fixed ones.
+
+**Amended 2026-09-09.** This slot was "Voice". The owner's reasoning, recorded rather than applied
+silently: **voice on top of six deterministic commands is a slower way to type `/status`.**
+Speech-to-text only becomes worth having once there is something worth saying, which means a model
+executor comes first. **Voice moves to Phase 17** and arrives into an interface that can answer.
+
+Numbers stay stable; running order is flexible — the same convention under which Phase 03 ran before
+Phase 02.
 
 ## Phase 10 — Knowledge / Second Brain
 
@@ -247,3 +256,14 @@ A later phase may be split into sub-phases when scope becomes too large. Example
 Changes that materially affect multiple phases are **captured as ADRs and carried into the next
 phase's brief** (ADR-017). There is no separate planning context to return them to; the phase that
 discovers the change is the phase that records it.
+
+## Phase 17 — Voice
+
+Receive Telegram voice notes, transcribe them, and route the resulting text through the existing
+architecture. Cloud transcription may be used first.
+
+**Moved here from Phase 09 on 2026-09-09**, before any work was done on it. Voice is a modality on
+top of the interface, not the interface itself: it becomes worth having once there is a model
+executor to talk to. Running order is expected to be after the foundations work (backup and the
+ADR-015 encryption decision), because voice notes and transcripts are the first data on this node
+that would be painful to lose or to have read.
