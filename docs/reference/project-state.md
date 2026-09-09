@@ -2,8 +2,8 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 06 — AI CLI Access (**complete**, 2026-09-09). Next: Phase 07 — Telegram
-  Interface.
+- **Current phase:** 07 — Telegram Interface (**complete**, 2026-09-09). Next: Phase 08 — Router &
+  Executors.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -13,8 +13,10 @@
   Ed25519 key; passwords, keyboard-interactive and root login are all refused. VS Code Remote SSH
   works. Docker Engine and Compose are installed, with no persistent containers running. Claude Code
   and Codex are installed as interactive `aleix`-scoped tools and authenticated through existing
-  subscriptions; neither is a service. **The monitor and keyboard have been physically removed** —
-  the node is genuinely headless and cold-boots to a reachable state in 25.8s.
+  subscriptions; neither is a service. **The node now runs its first service**: a read-only Telegram
+  status bot as the unprivileged `homelab-bot` account, long-polling so it opens **no listening
+  socket**. **The monitor and keyboard have been physically removed** — the node is genuinely
+  headless and cold-boots to a reachable state in 24.4s.
 
 ## Phase 01 status
 
@@ -314,7 +316,7 @@ The block is retained as the record of what was expected, not as an outstanding 
 
 ## Starting state for the next phase
 
-Re-verified 2026-09-09 at the close of Phase 06.
+Re-verified 2026-09-09 at the close of Phase 07, after a reboot.
 
 | Fact | Value |
 |---|---|
@@ -332,10 +334,13 @@ Re-verified 2026-09-09 at the close of Phase 06.
 | AI authentication | Claude `claude.ai` / first-party / Pro; Codex `Logged in using ChatGPT`; relevant API-key variables unset |
 | AI credential files | `/home/aleix/.claude/.credentials.json` and `/home/aleix/.codex/auth.json`, both mode `0600`, owner `aleix:aleix`; contents never captured |
 | AI processes/services | None; both CLIs are interactive operator commands |
-| Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache at Phase 06 close |
-| Listening | `:22` only off-box; everything else on loopback or the tailnet. Docker and the AI CLIs left no published ports. |
+| Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache |
+| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts since boot** |
+| Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |
+| Service hardening | `systemd-analyze security` → **1.3 OK** |
+| Listening | **6 sockets; `:22` only off-box.** Everything else on loopback or the tailnet. Docker, the AI CLIs and the bot published nothing — the bot long-polls outbound |
 | Swappiness | `vm.swappiness = 10` |
-| Boot | 25.8s cold, headless, to reachable |
+| Boot | **24.4s** cold, headless, to reachable |
 | **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |
 
 Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and

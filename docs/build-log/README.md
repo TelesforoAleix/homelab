@@ -14,6 +14,11 @@ Use [`../templates/build-log-template.md`](../templates/build-log-template.md).
 
 ## Recent entries
 
+- [`2026-09-09-phase-07-telegram-bot.md`](2026-09-09-phase-07-telegram-bot.md) — the first service
+  this project wrote. Five problems, four of them the author's: hardening that stopped a system-info
+  reporter reading system info, an unguarded exception that became a restart loop on a console-less
+  node, a disk figure double the truth and entirely plausible, and a verifier that reported a
+  confident `FAIL` about a file it lacked permission to see — the fifth instance of that family.
 - [`2026-09-09-phase-06-ai-cli-access.md`](2026-09-09-phase-06-ai-cli-access.md) — native Claude
   Code and Codex installation, subscription authentication, sandbox exercises, the broken MacBook
   launcher, and the difference between login health and available model capacity.

@@ -29,7 +29,6 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | OpenAI Codex CLI (server) | **Active** | 0.153.4 | Initial AI tool (ADR-008) | Phase 06. Native user-scoped install under `/home/aleix`; authenticated with ChatGPT device authorization. Interactive operator command, not a service. |
 | OpenAI Codex CLI (MacBook) | **Active** | 0.153.4 standalone | Administration workstation | Phase 06 replaced a broken npm `0.118.0` installation whose platform executable was missing. |
 | Bubblewrap | **Active** | 0.11.1-1ubuntu0.1 | Codex Linux sandbox prerequisite | Phase 06. Ubuntu package; works with the distribution's AppArmor profile while unprivileged user namespaces remain restricted. |
-| Telegram Bot | Planned | — | First remote interface | Phase 07 |
 | netplan | **Active** | 1.2-1ubuntu5 | Ships with Ubuntu Server | Declares the Wi-Fi link (ADR-016). Config at `/etc/netplan/00-installer-config.yaml`, mode `0600`. |
 | tmux | **Active** | 3.6 | No, but strongly advised | Ships with Ubuntu Server. Anything long-running on this node belongs in a tmux session: both access routes share one Wi-Fi adapter, and a dropped link mid-`apt` can leave dpkg half-configured. |
 | tree | **Active** | 2.3.1-1 | No | Phase 02. Directory structure at a glance where repeated `ls` gets tedious. |
