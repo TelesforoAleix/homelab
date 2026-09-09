@@ -46,9 +46,25 @@ Absorbs the remaining Phase 00 hardware validation as Part A.
 
 Learn and document the Linux concepts required to operate Home Lab safely: filesystem, users/groups, permissions, packages, processes/services, logs, storage basics, networking basics, shell workflow, and `tmux`/core tooling as appropriate.
 
+Status: **Deferred, not skipped.** The owner chose on 2026-09-09 to run Phase 03 first, so that
+Phase 01's principal open risk — SSH password authentication — is closed before a long
+documentation-heavy phase, and so that Phase 02 is carried out over key-based remote access rather
+than password login with a monitor attached. Phase numbers are stable by the rule below; this is a
+sequencing decision, not a renumbering.
+
+**Inherited from Phase 01:** the handover's "ground already covered" table lists LVM, permissions and
+ownership, systemd units, apt, netplan and `journalctl` as topics already exercised in anger. Build
+on them as worked examples rather than teaching them from zero. Phase 03 adds more of the same —
+see its handover.
+
 ## Phase 03 — Remote Access
 
 Establish SSH keys, Tailscale, and VS Code Remote SSH so the server can run headless and be safely administered from the MacBook.
+
+Status: **In progress** (started 2026-09-09), brought forward ahead of Phase 02 by the owner's
+decision — see the Phase 02 entry above.
+
+- Brief: [`docs/handovers/03-remote-access.md`](docs/handovers/03-remote-access.md)
 
 **Inherited from Phase 01:**
 

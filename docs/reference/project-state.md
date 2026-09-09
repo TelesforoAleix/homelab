@@ -2,7 +2,8 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 01 — Ubuntu Server (**complete**, 2026-09-08). Next: Phase 02 / 03.
+- **Current phase:** 03 — Remote Access (**in progress**, started 2026-09-09). Phase 01 complete
+  2026-09-08; Phase 02 deferred behind Phase 03 by the owner's sequencing decision.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
 - **Target OS:** Ubuntu Server 26.04.1 LTS (ADR-014)
 - **Current implementation state:** Ubuntu Server 26.04.1 LTS installed and validated on the
@@ -85,7 +86,25 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   personal Second Brain data, encryption at rest must be reconsidered on its merits — and converting
   an unencrypted root filesystem after the fact usually means a reinstall.
 
-## Immediate next planning action
+## Current phase
+
+**Phase 03 — Remote Access, in progress since 2026-09-09.**
+
+Brief committed before implementation per ADR-017:
+[`docs/handovers/03-remote-access.md`](../handovers/03-remote-access.md). Working branch
+`feature/03-remote-access`.
+
+**Sequencing:** the owner chose on 2026-09-09 to run Phase 03 ahead of Phase 02. Phase 01 named SSH
+password authentication as its principal open risk, and Phase 02 is a long documentation-heavy phase
+that would have left that risk open throughout. Phase 03 also gives Phase 02 a better environment to
+be carried out in: key-based login, a stable `ssh homelab` alias, VS Code Remote SSH, and no attached
+console. **Phase 02 is deferred, not skipped, and keeps its number.**
+
+## Superseded planning note
+
+The block below was written when Phase 01 closed, before the sequencing decision above. It is kept
+rather than rewritten (`PROJECT.md` §11). Its instruction still applies to Phase 02 when that phase
+runs — it must write and commit its own brief first.
 
 **Phase 01 is complete and merged. Phase 02 has not started.**
 
