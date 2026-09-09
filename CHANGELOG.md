@@ -69,6 +69,14 @@ This project uses this file for meaningful repository-level milestones rather th
   so the exact before/after ruleset diff is unrecoverable. Attribution by chain name found only
   Docker and Tailscale chains, and final reachability checks passed, but this is weaker evidence than
   the brief required.
+- **Fixed: the repository's GitHub front page had been a placeholder since publication.**
+  `.github/README.md` existed from the Phase 00 bootstrap, and GitHub resolves the front page as
+  `.github/README.md` → `README.md` → `docs/README.md`, first match winning. So the root `README.md`
+  was never rendered on the repository page from Phase 04 through Phase 09 — every visitor saw two
+  lines about GitHub templates. Phase 04's publication checks verified that publishing was *safe*
+  (a two-scanner full-history secrets audit) and never that it was *legible*. Found by the owner
+  looking at the actual page.
+
 - **The bot's Telegram profile and command menu are now set from the registry.** A phone client
   offers no autocomplete for unregistered commands, so `/ask` had to be typed from memory. The
   command list is derived from `executors.register_all()` — the same single source of truth that
