@@ -41,3 +41,5 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 | `02-linux-fundamentals-handover.md` | Phase 02 completion handover | **Written** 2026-09-09 — addressed to Phase 04; outcome Complete |
 | `04-git-github.md` | Phase 04 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |
 | `04-git-github-handover.md` | Phase 04 completion handover | **Written** 2026-09-09 — addressed to Phase 05; outcome Complete |
+| `05-docker.md` | Phase 05 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |
+| `05-docker-handover.md` | Phase 05 completion handover | **Written** 2026-09-09 — addressed to Phase 06; outcome Complete |

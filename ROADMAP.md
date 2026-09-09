@@ -106,6 +106,23 @@ node. Each is recorded with its reasoning in `docs/reference/git-workflow.md`.
 
 Learn containers and Compose, establish project conventions, and migrate appropriate services toward reproducible containerized deployments.
 
+Status: **Complete** (2026-09-09). Docker Engine 29.8.0, Compose v5.5.1, and
+containerd 2.3.5 installed from Docker's official apt repository. No persistent
+containers are left running.
+
+- Brief: [`docs/handovers/05-docker.md`](docs/handovers/05-docker.md)
+- Handover: [`docs/handovers/05-docker-handover.md`](docs/handovers/05-docker-handover.md)
+- Guide: [`guide/05-docker/`](guide/05-docker/README.md)
+- Reference: [`docs/reference/docker-reference.md`](docs/reference/docker-reference.md)
+- Decision: ADR-022 (Docker runtime and container conventions) — Accepted
+
+**Inherited forward:** every published port names an explicit interface; `-p
+8080:80` is forbidden because Docker DNAT happens before host firewall `INPUT`
+rules. `aleix` is in the `docker` group, which is root-equivalent and must never
+be granted to service accounts. Phase 13 must account for Docker's firewall
+interaction, rootful/user-namespace trade-off, and latent IPv6 forwarding
+asymmetry.
+
 ## Phase 06 — AI CLI Access
 
 Install and validate Claude Code CLI and OpenAI Codex CLI using officially supported subscription-backed authentication where available. Document trade-offs against API usage without prematurely introducing an API architecture.

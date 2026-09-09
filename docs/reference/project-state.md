@@ -2,8 +2,8 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 04 — Git & GitHub Fundamentals (**complete**, 2026-09-09). Next: Phase 05 —
-  Docker & Docker Compose.
+- **Current phase:** 05 — Docker & Docker Compose (**complete**, 2026-09-09). Next: Phase 06 —
+  AI CLI Access.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -11,8 +11,9 @@
 - **Current implementation state:** Ubuntu Server 26.04.1 LTS on the reference node, administered
   entirely remotely. `ssh homelab` reaches it over Tailscale by MagicDNS name, authenticated by an
   Ed25519 key; passwords, keyboard-interactive and root login are all refused. VS Code Remote SSH
-  works. **The monitor and keyboard have been physically removed** — the node is genuinely headless
-  and cold-boots to a reachable state in 25.8s.
+  works. Docker Engine and Compose are installed, with no persistent containers running. **The
+  monitor and keyboard have been physically removed** — the node is genuinely headless and cold-boots
+  to a reachable state in 25.8s.
 
 ## Phase 01 status
 
@@ -62,6 +63,8 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - knowledge storage separate from agents;
 - unprivileged user-facing services;
 - progressive automation;
+- Docker as the container runtime baseline, rootful with non-root containers and explicit-interface
+  port publishing (ADR-022);
 - known-working `main` branch.
 
 ## Recently resolved (Phase 01 Part A, 2026-09-08)
@@ -76,7 +79,8 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 ## Known unknowns
 
-- Exact versions of tools to be installed in future phases.
+- Exact versions of tools to be installed in future phases, except Docker/Compose/containerd which
+  are now recorded from Phase 05.
 - Exact Claude/ChatGPT subscription costs to record in the ledger.
 - ~~Public repository license.~~ ✅ **Closed 2026-09-09** by Phase 04 — MIT for code, CC BY-SA 4.0
   for documentation (ADR-021).
@@ -105,6 +109,20 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   survivable by design, but it should not be mistaken for "backup is handled".
 - **The volume group has no free extents.** The root LV consumes all 235.4 G, so storage cannot be
   grown by `lvextend`; it needs another disk. Found in Phase 02, not owned by any phase yet.
+- **Docker consumes the root LV.** Logs are bounded by `/etc/docker/daemon.json`, and Phase 05
+  finished with Docker inventory at zero, but images, containers, volumes and build cache all land on
+  the root filesystem.
+- **`aleix` is in the `docker` group.** This is root-equivalent access without a password prompt.
+  Accepted for the sole administrator in ADR-022; must never be granted to service accounts.
+- **Rootful Docker without user-namespace remapping.** Container root maps to host root; mitigated by
+  non-root container defaults and Compose hardening. Phase 13 should revisit rootless Docker or
+  userns-remap on its merits.
+- **Docker and Tailscale now both own packet-filtering chains.** Docker publishes with DNAT before
+  host firewall `INPUT` rules, so Phase 13 must design firewalling around Docker rather than
+  assuming `ufw deny` controls published container ports.
+- **IPv4/IPv6 forwarding policy is asymmetric.** IPv4 `FORWARD` is `DROP`; IPv6 `FORWARD` is
+  `ACCEPT`. Not reachable today because IPv6 forwarding is disabled and Docker bridge IPv6 is off,
+  but Phase 13 must not assume symmetry.
 - **Node key expiry deliberately disabled** on the Tailscale node (ADR-019) — a security control
   traded for availability. Phase 13 must revisit it rather than inherit it.
 - Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.
@@ -159,6 +177,31 @@ Phase 13 will have a better safety net.
 commit signing, no CI/GitHub Actions, no clone of the repository on the reference node. Reasoning in
 [`git-workflow.md`](git-workflow.md).
 
+## Phase 05 status
+
+**Complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`05-docker.md`](../handovers/05-docker.md), committed before implementation |
+| Implementation | ✅ Docker Engine 29.8.0, Compose v5.5.1, containerd 2.3.5 from Docker's official apt repository |
+| ADR-022 | ✅ **Accepted** — Docker runtime and container conventions |
+| Host configuration | ✅ `/etc/docker/daemon.json` log rotation, `vm.swappiness = 10`, `aleix` in `docker` group |
+| Guide | ✅ [`guide/05-docker/`](../../guide/05-docker/README.md) |
+| Reference | ✅ [`docker-reference.md`](docker-reference.md) |
+| Scripts | ✅ `install-docker.sh`, `capture-network-state.sh`, `configure-docker-host.sh` |
+| Validation | ✅ Learning exercises passed; no persistent containers/images/volumes/build cache remain |
+| Handover | ✅ [`05-docker-handover.md`](../handovers/05-docker-handover.md) |
+
+**Important evidence gap:** the pre-Docker network/firewall capture did not run, so the intended
+before/after ruleset diff is unrecoverable. Phase 05 recorded this as a failure. Current chain
+attribution is clean — Docker chains and Tailscale chains only — and final reachability checks
+passed, but that is weaker than the diff the brief required.
+
+**Conventions established:** rootful Docker; containers default to non-root; Compose services should
+drop capabilities, use `no-new-privileges`, and use read-only filesystems where practical; every
+published port names an interface; never grant the `docker` group to service accounts.
+
 ## Phase 03 status
 
 **Complete 2026-09-09.** Brief committed before implementation per ADR-017.
@@ -210,7 +253,7 @@ The block is retained as the record of what was expected, not as an outstanding 
 
 ## Starting state for the next phase
 
-Re-verified 2026-09-09 at the close of Phase 02.
+Re-verified 2026-09-09 at the close of Phase 05.
 
 | Fact | Value |
 |---|---|
@@ -221,10 +264,13 @@ Re-verified 2026-09-09 at the close of Phase 02.
 | Authentication | **Public key only.** No passwords, no keyboard-interactive, no root login |
 | Tailnet | `100.71.62.71`; node key expiry disabled |
 | Admin user | `aleix`, sudo-capable; **`sudo` requires a password — no `NOPASSWD`** |
+| Docker access | `aleix` is in `docker` group `983`; this is root-equivalent (ADR-022) |
 | Storage | LVM, 232 GB root, unencrypted |
 | Health | `systemctl is-system-running` → `running`, no failed units |
-| Tooling | `tmux` 3.6, `htop`, `jq`, `git`, `vim`, `nano`, `less`, `lsof`, plus `tree`, `ncdu`, `ripgrep` |
-| Listening | `:22` only off-box; everything else on loopback or the tailnet — unchanged by Phase 02 |
+| Tooling | `tmux` 3.6, `htop`, `jq`, `git`, `vim`, `nano`, `less`, `lsof`, plus `tree`, `ncdu`, `ripgrep`, Docker 29.8.0, Compose v5.5.1, containerd 2.3.5 |
+| Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache at Phase 05 close |
+| Listening | `:22` only off-box; everything else on loopback or the tailnet. Docker left no published ports. |
+| Swappiness | `vm.swappiness = 10` |
 | Boot | 25.8s cold, headless, to reachable |
 | **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |
 

@@ -1,0 +1,49 @@
+# Home Lab — Phase 05 Compose example.
+#
+#   docker compose up -d
+#   docker compose ps
+#   docker compose down
+#
+# Compose exists here for one reason beyond convenience: a `docker run` line
+# with eight flags lives only in shell history, and shell history is not
+# documentation. This file is reviewable, diffable and committed.
+
+services:
+  example:
+    build: .
+    image: homelab-example:1
+    container_name: homelab-example
+
+    # Restart policy. "no" is deliberate for a teaching stack -- Phase 05
+    # leaves nothing running, and a container that resurrects itself after a
+    # reboot would quietly contradict that.
+    restart: "no"
+
+    # THE PORT-PUBLISHING CONVENTION (ADR-022).
+    #
+    # Always name an interface. "8080:80" means 0.0.0.0:8080 -- every
+    # interface, including the LAN -- and Docker publishes it with a DNAT rule
+    # in nat/PREROUTING, which is evaluated BEFORE filter/INPUT. That is the
+    # chain a host firewall like ufw manages, so a published port is reachable
+    # even when the firewall is configured to deny it.
+    #
+    # Verified on the reference node: Docker adds nothing at all to INPUT.
+    # Its only PREROUTING rule is
+    #   -A PREROUTING -m addrtype --dst-type LOCAL -j DOCKER
+    #
+    # This example publishes nothing, because it serves nothing. The commented
+    # form below is the correct shape when a service does.
+    # ports:
+    #   - "127.0.0.1:8080:80"
+
+    # Drop every capability the process does not need. The example needs none.
+    cap_drop:
+      - ALL
+
+    # Stop the container acquiring new privileges via setuid binaries.
+    security_opt:
+      - no-new-privileges:true
+
+    # A read-only root filesystem. The app writes nothing, so nothing is lost,
+    # and anything that tries becomes a visible error rather than silent state.
+    read_only: true

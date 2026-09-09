@@ -56,6 +56,19 @@ This project uses this file for meaningful repository-level milestones rather th
   while the running server still accepted passwords. Ubuntu's `ssh.socket` uses `Accept=no`, so one
   long-running daemon serves every connection using the configuration it parsed at start. A
   configuration file is not a control until the process holding it has re-read it.
+- **Phase 05 complete.** Docker Engine 29.8.0, Compose v5.5.1, and containerd 2.3.5 installed from
+  Docker's official apt repository. Adds ADR-022, `guide/05-docker/`,
+  `docs/reference/docker-reference.md`, `scripts/server/install-docker.sh`,
+  `scripts/server/capture-network-state.sh`, `scripts/server/configure-docker-host.sh`, Docker host
+  log rotation, and a committed teaching image/Compose stack. Nothing persistent is left running.
+- Phase 05 established the container convention that every published port names an explicit
+  interface. `-p 8080:80` is forbidden because Docker publishes with DNAT before host firewall
+  `INPUT` rules. It also records that `aleix` is in the `docker` group, which is root-equivalent and
+  must never be granted to service accounts.
+- Phase 05 recorded a failure worth preserving: the pre-Docker network/firewall capture did not run,
+  so the exact before/after ruleset diff is unrecoverable. Attribution by chain name found only
+  Docker and Tailscale chains, and final reachability checks passed, but this is weaker evidence than
+  the brief required.
 
 ### Changed
 

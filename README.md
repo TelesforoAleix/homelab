@@ -43,7 +43,7 @@ This repository is aimed at people with a business and some technical background
 
 ## Current status
 
-**Phases 00–03 complete. Phase 04 — Git & GitHub Fundamentals in progress.**
+**Phases 00–05 complete. Next: Phase 06 — AI CLI Access.**
 
 | Phase | State |
 |---|---|
@@ -51,11 +51,13 @@ This repository is aimed at people with a business and some technical background
 | 01 — Ubuntu Server on the reference node | ✅ Complete |
 | 03 — Remote access (SSH keys, Tailscale, VS Code) | ✅ Complete — run ahead of 02 by choice |
 | 02 — Linux fundamentals | ✅ Complete |
-| 04 — Git & GitHub fundamentals | 🔄 In progress |
+| 04 — Git & GitHub fundamentals | ✅ Complete |
+| 05 — Docker & Docker Compose | ✅ Complete |
 
 The reference node runs Ubuntu Server 26.04.1 LTS, is administered entirely
 remotely over Tailscale with key-only SSH, and has **no monitor or keyboard
-attached**. See [`ROADMAP.md`](ROADMAP.md) for what comes next and
+attached**. Docker Engine and Compose are installed, with no persistent
+containers running. See [`ROADMAP.md`](ROADMAP.md) for what comes next and
 [`docs/reference/project-state.md`](docs/reference/project-state.md) for the
 verified current state.
 

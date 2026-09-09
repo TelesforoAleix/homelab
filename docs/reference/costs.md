@@ -66,6 +66,16 @@ exist. The choice was made on the project's purpose, not its budget (ADR-021).
 `gitleaks` 8.30.1 was installed on the MacBook via Homebrew; free and open source. No new hardware,
 no subscription, no paid service. Reference-build running total unchanged at **899 DKK (~121 EUR)**.
 
+## Phase 05 — Docker & Docker Compose
+
+**0 DKK.** Recorded explicitly.
+
+Docker Engine 29.8.0, Docker Compose v5.5.1, Buildx and containerd 2.3.5 were installed from
+Docker's official apt repository. All are free and open source. No new hardware, subscription, paid
+service, hosted account, or usage-based dependency was introduced.
+
+Reference-build running total unchanged at **899 DKK (~121 EUR)**.
+
 ## Existing subscriptions used by the project
 
 These should be recorded as costs even when they pre-date Home Lab. The exact subscription prices have not yet been supplied by the owner; record them in the phase that first depends on them (Phase 06, AI CLI access).

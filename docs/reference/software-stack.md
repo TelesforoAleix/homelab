@@ -18,8 +18,10 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | Tailscale (server) | **Active** | 1.102.3 | Chosen remote-access approach (ADR-005) | Installed 2026-09-09 from the `resolute` repository, re-verified that day. MagicDNS primary route; node key expiry disabled (ADR-019). |
 | Tailscale (MacBook) | **Active** | 1.102.3 | Same tailnet | Homebrew cask `tailscale-app`. Same version as the server. |
 | VS Code Remote SSH | **Active** | extension 0.124.0 (`remote-ssh-edit` 0.87.0, `remote-explorer` 0.5.0) | Development workflow (ADR-004) | Connects via the `homelab` alias in `~/.ssh/config`; bootstraps `~/.vscode-server` on the node. |
-| Docker Engine | Planned | — | Expected core infrastructure | Phase 05; `resolute` repository confirmed available 2026-09-08 |
-| Docker Compose | Planned | — | Expected core infrastructure | Phase 05 |
+| Docker Engine / CLI | **Active** | 29.8.0, build 88096ef | Core container runtime (ADR-022) | Phase 05. Installed from Docker's official apt repository with `signed-by`; rootful daemon. Containers should run as non-root and published ports must bind an explicit interface. |
+| Docker Compose plugin | **Active** | v5.5.1 | Compose file workflow (ADR-022) | Phase 05. Used for committed service definitions instead of long `docker run` lines living only in shell history. |
+| Docker Buildx plugin | **Active** | Installed with Docker 29.8.0 | No | Phase 05 package set from Docker's repository. |
+| containerd | **Active** | v2.3.5, commit 1294c24a7da8e5a793ed378161673abe94118892 | Docker dependency | Installed as Docker's `containerd.io` package; no conflicting distribution `containerd` was installed. |
 | Python | Planned | — | Likely runtime/tooling | Version selected when needed |
 | Node.js | Planned | — | Likely runtime/tooling | Version selected when needed |
 | Claude Code CLI | Planned | — | Initial AI tool | Phase 06 |
