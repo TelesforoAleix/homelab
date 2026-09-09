@@ -43,4 +43,6 @@ These mirror the numbered project roadmap.
 - [`03-remote-access`](03-remote-access/README.md) — SSH keys, disabling password authentication,
   Tailscale, VS Code Remote SSH, and removing the monitor. *(Complete 2026-09-09. Run before Phase
   02 by the owner's sequencing decision, to close Phase 01's principal open risk early.)*
-- `02-linux-fundamentals` — **next.** Deferred behind Phase 03; see `ROADMAP.md`.
+- [`02-linux-fundamentals`](02-linux-fundamentals/README.md) — operating the node: permissions,
+  services, logs, storage, packages, and the habit of recognising a change that could lock you out
+  before typing it. *(Run after Phase 03 by the owner's sequencing decision.)*
