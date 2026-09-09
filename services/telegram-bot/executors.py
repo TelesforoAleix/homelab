@@ -35,6 +35,7 @@ import os
 import socket
 import subprocess
 
+import model_client
 from router import Capability, Executor
 
 SYSTEMCTL = "/usr/bin/systemctl"
@@ -209,34 +210,67 @@ def make_restart(allowed_units: set[str], log) -> Executor:
 
 
 # --------------------------------------------------------------------------
-# UNAVAILABLE executor — the model interface
+# The model executor — Phase 09 connected it
 # --------------------------------------------------------------------------
 
-def _model(_args: list[str]) -> str:
+def _ask(args: list[str], user_id: int) -> str:
     """
-    The model executor is registered and deliberately not wired.
+    Ask a model a question. Phase 09, ADR-025.
 
-    This is a licensing decision, not a missing feature, and the reply says so
-    rather than pretending to be a bug someone should fix.
+    THIS EXECUTOR CANNOT REACH A PRIVILEGED ONE
+    -------------------------------------------
+    It returns a string. That string is sent to Telegram and nothing else is
+    done with it -- it is never parsed, never matched against the registry, and
+    never passed back into dispatch(). The router's capability check is what
+    guarantees `/ask` cannot become a route to `/restart`, and the reason it
+    holds is that there is no code path from a model's output to a dispatch.
 
-    ADR-008 authorises subscription-backed INTERACTIVE access. It does not
-    authorise unattended use, and whether automating a personal Claude Pro or
-    ChatGPT subscription behind a service is within either provider's terms is
-    something this project has not established. Wiring `claude -p` would work
-    today and cost nothing, which is exactly why the decision needs making
-    deliberately rather than by default.
+    That is not a theoretical concern. A model with its tools disabled will
+    happily EMIT TEXT SHAPED LIKE A TOOL CALL: during Phase 09 testing, Haiku
+    with --tools "" replied with a function_calls block and a confabulated
+    answer. Anything that parsed model output looking for commands would have
+    found one.
 
-    Phase 09 needs real transcription and will decide on its merits --
-    subscription, API key, or local model -- and record it as an ADR.
+    WHAT THIS SENDS OFF THE MACHINE
+    -------------------------------
+    The question, and the literal output of /status. That is all, and it is the
+    same five figures the owner can already see on their phone. The list is
+    enforced here by construction: _status() is called with no arguments and
+    there is nowhere to add a sixth source without editing this line.
     """
-    return (
-        "The model executor is registered but not connected.\n\n"
-        "This is deliberate. ADR-008 authorises subscription-backed interactive\n"
-        "access; it does not authorise unattended use, and whether automating a\n"
-        "personal subscription behind a service is permitted by the provider is\n"
-        "not something this project has established.\n\n"
-        "Phase 09 needs a real model call and will decide on its merits."
-    )
+    question = " ".join(args).strip()
+    if not question:
+        return (
+            "Usage: /ask <question>\n\n"
+            "Sends your question and the /status figures to a model.\n"
+            "Nothing else about this host is sent."
+        )
+
+    context = _status([])
+    reply = model_client.ask(question, context, user_id)
+
+    if reply.get("ok"):
+        text = str(reply.get("text", "")).strip() or "(the model returned nothing)"
+        provider = reply.get("provider", "?")
+        model = reply.get("model", "?")
+        # The provenance line is not decoration. Two providers answer here and
+        # they are not interchangeable; the owner should never have to guess
+        # which subscription just paid for an answer.
+        return f"{text}\n\n-- {provider}/{model}"
+
+    kind = reply.get("kind", "error")
+    message = str(reply.get("message", "the model helper failed"))
+
+    if kind == "exhausted":
+        lines = ["Both providers are spent."]
+        for item in reply.get("detail", []) or []:
+            lines.append(f"  {item}")
+        lines.append("")
+        lines.append("This is a usage limit, not a fault. The read-only")
+        lines.append("commands are unaffected -- try /status.")
+        return "\n".join(lines)
+
+    return f"Could not ask a model: {message}"
 
 
 # --------------------------------------------------------------------------
@@ -284,6 +318,23 @@ def register_all(router, *, allowed_units: set[str], log) -> None:
     router.register(Executor("/uptime", Capability.READ, _uptime,
                              "uptime and load average"))
     router.register(make_restart(allowed_units, log))
-    router.register(Executor("/model", Capability.UNAVAILABLE, _model,
-                             "model access — registered, not connected"))
+    # /ask carries wants_user because the audit record of a call that spends
+    # the owner's subscription allowance must name who asked for it, and
+    # log_args=False because the argument is the owner's own prose.
+    #
+    # Capability.READ, not PRIVILEGED. It reads /proc and talks to a socket it
+    # is permitted to talk to; it gains no privilege on this host. The thing it
+    # spends is a subscription allowance, and that is rationed by the helper's
+    # caps rather than by the router's allowlist -- a resource limit is not an
+    # authorisation question.
+    #
+    # /model stays as an alias. It was the documented command from Phase 07
+    # onwards and it now does what it always said it would.
+    router.register(
+        Executor("/ask", Capability.READ, _ask,
+                 "ask a model a question, with /status as context",
+                 usage="/ask <question>",
+                 wants_user=True, log_args=False),
+        "/model",
+    )
     router.register(build_help(router), "/start")

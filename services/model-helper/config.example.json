@@ -1,0 +1,23 @@
+{
+  "providers": ["claude", "codex"],
+
+  "claude": {
+    "bin": "/home/aleix/.local/bin/claude",
+    "model": "haiku"
+  },
+
+  "codex": {
+    "bin": "/home/aleix/.local/bin/codex",
+    "model": "gpt-5.6-luna"
+  },
+
+  "caps": {
+    "per_hour": 6,
+    "per_day": 30
+  },
+
+  "state_file": "/var/lib/homelab-model-helper/calls.json",
+  "timeout_seconds": 120,
+  "max_question_chars": 500,
+  "max_answer_chars": 3000
+}

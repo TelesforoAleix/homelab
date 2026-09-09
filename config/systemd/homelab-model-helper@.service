@@ -1,0 +1,108 @@
+# Home Lab model helper — Phase 09, ADR-025.
+#
+# Installed to /etc/systemd/system/homelab-model-helper@.service
+#
+# Templated (@) because the socket uses Accept=yes: systemd instantiates one
+# copy of this unit per connection and hands it the accepted socket as stdin.
+#
+# THIS UNIT RUNS AS `aleix`, AND THAT IS THE POINT
+# ------------------------------------------------
+# It is the only service on this node that runs as the human's account, because
+# it is the only one that must reach the human's OAuth credentials. Everything
+# below exists to make that as small a concession as possible: it holds the
+# credential, and it can do almost nothing else.
+#
+# It is NOT a substitute for the bot's own sandbox. The bot stays as
+# homelab-bot, unprivileged, with ProtectHome=yes -- unchanged by this phase.
+
+[Unit]
+Description=Home Lab model helper (per-connection)
+Documentation=https://github.com/TelesforoAleix/homelab
+
+# No [Install] section, deliberately. This unit is started by the socket and
+# must never be enabled or started on its own -- with no connection on stdin it
+# would read EOF and exit. It is also therefore not WantedBy=multi-user.target,
+# so it is not boot-critical and not lockout-class (ADR-020).
+
+[Service]
+Type=simple
+User=aleix
+Group=aleix
+
+ExecStart=/usr/bin/python3 /opt/homelab-model-helper/helper.py
+
+# The connection is stdin and stdout. Errors go to the journal, which is where
+# the audit record of every call lives: requesting user, provider, model,
+# outcome, duration. The question text is deliberately NOT logged.
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+
+# A model call that has not answered in two minutes is not going to. Bound the
+# instance so a hung CLI cannot sit holding a connection slot forever.
+RuntimeMaxSec=180
+TimeoutStopSec=10
+
+# --- Privilege -----------------------------------------------------------
+#
+# Retained even though this runs as a real user account: `aleix` is an admin
+# account and can sudo. Without NoNewPrivileges a compromise of this process
+# would inherit that path. With it, setuid is refused outright -- the same
+# directive that forced Phase 08 to use polkit instead of sudo.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+# --- Filesystem ----------------------------------------------------------
+#
+# /usr and /etc read-only. /home/aleix stays writable because both CLIs write
+# there -- session state, caches and update metadata under ~/.claude and
+# ~/.codex. Narrowing this to those two directories was considered and
+# rejected for now: Phase 07 set ProcSubset=pid, broke every /status, and
+# taught this project that hardening which breaks the function it protects is
+# not hardening. What is written here is what has been OBSERVED to be needed.
+ProtectSystem=strict
+ReadWritePaths=/home/aleix
+StateDirectory=homelab-model-helper
+StateDirectoryMode=0700
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectProc=invisible
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+# --- Deliberately NOT set, with reasons ----------------------------------
+#
+# MemoryDenyWriteExecute
+#   Both CLIs ship a JIT. A JIT needs writable-then-executable pages by
+#   definition, so this directive would stop them starting. Recorded rather
+#   than silently omitted, because its absence is a real weakening compared to
+#   the bot's unit, which does set it.
+#
+# RestrictNamespaces
+#   `codex exec --sandbox read-only` builds its own sandbox out of namespaces.
+#   Forbidding namespaces here would disable the sandbox that keeps the model's
+#   shell tool from touching the filesystem -- a directive that would make the
+#   system less safe, not more.
+#
+# ProtectHome
+#   The entire purpose of this unit is to reach two files under /home/aleix.
+#
+# SystemCallFilter
+#   Left off while the syscall surface of a JIT plus a namespace sandbox is
+#   unmeasured. Guessing at a filter here risks an intermittent failure that
+#   looks like a model outage. A measured filter is a candidate for a later
+#   phase.
+
+# --- Network -------------------------------------------------------------
+#
+# Both providers are HTTPS APIs. AF_UNIX is needed for the connection itself.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
