@@ -146,7 +146,18 @@ treated as an availability SLA.
 
 ## Phase 07 — Telegram Interface
 
+**Status: complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
 Build a minimal Telegram bot with deterministic infrastructure/status commands. Keep it unprivileged.
+
+Delivered as a **native systemd service** (not a container), running as a dedicated account in no
+privileged group, scoring **1.3 OK** on `systemd-analyze security`. **Long polling, so it opens no
+listening socket** — which is what makes a network service acceptable on a node with no firewall.
+Standard library only; the bot never forks a process. Isolation proved by attempted access (ADR-023).
+
+**Deliberately read-only, with no escalation built.** Phase 08 owns the executor pattern; widening
+the service account is its decision to make, not to inherit. Moving to webhooks would change the
+exposure model completely and needs its own ADR.
 
 ## Phase 08 — Router & Executors
 

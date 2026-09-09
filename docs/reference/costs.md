@@ -86,6 +86,18 @@ The phase uses two subscriptions that the owner already paid for before Home Lab
 below as recurring project dependencies, but do not change the one-time reference-build total of
 **899 DKK (~121 EUR)**.
 
+## Phase 07 — Telegram Interface
+
+**0 DKK.** Recorded as an explicit zero.
+
+Telegram bots are free to create and operate. No new hardware, no subscription, no paid service, and
+no third-party Python package. The only ongoing cost is one outbound HTTPS request roughly every 50
+seconds, forever, which is negligible in bandwidth but is worth naming as a permanent connection
+from this node to a third party.
+
+Reference-build running total unchanged at **899 DKK (~121 EUR)**, plus the existing AI
+subscriptions recorded in Phase 06.
+
 ## Existing subscriptions used by the project
 
 These are costs even though they pre-date Home Lab. The owner supplied the actual billed EUR amounts

@@ -92,6 +92,27 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   (`two_factor: true`) after adding the two read-only scopes needed to ask. Primary email is
   **private**, and all commits use the GitHub noreply address.
 
+## Phase 07 status
+
+**Complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`07-telegram.md`](../handovers/07-telegram.md), committed as `54a33d2` before implementation |
+| Service | ✅ `homelab-telegram-bot.service` — native systemd, enabled, running |
+| Account | ✅ `homelab-bot` uid 999, `nologin`, no home, **no privileged group** |
+| Hardening | ✅ `systemd-analyze security` → **1.3 OK** |
+| Exposure | ✅ **No listening socket.** Long polling, outbound HTTPS only; `ss -tln` unchanged |
+| Isolation | ✅ Proved by attempted access — cannot read `/home/aleix`, either AI credential, the Docker socket, or its own token |
+| Reboot test | ✅ Started 7s after boot, **0 restarts**; recovered from a DNS-not-ready window unaided in 56s |
+| ADR-023 | ✅ **Accepted** |
+| Guide | ✅ [`guide/07-telegram/`](../../guide/07-telegram/README.md) |
+| Verifier | ✅ 0 failures, 0 warnings |
+| Handover | ✅ [`07-telegram-handover.md`](../handovers/07-telegram-handover.md) |
+
+**Read-only by design, with no escalation built.** Phase 08 owns the executor pattern; widening the
+service account is its decision to make deliberately, not to inherit.
+
 ## Open risks carried forward
 
 > **The repository is now public.** Everything below is publicly documented. That is intentional for
@@ -137,6 +158,12 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   but Phase 13 must not assume symmetry.
 - **Node key expiry deliberately disabled** on the Tailscale node (ADR-019) — a security control
   traded for availability. Phase 13 must revisit it rather than inherit it.
+- **The Telegram allowlist is per-deployment state on the node**, in no backup. New in Phase 07.
+- **Telegram is a third party.** Every bot message transits and is stored on their infrastructure.
+  Acceptable for uptime and disk figures; a reason not to extend the bot toward anything sensitive
+  without revisiting. Phases 08 and 10.
+- **No alerting on the bot.** If it dies at 3am, nothing says so — and bounded logging means a quiet
+  journal does not mean a healthy service.
 - Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.
 - No encryption at rest (ADR-015), which compounds with the cleartext Wi-Fi passphrase (ADR-016).
   Phase 13 should treat these together.
