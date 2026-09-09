@@ -19,3 +19,17 @@ belong in this repository. `.gitignore` carries patterns for all of them as a sa
 
 See [`ssh/README.md`](ssh/README.md) for how these are applied — in particular that the drop-in's
 `10-` prefix is a security control, and that installing it requires `systemctl reload ssh`.
+
+## `docker/`
+
+`daemon.json` configures Docker log rotation only: `json-file` with `max-size: 10m` and
+`max-file: 3`. It exists because Docker logs land on the root logical volume, and this machine's
+volume group has no free extents.
+
+See [`docker/README.md`](docker/README.md).
+
+## `sysctl/`
+
+`99-homelab-swappiness.conf` lowers `vm.swappiness` to `10`, closing the Phase 01 item that Phase 05
+inherited. It keeps swap available as a safety net while making the server prefer reclaiming cache
+before moving active processes to swap.

@@ -50,3 +50,7 @@ These mirror the numbered project roadmap.
   repository's own history: what a commit really is, why the phase merges are `--no-ff`, conflicts,
   the `.gitignore` trap, recovery via the reflog, and auditing a history before publishing it.
   *(Complete 2026-09-09. The phase in which the repository was first pushed anywhere.)*
+- [`05-docker`](05-docker/README.md) — Docker and Compose on a console-less node: containers as
+  host processes, non-root containers, explicit-interface port publishing, layer caching, logs,
+  diagnostics, disk accounting, and the Docker/firewall interaction Phase 13 inherits.
+  *(Complete 2026-09-09. Leaves Docker installed and no containers running.)*

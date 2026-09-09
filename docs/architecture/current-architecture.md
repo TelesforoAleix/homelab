@@ -1,8 +1,8 @@
 # Current Architecture
 
-**State:** Phases 01–03 complete — the reference node runs Ubuntu Server and is administered
-remotely over Tailscale with key-only SSH. **The console has been physically removed**; the node is
-genuinely headless.
+**State:** Phases 01–05 complete — the reference node runs Ubuntu Server, is administered remotely
+over Tailscale with key-only SSH, and has Docker Engine/Compose installed as the container runtime.
+**The console has been physically removed**; the node is genuinely headless.
 
 Phase 02 changed nothing here, which its brief predicted: it taught the architecture rather than
 altering it. Its only lasting change to the node is three diagnostic packages. What it *did* add is
@@ -27,6 +27,7 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
     UEFI boot · LVM without encryption (ADR-015) · 232 GB root
     Wi-Fi wlp1s0, 2.4 GHz (ADR-016) · eno1 present, unused
     SSH: publickey only. No passwords, no root login (ADR-018)
+    Docker Engine 29.8.0 + Compose v5.5.1, rootful (ADR-022)
     NO MONITOR, NO KEYBOARD — all DRM connectors report disconnected
     Cold-boots headless to a reachable state in ~26 seconds
 ```
@@ -42,6 +43,7 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | netplan + wpasupplicant (Wi-Fi) | **Active** |
 | unattended-upgrades | **Active** |
 | Wi-Fi power-save suppression | **Active** — `config/systemd/` |
+| Docker Engine / Compose | **Active** — no persistent containers; explicit-interface port publishing required (ADR-022) |
 
 ## Confirmed architectural direction
 
@@ -54,7 +56,6 @@ Claude Code CLI and OpenAI Codex CLI where officially supported through existing
 
 ## Not implemented yet
 
-- Docker / Compose baseline (Phase 05)
 - Telegram bot (Phase 07)
 - router/executor code (Phase 08)
 - knowledge/RAG services (Phase 10)
