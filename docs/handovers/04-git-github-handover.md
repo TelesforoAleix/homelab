@@ -44,7 +44,7 @@ Before installing Docker:
 |---|---|
 | Visibility | **PUBLIC** |
 | Default branch | `main` |
-| Commits on `main` at handover | 37 + the Phase 04 merge |
+| Commits on `main` at handover | **43** (37 at first push, plus Phase 04's own work and its merge) |
 | Merge commits preserved | **4/4** — verified after the push |
 | Tags | `phase-01`, `phase-02`, `phase-03`, `phase-04` — annotated |
 | Licences | MIT (`LICENSE`), CC BY-SA 4.0 (`LICENSE-docs`) |
@@ -202,9 +202,14 @@ That generalises well beyond git — to monitoring, alerting and health checks, 
 backups: a backup you have never restored is not a backup, for exactly this reason. **Phase 05 will
 add health checks and Phase 13 will add backups. Both should validate against a positive case.**
 
-Also recorded: the scanner matched its own documentation (`*.ts.net` as literal pattern text in this
-phase's own brief); gitleaks silently skipped all four merge commits; and `README.md` still announced
-Phase 00 as the current status, three phases later, corrected an hour before publication.
+Also recorded: the scanner matched its own documentation twice — first `*.ts.net` as literal pattern
+text in this phase's own brief, then, more seriously, **the build log's own record of the
+planted-secret test tripped all six CRITICAL classes on published `main`**. Nothing real was
+disclosed, but the gate was left permanently red, which is how a control stops being one. The
+evidence is now written in a form that cannot be mistaken for the thing it describes, and **the audit
+now runs at phase close as well as before the push**. Also: gitleaks silently skipped all four merge
+commits; and `README.md` still announced Phase 00 as the current status, three phases later,
+corrected an hour before publication.
 
 **One honest ordering note.** The private-key bug was found *after* the repository was pushed, not
 before. The re-audit with the working scanner returned the same verdict, so the publication decision

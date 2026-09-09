@@ -239,21 +239,39 @@ check() {
   echo
 }
 
+# Lines of this script's OWN OUTPUT, quoted into a build log as evidence.
+#
+# Phase 04 planted six fake secrets to prove this scanner could detect them,
+# then wrote the results up -- and the write-up tripped all six classes on
+# published main. The values were never real, but a gate that is permanently
+# red is a gate people wave through.
+#
+# "MATCHES -- CRITICAL" is emitted only by this script. A genuine secret is
+# never on a line that also contains it. That makes this a narrow, specific
+# discriminator rather than a path exclusion: docs/build-log/ is still scanned
+# in full, so a real secret landing there would still be caught.
+#
+# See Problem 5 in docs/build-log/2026-09-09-phase-04-audit.md.
+EVIDENCE='MATCHES -- CRITICAL'
+
 echo "Pattern classes"
 echo "---------------"
 
 # --- Credentials. Any match here is disqualifying. ---
 check FAIL "private keys" \
-  '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+  '-----BEGIN [A-Z ]*PRIVATE KEY-----' \
+  "$EVIDENCE"
 
 check FAIL "SSH public keys" \
   'ssh-(rsa|ed25519|dss) AAAA[0-9A-Za-z+/]{20,}'
 
 check FAIL "Tailscale auth keys" \
-  'tskey-[a-zA-Z0-9-]{10,}'
+  'tskey-[a-zA-Z0-9-]{10,}' \
+  "$EVIDENCE"
 
 check FAIL "GitHub tokens" \
-  '(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})'
+  '(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})' \
+  "$EVIDENCE"
 
 check FAIL "OpenAI / Anthropic keys" \
   '(sk-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]{20,})'
@@ -273,20 +291,20 @@ check FAIL "wifi passphrase / psk" \
 # --- Hardware and network identity. The owner's standing rule names MACs. ---
 check FAIL "MAC addresses" \
   '\b[0-9a-fA-F]{2}(:[0-9a-fA-F]{2}){5}\b' \
-  '00:00:00:00:00:00|ff:ff:ff:ff:ff:ff'
+  "00:00:00:00:00:00|ff:ff:ff:ff:ff:ff|$EVIDENCE"
 
 # --- Identity. Generic patterns, known-safe values excluded. ---
 # The GitHub noreply address is the whole point of using a noreply address:
 # it is designed to be public and it is what all commits already use.
 check FAIL "email addresses" \
   '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b' \
-  'users\.noreply\.github\.com|noreply@anthropic\.com|@example\.(com|org)|@[a-z]+\.invalid'
+  "users\.noreply\.github\.com|noreply@anthropic\.com|@example\.(com|org)|@[a-z]+\.invalid|$EVIDENCE"
 
 # A real tailnet is a name plus .ts.net. The repo's placeholders are excluded;
 # anything else reaching this line is a real tailnet name and must not ship.
 check FAIL "tailnet names" \
   '[A-Za-z0-9_.<>{}$-]+\.ts\.net' \
-  '<tailnet>|CHANGE-ME|\{tailnet\}|\$tailnet|example\.ts\.net'
+  "<tailnet>|CHANGE-ME|\{tailnet\}|\\\$tailnet|example\.ts\.net|$EVIDENCE"
 
 # --- Judgement calls. Not secrets by default; the project must decide. ---
 check REVIEW "hardware serial numbers" \
