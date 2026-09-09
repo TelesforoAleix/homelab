@@ -82,9 +82,9 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   for documentation (ADR-021).
 - ~~Final GitHub repository owner/name if different from `homelab`.~~ ✅ **Closed 2026-09-09** —
   `TelesforoAleix/homelab`, public.
-- **Whether 2FA is enabled on the GitHub account.** Not verified: the `gh` token lacks the `user`
-  scope, so the API returns `null` rather than a value. Recorded as *unknown* rather than assumed —
-  the token's scope was deliberately not expanded for a convenience check.
+- ~~Whether 2FA is enabled on the GitHub account.~~ ✅ **Closed 2026-09-09** — verified enabled
+  (`two_factor: true`) after adding the two read-only scopes needed to ask. Primary email is
+  **private**, and all commits use the GitHub noreply address.
 
 ## Open risks carried forward
 

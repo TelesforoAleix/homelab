@@ -130,7 +130,7 @@ Unchanged by this phase unless noted.
 | Wi-Fi is a single point of failure for **both** access routes; `eno1` present, unused | Not owned by any phase — **and it bites hardest in Phase 05** |
 | The volume group has no free extents | Not owned by any phase — **relevant to Phase 05:** Docker images and volumes consume the root LV, which cannot be grown by `lvextend` |
 | 2016 firmware | Phase 13, low priority |
-| **New:** GitHub 2FA status unverified — the `gh` token lacks the `user` scope | Owner |
+| ~~GitHub 2FA status unverified~~ — ✅ **closed 2026-09-09**, verified enabled | — |
 
 **Do not let "backup" look solved.** Phase 04 gave the *repository* an offsite copy. **The reference
 node still has no backup of any kind.** If the SSD fails, the machine is rebuilt from the guide.
@@ -228,13 +228,27 @@ flattering one.
 3. **GitHub 2FA could not be verified.** The `gh` token lacks the `user` scope. Recorded as
    *unknown* rather than assumed, and the token's scope was deliberately **not** expanded for a
    convenience check.
+
+   > **Resolved 2026-09-09, immediately after the phase closed**, at the owner's request. Kept here
+   > unrewritten because it is an accurate record of the phase as run. See Open issues below.
 4. **The scanner's validation step was added.** The brief specified running two scanners; it did not
    specify proving either could detect anything. It should have.
 
 ## Open issues / technical debt
 
-- **GitHub 2FA status unverified.** Owner action; needs `gh auth refresh -h github.com -s user`, or
-  a look at the account settings page.
+- ~~**GitHub 2FA status unverified.**~~ ✅ **Closed 2026-09-09**, immediately after the phase, at
+  the owner's request. **2FA is enabled**, the primary email address is **private**, and all 45
+  commits use only GitHub noreply addresses — confirmed by searching every blob in history for each
+  of the account's three verified addresses (0 hits).
+
+  Closed by adding **`read:user` and `user:email`** to the token — deliberately **not** the `user`
+  scope that `gh` itself suggested in its error message. `user` is a parent scope that also grants
+  `user:follow`, which can follow and unfollow people on your behalf. A read-only question did not
+  need write access to the account, and `read:user` proved sufficient.
+
+  **A tool's suggested command optimises for "this will definitely work", not for least privilege.**
+  That is ADR-011 applied to a credential rather than to a service account, and it is the moment to
+  think about it: scopes accumulate and are almost never reviewed afterwards.
 - **Nothing enforces the workflow.** No branch protection, no signing, no CI.
 - **`scan-history.sh` only knows the patterns it was given.** Its header says so. It scans objects
   reachable from a ref — right for a push, not a full account of what is on disk.

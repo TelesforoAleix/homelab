@@ -209,6 +209,23 @@ for anything meaningful.
 `gh auth status` also prints the token's scopes. The token is a live credential in the macOS keyring;
 it is never in the repository, and `scan-history.sh` looks for `ghp_`/`gho_` patterns in case.
 
+### Adding a scope
+
+When `gh` reports that an operation needs a scope, it names the **broadest** one that would work.
+Check whether a narrower child scope covers what you actually need first:
+
+```bash
+gh auth refresh -h github.com -s read:user -s user:email
+```
+
+On 2026-09-09 `gh` suggested `-s user` for reading 2FA status and email visibility. `user` is a
+parent scope that also grants `user:follow` — write access that can follow and unfollow people as
+you. `read:user` and `user:email` are both read-only and were sufficient. Scopes accumulate and are
+rarely reviewed afterwards, so the moment of adding one is the only moment you are likely to think
+about it.
+
+Scopes in use: `gist`, `read:org`, `read:user`, `repo`, `user:email`, `workflow`.
+
 ---
 
 ## Conventions in force
