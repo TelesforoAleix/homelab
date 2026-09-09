@@ -90,21 +90,51 @@ fi
 
 # --------------------------------------------------------------------------
 sec "file permissions"
-for spec in "$CONF_DIR/token:600:root:root" "$APP_DIR/bot.py:644:root:root"; do
-  p="${spec%%:*}"; rest="${spec#*:}"; want_mode="${rest%%:*}"
-  rest="${rest#*:}"; want_own="${rest%:*}:${rest#*:}"
-  if [ -e "$p" ]; then
-    got="$(stat -c '%a %U:%G' "$p")"
-    [ "$got" = "$want_mode $want_own" ] && ok "$p is $got" || bad "$p is $got, expected $want_mode $want_own"
-  else
-    bad "$p does not exist"
+#
+# UNKNOWN IS NOT A FAILURE, AND IT IS NOT A PASS.
+#
+# $CONF_DIR is 0750 root:homelab-bot, so an unprivileged caller cannot even
+# traverse it. An earlier version of this script reported
+# "FAIL: token does not exist" while the bot was happily authenticating with
+# that very token -- it had confused "I cannot see it" with "it is not there".
+#
+# That is the fifth time this project has hit a check that answers confidently
+# without being able to answer at all, after sshd -T, `who`, the blob scanner's
+# binary test, and its private-key pattern. scripts/README.md has carried the
+# rule since Phase 02 and this script still broke it. So the privilege is
+# checked FIRST, and anything unknowable says so.
+IS_ROOT=0; [ "$(id -u)" -eq 0 ] && IS_ROOT=1
+if [ "$IS_ROOT" -eq 0 ] && ! test -x "$CONF_DIR"; then
+  warn "cannot traverse $CONF_DIR as $(id -un) -- config checks are UNKNOWN, not failed"
+  warn "re-run with sudo for the token, allowlist and journal checks"
+  CONF_READABLE=0
+else
+  CONF_READABLE=1
+fi
+
+check_file() {
+  local path="$1" want_mode="$2" want_own="$3"
+  if [ ! -e "$path" ] && [ "$CONF_READABLE" -eq 0 ] && case "$path" in "$CONF_DIR"/*) true ;; *) false ;; esac; then
+    warn "$path: UNKNOWN (no permission to look)"
+    return
   fi
-done
-if [ -f "$CONF_DIR/token" ]; then
+  if [ -e "$path" ]; then
+    local got; got="$(stat -c '%a %U:%G' "$path" 2>/dev/null)"
+    if [ -z "$got" ]; then warn "$path: UNKNOWN (cannot stat)"; return; fi
+    [ "$got" = "$want_mode $want_own" ] && ok "$path is $got" \
+                                        || bad "$path is $got, expected $want_mode $want_own"
+  else
+    bad "$path does not exist"
+  fi
+}
+check_file "$CONF_DIR/token" 600 root:root
+check_file "$APP_DIR/bot.py" 644 root:root
+
+if [ "$CONF_READABLE" -eq 1 ] && [ -f "$CONF_DIR/token" ]; then
   [ -s "$CONF_DIR/token" ] && ok "token file is non-empty (value not shown)" \
                            || warn "token file is EMPTY -- the bot cannot authenticate"
 fi
-if [ -f "$CONF_DIR/allowlist" ]; then
+if [ "$CONF_READABLE" -eq 1 ] && [ -f "$CONF_DIR/allowlist" ]; then
   N="$(grep -cE '^[[:space:]]*[0-9]+' "$CONF_DIR/allowlist" 2>/dev/null || echo 0)"
   [ "$N" -gt 0 ] && ok "allowlist holds $N id(s) (ids not shown)" \
                  || bad "allowlist has no ids -- the bot refuses to start, by design"
@@ -137,11 +167,25 @@ sec "network exposure"
 echo "  listening sockets on this host:"
 ss -tln | tail -n +2 | redact | sed 's/^/    /'
 if [ -n "$MAINPID" ]; then
-  LISTEN_N="$(ss -tlnp 2>/dev/null | grep -c "pid=$MAINPID," || true)"
-  [ "${LISTEN_N:-0}" -eq 0 ] && ok "the bot listens on NOTHING (long polling, outbound only)" \
-                             || bad "the bot has $LISTEN_N listening socket(s) -- it should have none"
-  OUT_N="$(ss -tnp 2>/dev/null | grep -c "pid=$MAINPID," || true)"
-  ok "outbound connections owned by the bot: ${OUT_N:-0}"
+  # The listener claim is safe to make unprivileged for a different reason:
+  # `ss -tln` shows every listening socket on the host regardless of owner, so
+  # comparing the full list against the known baseline is conclusive even
+  # without pid attribution.
+  BASELINE=6
+  LISTEN_TOTAL="$(ss -tln | tail -n +2 | wc -l | tr -d ' ')"
+  if [ "$LISTEN_TOTAL" -eq "$BASELINE" ]; then
+    ok "$LISTEN_TOTAL listening sockets, matching the pre-Phase-07 baseline -- the bot added none"
+  else
+    bad "$LISTEN_TOTAL listening sockets, baseline was $BASELINE -- investigate the difference"
+  fi
+  # Same trap as the config files: ss cannot see another user's sockets
+  # unprivileged, so a zero here means "cannot see", not "none exist".
+  if [ "$IS_ROOT" -eq 1 ]; then
+    OUT_N="$(ss -tnp 2>/dev/null | grep -c "pid=$MAINPID," || true)"
+    ok "outbound connections owned by the bot: ${OUT_N:-0}"
+  else
+    warn "outbound connection count: UNKNOWN (ss needs root to attribute sockets)"
+  fi
 fi
 
 # --------------------------------------------------------------------------

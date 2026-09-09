@@ -375,7 +375,23 @@ def poll_forever(allowlist: set[int]) -> None:
                 send_message(chat_id, "Not authorised.")
                 continue
 
-            reply = handle(text)
+            # A failing handler must not kill the bot.
+            #
+            # Without this, one exception inside a command took the whole
+            # process down, systemd restarted it, the same message was still
+            # pending, and it crashed again -- a restart loop driven by a
+            # single bad message. That is exactly how a read-only status bot
+            # turns into a self-inflicted outage on a console-less node.
+            #
+            # Found in the reference build: ProcSubset=pid in the unit hid
+            # /proc/uptime, so every /status raised FileNotFoundError.
+            try:
+                reply = handle(text)
+            except Exception as exc:  # noqa: BLE001 - a command must never be fatal
+                log(f"ERROR: command failed for user {user_id}: {redact(str(exc))}")
+                send_message(chat_id, "That command failed. The error is in the journal.")
+                continue
+
             if reply is None:
                 log(f"user {user_id}: unknown command")
                 send_message(chat_id, "Unknown command. Try /help")

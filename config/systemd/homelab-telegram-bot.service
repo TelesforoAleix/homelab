@@ -72,7 +72,19 @@ PrivateTmp=yes
 PrivateDevices=yes
 DevicePolicy=closed
 ProtectProc=invisible
-ProcSubset=pid
+
+# ProcSubset=pid is deliberately NOT set, and this comment is the reason.
+#
+# It restricts /proc to process directories only, hiding /proc/uptime,
+# /proc/loadavg and /proc/meminfo. Those are exactly what this bot reads. It is
+# an excellent directive for a service that has no business reading system-wide
+# state -- and this service's entire job is reading system-wide state.
+#
+# Setting it made every /status crash with FileNotFoundError on /proc/uptime.
+# Hardening that breaks the function it protects is not hardening.
+#
+# ProtectProc=invisible is kept: it hides OTHER processes' directories, which
+# this bot genuinely does not need, without touching the files it does.
 ReadOnlyPaths=/etc/homelab-telegram-bot
 
 # --- Kernel and system ---------------------------------------------------
