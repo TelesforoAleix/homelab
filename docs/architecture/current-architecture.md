@@ -1,8 +1,13 @@
 # Current Architecture
 
-**State:** Phase 03 complete — the reference node runs Ubuntu Server and is administered remotely
-over Tailscale with key-only SSH. **The console has been physically removed**; the node is genuinely
-headless.
+**State:** Phases 01–03 complete — the reference node runs Ubuntu Server and is administered
+remotely over Tailscale with key-only SSH. **The console has been physically removed**; the node is
+genuinely headless.
+
+Phase 02 changed nothing here, which its brief predicted: it taught the architecture rather than
+altering it. Its only lasting change to the node is three diagnostic packages. What it *did* add is
+a constraint on how this architecture may be changed from now on —
+[`docs/standards/safe-changes-headless.md`](../standards/safe-changes-headless.md) (ADR-020).
 
 ## Physical roles
 

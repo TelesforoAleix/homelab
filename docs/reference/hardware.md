@@ -9,7 +9,7 @@ Verified in **Phase 01 Part A** on 2026-09-08 from Windows Task Manager, before 
 | Model | Lenovo ThinkCentre M700 Tiny | Confirmed |
 | CPU | Intel Core i5-6600T @ 2.70 GHz (Skylake, 35 W) | Confirmed — Part A |
 | CPU cores/threads | 4 / 4 | Confirmed — Part A |
-| CPU virtualization | VT-x, VT-d and EPT supported by the CPU; **currently disabled in firmware** | To enable in Phase 01 Part D |
+| CPU virtualization | VT-x, VT-d and EPT supported by the CPU; **enabled in firmware 2026-09-08** | ✅ Done in Phase 01 Part D. `lscpu` → `Virtualization: VT-x`; `vmx` on all 8 threads |
 | RAM | 8 GB DDR4 SO-DIMM @ 2133 MHz | Confirmed — Part A |
 | RAM module layout | **1 × 8 GB in ChannelA-DIMM0; ChannelB-DIMM0 empty** | **Resolved** — confirmed by `dmidecode` |
 | RAM module part | Samsung `M471A1K43BB0-CPB`, DDR4-2133 | Confirmed by `dmidecode` |
@@ -39,8 +39,8 @@ Resolved:
 
 Newly discovered:
 
-- ⚠️ **CPU virtualization is disabled in firmware.** The CPU supports it; the setting is off. See
-  *Firmware actions* below.
+- ~~⚠️ **CPU virtualization is disabled in firmware.**~~ ✅ **Enabled 2026-09-08** during Phase 01
+  Part D. Recorded here as discovered-then-resolved rather than deleted (`PROJECT.md` §11).
 
 Also validated:
 
@@ -66,24 +66,31 @@ driver and packaged firmware, so the specific risk that *the installer cannot se
 is now **substantially reduced**. The documented fallback path is retained — it costs nothing to keep
 and covers the case where reality disagrees — but it is now unlikely to be needed.
 
-## Firmware actions required before installation
+## Firmware actions — ✅ completed in Phase 01 Part D (2026-09-08)
 
-To be performed in Phase 01 Part D, while a monitor and keyboard are still attached:
+All three were performed while a monitor and keyboard were still attached, and all three are
+verified from live output.
 
-1. **Enable CPU virtualization (VT-x / VT-d).** Currently disabled.
-2. **Set `After Power Loss` to `Power On`.** Required by the Definition of Done.
-3. **Preserve UEFI boot mode.** Do not switch to legacy/CSM.
+| # | Action | Verified by |
+|---|---|---|
+| 1 | **Enable CPU virtualization (VT-x / VT-d)** | `lscpu` → `Virtualization: VT-x`; `vmx` present on all 8 threads. Re-confirmed 2026-09-09 |
+| 2 | **Set `After Power Loss` to `Power On`** | Phase 01's unattended power-loss recovery test passed all four criteria |
+| 3 | **Preserve UEFI boot mode** | ESP present at `/boot/efi`; no legacy/CSM |
 
-The ordering matters for a practical reason: after this phase the machine is headless, so every
-later firmware change means physically reattaching a monitor and keyboard. Make all of them now.
+The ordering mattered for a practical reason, and that reason has now fully arrived: **the machine is
+headless and the monitor, keyboard and cable have been removed** (Phase 03). Any further firmware
+change means physically reattaching all three. There is no known outstanding firmware task — and if
+one appears, budget a physical trip for it.
 
 ### On CPU virtualization
 
-Enabling it is **not** a requirement for anything currently on the roadmap. Linux containers —
-Docker in Phase 05 — use kernel namespaces and cgroups, not hardware virtualization, and run fine
-with VT-x disabled. It is being enabled because it is free, because the CPU supports it, and because
-the alternative to enabling it now is a physical trip to the machine later if a phase ever wants
-KVM/QEMU virtual machines.
+It was **not** a requirement for anything on the roadmap. Linux containers — Docker in Phase 05 —
+use kernel namespaces and cgroups, not hardware virtualization, and run fine with VT-x disabled. It
+was enabled because it was free, because the CPU supports it, and because the alternative was a
+physical trip to the machine later if a phase ever wanted KVM/QEMU virtual machines.
+
+That reasoning has aged well. The console is now gone, so the trip that was hypothetical in Phase 01
+would today mean reattaching hardware from a drawer.
 
 ## RAM upgrade path
 

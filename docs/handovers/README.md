@@ -32,7 +32,7 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 
 | File | Kind | Status |
 |---|---|---|
-| `project-planning.md` | Master governance context | Standing |
+| `project-planning.md` | Master governance context | **Historical** — retired 2026-09-08 by ADR-017. Retained unrewritten as the record of how Phase 00 and Phase 01 were actually run |
 | `01-ubuntu-server.md` | Phase 01 brief | **Ratified** 2026-09-08, subject to six amendments (recorded in its §0.1) — all reconciled |
 | `01-ubuntu-server-handover.md` | Phase 01 completion handover | **Returned to Project Planning** 2026-09-08 — outcome Complete |
 | `03-remote-access.md` | Phase 03 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |

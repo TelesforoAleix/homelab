@@ -46,15 +46,6 @@ Phase 03 Part F, when the monitor was removed. It is not re-recorded here and th
 unchanged — it was genuinely spent, and it was genuinely needed to install the machine. But anyone
 reproducing this build who installs headless from the start may not need it at all.
 
-## Existing subscriptions used by the project
-
-These should be recorded as costs even when they pre-date Home Lab. The exact subscription prices have not yet been supplied by the owner; record them in the phase that first depends on them (Phase 06, AI CLI access).
-
-| Service | Category | Billing model | Actual cost | Project-specific incremental cost | Notes |
-|---|---|---|---|---|---|
-| ChatGPT subscription | AI | Recurring | TBD | TBD | Intended for Codex CLI where officially supported |
-| Claude subscription | AI | Recurring | TBD | TBD | Intended for Claude Code CLI where officially supported |
-
 ## Phase 02 — Linux Fundamentals
 
 **0 DKK.** Recorded as an explicit zero rather than omitted: an omitted cost is indistinguishable
@@ -63,6 +54,15 @@ from a forgotten one.
 `tree`, `ncdu` and `ripgrep` all come from Ubuntu's own repositories (1,671 kB downloaded). No new
 hardware, no subscription, no paid service. Reference-build running total unchanged at
 **899 DKK (~121 EUR)**.
+
+## Existing subscriptions used by the project
+
+These should be recorded as costs even when they pre-date Home Lab. The exact subscription prices have not yet been supplied by the owner; record them in the phase that first depends on them (Phase 06, AI CLI access).
+
+| Service | Category | Billing model | Actual cost | Project-specific incremental cost | Notes |
+|---|---|---|---|---|---|
+| ChatGPT subscription | AI | Recurring | TBD | TBD | Intended for Codex CLI where officially supported |
+| Claude subscription | AI | Recurring | TBD | TBD | Intended for Claude Code CLI where officially supported |
 
 ## Usage-based services
 
