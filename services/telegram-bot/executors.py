@@ -286,20 +286,32 @@ def build_help(router) -> Executor:
     """
 
     def handler(_args: list[str]) -> str:
+        marks = {
+            Capability.READ: " ",
+            Capability.PRIVILEGED: "*",
+            Capability.UNAVAILABLE: "-",
+        }
         lines = ["Home Lab bot — commands:", ""]
+        seen = set()
         for ex in router.unique_executors():
-            mark = {
-                Capability.READ: " ",
-                Capability.PRIVILEGED: "*",
-                Capability.UNAVAILABLE: "-",
-            }[ex.capability]
+            seen.add(ex.capability)
             label = ex.usage or ex.name
-            lines.append(f" {mark} {label:<22} {ex.summary}")
-        lines += [
-            "",
-            " * privileged — requires authorisation",
-            " - registered but not connected",
-        ]
+            lines.append(f" {marks[ex.capability]} {label:<22} {ex.summary}")
+
+        # The legend describes what is actually on the list above.
+        #
+        # Phase 09 connected the last UNAVAILABLE executor, and /help went on
+        # explaining a "-" marker that no longer appeared against anything --
+        # help text describing a state the system had left behind. Deriving the
+        # legend from the registry is the same principle as deriving the command
+        # list from it: prose that is maintained by hand goes stale silently.
+        legend = []
+        if Capability.PRIVILEGED in seen:
+            legend.append(" * privileged — requires authorisation")
+        if Capability.UNAVAILABLE in seen:
+            legend.append(" - registered but not connected")
+        if legend:
+            lines += [""] + legend
         return "\n".join(lines)
 
     return Executor(

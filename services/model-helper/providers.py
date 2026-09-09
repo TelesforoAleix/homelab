@@ -40,7 +40,26 @@ from __future__ import annotations
 import dataclasses
 import re
 import subprocess
+import sys
 import tempfile
+
+
+def log(msg: str) -> None:
+    """
+    stderr, which systemd routes to the journal.
+
+    This exists because of a Phase 09 mistake worth keeping. The Telegram reply
+    deliberately does NOT carry raw CLI output -- provider diagnostics contain
+    absolute paths and the reply leaves the machine. That part was right. What
+    was wrong was concluding the output should go nowhere: the first real /ask
+    failed with "the provider failed in a way this helper does not recognise"
+    and there was nothing anywhere to say what had actually happened.
+
+    Suppressing something from a user-facing message is not the same decision as
+    not recording it. The journal is the right place, and it is the place that
+    was left empty.
+    """
+    print(msg, file=sys.stderr, flush=True)
 
 # The prompt. Everything sent to a provider is built from this and nothing else.
 #
@@ -92,28 +111,54 @@ class Answer:
 
 # Phrases that mean "your allowance is spent" rather than "something broke".
 #
-# The Codex phrasing is real, captured from a genuinely exhausted subscription
-# while the Phase 09 brief was being written:
-#     ERROR: You've hit your usage limit ... try again at 8:55 PM
+# BOTH of these are real, captured from genuinely exhausted subscriptions rather
+# than imagined:
 #
-# The Claude phrasings are NOT yet confirmed against a live exhausted window --
-# see the build log. They are matched conservatively, and anything unrecognised
-# falls through to "error", which is the honest answer for output we cannot read.
+#   Codex,  while the Phase 09 brief was written:
+#     ERROR: You've hit your usage limit ... try again at 8:55 PM
+#   Claude, on the very first real /ask of this phase:
+#     You've hit your session limit · resets 11pm (UTC)
+#
+# The first version of this pattern was written from the Codex text plus
+# guesses, and it did not match Claude's wording -- "session limit", which none
+# of the guesses covered. So the first real /ask reported "the provider failed
+# in a way this helper does not recognise" about an entirely normal condition,
+# and never fell back to the other provider.
+#
+# The lesson is the one this project keeps relearning in new clothing: a branch
+# that has only ever been exercised against invented input is untested. The
+# guessed half was wrong and the observed half was right.
+#
+# Anything still unrecognised falls through to "error", which remains the honest
+# answer for output we cannot read -- and it is now logged, so the next
+# unrecognised phrasing arrives with its evidence attached.
 _EXHAUSTED = re.compile(
-    r"usage limit|rate limit|quota exceeded|too many requests|"
-    r"limit reached|429",
+    r"(?:usage|session|weekly|daily|hourly|rate)\s+limit"
+    r"|limit\s+(?:reached|exceeded)"
+    r"|quota\s+exceeded"
+    r"|too\s+many\s+requests"
+    r"|\b429\b",
     re.IGNORECASE,
 )
 
-# "try again at 8:55 PM", "resets at 3pm", "reset at 2026-09-09T21:00Z"
+# Both observed shapes, and note that only one of them uses the word "at":
+#   "try again at 8:55 PM"      -> 8:55 PM
+#   "resets 11pm (UTC)"         -> 11pm (UTC)
+# The capture stops at a comma, newline or the middle dot Claude uses as a
+# separator, so it cannot run on and swallow the rest of a message.
 _RETRY_AT = re.compile(
-    r"(?:try again|reset(?:s)?)\s+at\s+([0-9A-Za-z:\-\+\. ]{3,40})",
+    r"(?:try\s+again\s+at|resets?(?:\s+at)?)\s+([0-9][^,\n\u00b7]{0,39})",
     re.IGNORECASE,
 )
 
 
-def _classify(blob: str, provider: str, model: str) -> Answer:
+def _classify(blob: str, provider: str, model: str, code: int = -1) -> Answer:
     """Turn a failed run's output into an Answer. Shared by both providers."""
+    # Logged before classification, so an unrecognised failure is still
+    # recoverable from the journal. Truncated: a CLI can produce a great deal
+    # of output and journald is not free on this node.
+    log(f"{provider}/{model} failed exit={code} output[:1200]={blob[:1200]!r}")
+
     if _EXHAUSTED.search(blob):
         m = _RETRY_AT.search(blob)
         return Answer(ok=False, kind="exhausted", provider=provider, model=model,
@@ -184,6 +229,7 @@ class ClaudeProvider(Provider):
             try:
                 code, out = self._run(argv, workdir)
             except subprocess.TimeoutExpired:
+                log(f"{self.name}/{self.model} timed out after {self.timeout}s")
                 return Answer(ok=False, kind="error", provider=self.name,
                               model=self.model,
                               detail=f"no reply within {self.timeout}s")
@@ -191,7 +237,7 @@ class ClaudeProvider(Provider):
         text = out.strip()
         if code == 0 and text and not _EXHAUSTED.search(text):
             return Answer(ok=True, text=text, provider=self.name, model=self.model)
-        return _classify(text, self.name, self.model)
+        return _classify(text, self.name, self.model, code)
 
 
 class CodexProvider(Provider):
@@ -235,6 +281,7 @@ class CodexProvider(Provider):
             try:
                 code, out = self._run(argv, workdir)
             except subprocess.TimeoutExpired:
+                log(f"{self.name}/{self.model} timed out after {self.timeout}s")
                 return Answer(ok=False, kind="error", provider=self.name,
                               model=self.model,
                               detail=f"no reply within {self.timeout}s")
@@ -250,7 +297,7 @@ class CodexProvider(Provider):
 
         if code == 0 and text:
             return Answer(ok=True, text=text, provider=self.name, model=self.model)
-        return _classify(out, self.name, self.model)
+        return _classify(out, self.name, self.model, code)
 
 
 BY_NAME = {"claude": ClaudeProvider, "codex": CodexProvider}
