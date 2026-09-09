@@ -38,4 +38,9 @@ Current bootstrap topics:
 These mirror the numbered project roadmap.
 
 - [`01-ubuntu-server`](01-ubuntu-server/README.md) — installing Ubuntu Server on the reference node
-  and making it boot headless and unattended. *(In progress: written, not yet executed on hardware.)*
+  and making it boot headless and unattended. *(Complete 2026-09-08, and corrected five times by
+  being used.)*
+- [`03-remote-access`](03-remote-access/README.md) — SSH keys, disabling password authentication,
+  Tailscale, VS Code Remote SSH, and removing the monitor. *(Complete 2026-09-09. Run before Phase
+  02 by the owner's sequencing decision, to close Phase 01's principal open risk early.)*
+- `02-linux-fundamentals` — **next.** Deferred behind Phase 03; see `ROADMAP.md`.

@@ -48,3 +48,18 @@ tmp/
 local-data/
 private/
 backups/
+
+# Credentials and keys (Phase 03). Belt and braces: nothing here should ever be
+# written into the repository in the first place, but a mistyped path should not
+# be able to commit a private key.
+id_rsa
+id_ecdsa
+id_ed25519
+id_*_homelab*
+*.pem
+*.key
+*.ppk
+authorized_keys
+known_hosts
+ssh_config
+tailscale-authkey*

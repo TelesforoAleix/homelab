@@ -17,9 +17,16 @@ Scripts are organised by **where they run**, which is not always where they are 
 | Script | Purpose |
 |---|---|
 | `verify-install.sh` | Produces a Markdown report of the server's real state — hardware, LVM layout, network, services, versions — for pasting into `docs/`. Deliberately never prints netplan file contents, which hold the Wi-Fi passphrase in cleartext. |
+| `apply-ssh-hardening.sh` | Installs the key-only sshd configuration (ADR-018). Refuses to run if the invoking user has no `authorized_keys` entry, reverts itself if `sshd -t` rejects the result, and reloads sshd — because the running daemon does not re-read its configuration on its own. |
+| `install-tailscale.sh` | Adds Tailscale's apt repository and installs it. Derives the codename from `/etc/os-release` and refuses to continue unless the repository declares `Origin: Tailscale` and the running architecture, so an unsupported release becomes a recorded problem rather than a silent fallback (ADR-014). |
+| `verify-remote-access.sh` | Reports the live remote-access posture. Probes the **running** SSH daemon over the network rather than trusting `sshd -T`, warns when configuration is newer than the daemon, and redacts the Tailscale account and tailnet suffix so its output is safe to paste. |
 
 ## Conventions
 
 - `set -euo pipefail` unless a script must survive missing optional tools, in which case say why.
 - Destructive operations require an explicit target and an explicit confirmation. Never a default.
 - Anything whose output is meant to be pasted into the repository must be safe to paste: no secrets.
+  That includes identity leaking in from third-party tools — `verify-remote-access.sh` redacts the
+  Tailscale account and tailnet name, which `tailscale status` prints against every node.
+- A script that changes a security control should verify the **running system**, not the file it
+  just wrote. Phase 03 shipped a correct configuration to a daemon that never re-read it.

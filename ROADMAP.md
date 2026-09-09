@@ -46,18 +46,43 @@ Absorbs the remaining Phase 00 hardware validation as Part A.
 
 Learn and document the Linux concepts required to operate Home Lab safely: filesystem, users/groups, permissions, packages, processes/services, logs, storage basics, networking basics, shell workflow, and `tmux`/core tooling as appropriate.
 
+Status: **Next.** Deferred, not skipped — the owner chose on 2026-09-09 to run Phase 03 first, so that
+Phase 01's principal open risk — SSH password authentication — is closed before a long
+documentation-heavy phase, and so that Phase 02 is carried out over key-based remote access rather
+than password login with a monitor attached. Phase numbers are stable by the rule below; this is a
+sequencing decision, not a renumbering.
+
+**Inherited from Phase 01 and Phase 03 — read
+[`03-remote-access-handover.md`](docs/handovers/03-remote-access-handover.md) first:**
+
+- **The server has no console.** A mistake that breaks networking or `sshd` is no longer a walk to
+  the monitor. This changes how user, network and service exercises should be practised.
+- Both handovers carry a "ground already covered" table: LVM, permissions and ownership, systemd
+  units, apt, netplan and `journalctl` from Phase 01; drop-in configuration, third-party apt
+  repositories and keyrings, socket activation, reload-vs-restart and `known_hosts` from Phase 03.
+  Build on them as worked examples rather than teaching from zero.
+
 ## Phase 03 — Remote Access
 
 Establish SSH keys, Tailscale, and VS Code Remote SSH so the server can run headless and be safely administered from the MacBook.
 
+Status: **Complete** (2026-09-09), brought forward ahead of Phase 02 by the owner's decision — see
+the Phase 02 entry above. Key-only SSH, Tailscale, VS Code Remote SSH, and the console physically
+removed. Closes Phase 01's principal open risk.
+
+- Brief: [`docs/handovers/03-remote-access.md`](docs/handovers/03-remote-access.md)
+- Handover: [`docs/handovers/03-remote-access-handover.md`](docs/handovers/03-remote-access-handover.md)
+- Guide: [`guide/03-remote-access/`](guide/03-remote-access/README.md)
+- Decisions: ADR-018 (SSH access policy), ADR-019 (tailnet configuration) — both Accepted
+
 **Inherited from Phase 01:**
 
-- Closes Phase 01's principal open risk: **SSH currently accepts password authentication.**
+- ✅ **Closed** Phase 01's principal open risk: SSH accepted password authentication. It no longer
+  does (ADR-018).
 - **Do not cite Tailscale's Ubuntu documentation.** It still references Noble 24.04 and has no 26.04
   page; `tailscale.com/kb/1187/install-ubuntu-2604` returns HTTP 200 but serves a generic index. The
   `resolute` package repository is the authoritative source — see ADR-014.
-- Supersedes the unsatisfied DHCP-reservation control in ADR-016: Tailscale gives the node a stable
-  identity independent of its LAN address.
+- ✅ Superseded the unsatisfied DHCP-reservation control in ADR-016 — formally, in ADR-019.
 
 ## Phase 04 — Git & GitHub Fundamentals
 
@@ -107,6 +132,18 @@ Add scheduled or event-driven workflows where concrete use cases justify them.
 Deepen permissions, secrets, isolation, auditing, backups, and network controls based on the capabilities accumulated in earlier phases.
 
 Security is still considered in every earlier phase; this phase is dedicated hardening rather than the first time security appears.
+
+**Inherited from Phase 03 — must be addressed, not inherited silently:**
+
+- **A backup SSH key or recovery path.** Phase 03 removed the console and left a single Ed25519 key
+  as the only way in. Losing it means losing access to a machine with no monitor attached. This is
+  debt Phase 03 created and did not close.
+- **Node key expiry is deliberately disabled** on the server (ADR-019). A real security control was
+  switched off for availability, because a lapsed key silently removes a console-less node from the
+  tailnet. Revisit on its merits.
+- **Tailscale SSH was declined** (ADR-019), keeping OpenSSH keys as the authentication mechanism.
+  Worth re-evaluating here with ACLs in scope.
+- **Firewall (UFW) and `fail2ban`** were both explicitly deferred from Phase 03 to here.
 
 ## Phase 14 — Reproducibility / Infrastructure as Code
 

@@ -1,0 +1,59 @@
+# Home Lab — SSH client configuration (MacBook side)
+#
+# Phase 03 (Remote Access). See docs/handovers/03-remote-access.md and ADR-018.
+#
+# This is an EXAMPLE. It is not applied automatically — it belongs in your
+# personal ~/.ssh/config, which is not in this repository. Append it with:
+#
+#     cat config/ssh/homelab.ssh-config.example >> ~/.ssh/config
+#     chmod 600 ~/.ssh/config
+#
+# Then edit the two placeholders marked CHANGE ME.
+#
+# Why bother: without this, every connection is
+#   ssh -i ~/.ssh/id_ed25519_homelab aleix@192.168.1.57
+# which is easy to get wrong and hard-codes an address that can change. With
+# it, the connection is "ssh homelab" and the detail lives in one file. That is
+# an operational improvement, not just a convenience — VS Code Remote SSH, scp,
+# rsync and git over SSH all read this same file and all get the alias for free.
+
+# ---------------------------------------------------------------------------
+# Primary route — over Tailscale, using the MagicDNS name.
+# ---------------------------------------------------------------------------
+# This is the address that keeps working when the LAN address changes, when you
+# are not at home, and it is why ADR-016's unsatisfied DHCP reservation stopped
+# mattering (see ADR-019).
+Host homelab
+    HostName homelab.CHANGE-ME.ts.net
+    User aleix
+    IdentityFile ~/.ssh/id_ed25519_homelab
+
+    # Offer ONLY the key named above. Without this, ssh offers every key the
+    # agent holds, one at a time. With enough keys the server hits
+    # MaxAuthTries and refuses you before reaching the right one — a confusing
+    # failure that looks like the key is wrong when it is merely late.
+    IdentitiesOnly yes
+
+    # Add the key to the agent on first use, so the passphrase is typed once
+    # per login session instead of once per connection.
+    AddKeysToAgent yes
+
+    # macOS only: store the passphrase in the login keychain, so it survives a
+    # reboot. This is what makes a passphrase-protected key painless rather
+    # than something you are tempted to skip. On Linux, delete this line.
+    UseKeychain yes
+
+# ---------------------------------------------------------------------------
+# Fallback route — over the LAN, by IP address.
+# ---------------------------------------------------------------------------
+# Kept deliberately. If Tailscale is down, misconfigured, or the node key has
+# expired, this is how you get back in without walking to the machine — which
+# matters more once the monitor has been removed. Verified at 192.168.1.57 on
+# 2026-09-09, but there is no DHCP reservation, so it can move.
+Host homelab-lan
+    HostName 192.168.1.57
+    User aleix
+    IdentityFile ~/.ssh/id_ed25519_homelab
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    UseKeychain yes

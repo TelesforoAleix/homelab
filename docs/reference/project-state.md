@@ -2,12 +2,15 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 01 — Ubuntu Server (**complete**, 2026-09-08). Next: Phase 02 / 03.
+- **Current phase:** 03 — Remote Access (**complete**, 2026-09-09). Next: Phase 02 — Linux
+  Fundamentals, deferred behind Phase 03 by the owner's sequencing decision.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
 - **Target OS:** Ubuntu Server 26.04.1 LTS (ADR-014)
-- **Current implementation state:** Ubuntu Server 26.04.1 LTS installed and validated on the
-  reference node. Reachable over SSH from the MacBook and recovers unattended from AC power loss.
-  Windows removed.
+- **Current implementation state:** Ubuntu Server 26.04.1 LTS on the reference node, administered
+  entirely remotely. `ssh homelab` reaches it over Tailscale by MagicDNS name, authenticated by an
+  Ed25519 key; passwords, keyboard-interactive and root login are all refused. VS Code Remote SSH
+  works. **The monitor and keyboard have been physically removed** — the node is genuinely headless
+  and cold-boots to a reachable state in 25.8s.
 
 ## Phase 01 status
 
@@ -78,14 +81,44 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 ## Open risks carried forward
 
-- SSH password authentication will be enabled by the Phase 01 install and is only closed in Phase 03.
+- ~~SSH password authentication~~ — ✅ **closed 2026-09-09** by Phase 03 (ADR-018). The server
+  advertises `publickey` only.
+- **Single SSH key, no backup, and no console.** Phase 03 removed the monitor and left one Ed25519
+  key as the only way in. New debt, owned by Phase 13.
+- **Node key expiry deliberately disabled** on the Tailscale node (ADR-019) — a security control
+  traded for availability. Phase 13 must revisit it rather than inherit it.
+- Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.
 - No encryption at rest (ADR-015), which compounds with the cleartext Wi-Fi passphrase (ADR-016).
   Phase 13 should treat these together.
 - **Phase 10 must not silently inherit ADR-015.** Once the node stores significant sensitive or
   personal Second Brain data, encryption at rest must be reconsidered on its merits — and converting
   an unencrypted root filesystem after the fact usually means a reinstall.
 
-## Immediate next planning action
+## Phase 03 status
+
+**Complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`03-remote-access.md`](../handovers/03-remote-access.md), committed before implementation |
+| Implementation | ✅ Key-only SSH, Tailscale 1.102.3, VS Code Remote SSH, console removed |
+| Validation | ✅ All checks passed, re-run after a headless cold boot |
+| ADR-018 / ADR-019 | ✅ **Accepted** |
+| Guide | ✅ [`guide/03-remote-access/`](../../guide/03-remote-access/README.md) |
+| Handover | ✅ [`03-remote-access-handover.md`](../handovers/03-remote-access-handover.md) |
+| `main` known-working | ⏳ pending merge of `feature/03-remote-access` |
+
+**Sequencing:** the owner chose on 2026-09-09 to run Phase 03 ahead of Phase 02. Phase 01 named SSH
+password authentication as its principal open risk, and Phase 02 is a long documentation-heavy phase
+that would have left that risk open throughout. Phase 03 also gives Phase 02 a better environment to
+be carried out in: key-based login, a stable `ssh homelab` alias, VS Code Remote SSH, and no attached
+console. **Phase 02 is deferred, not skipped, and keeps its number.**
+
+## Superseded planning note
+
+The block below was written when Phase 01 closed, before the sequencing decision above. It is kept
+rather than rewritten (`PROJECT.md` §11). Its instruction still applies to Phase 02 when that phase
+runs — it must write and commit its own brief first.
 
 **Phase 01 is complete and merged. Phase 02 has not started.**
 
@@ -109,18 +142,25 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 ## Starting state for the next phase
 
-Verified as of 2026-09-08:
+Verified as of 2026-09-09, after the headless reboot.
 
 | Fact | Value |
 |---|---|
 | Host | `homelab`, Lenovo M700 Tiny |
 | OS | Ubuntu Server 26.04.1 LTS, kernel 7.0.0-31-generic |
-| Access | SSH from the MacBook, **password authentication** |
-| Address | 192.168.1.57/21 over Wi-Fi `wlp1s0` (no DHCP reservation) |
-| Admin user | `aleix`, sudo-capable; no direct root login |
-| Storage | LVM, 232 GB root, 214 GB free, unencrypted |
-| Health | `systemctl is-system-running` → `running`; boots in 23s |
-| Recovery | Returns unattended from AC power loss (validated) |
-| Console | Monitor and keyboard still attached; removed once Phase 03 proves remote access |
+| Primary access | `ssh homelab` → MagicDNS over Tailscale |
+| Fallback access | `ssh homelab-lan` → `192.168.1.57` on the LAN |
+| Authentication | **Public key only.** No passwords, no keyboard-interactive, no root login |
+| Tailnet | `100.71.62.71`; node key expiry disabled |
+| Admin user | `aleix`, sudo-capable; **`sudo` requires a password — no `NOPASSWD`** |
+| Storage | LVM, 232 GB root, unencrypted |
+| Health | `systemctl is-system-running` → `running`, no failed units |
+| Boot | 25.8s cold, headless, to reachable |
+| **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |
 
-Reproduce this state check at any time with `scripts/server/verify-install.sh`.
+Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and
+`scripts/server/verify-remote-access.sh` (Phase 03 posture; run under `sudo` for a complete report).
+
+> **The console is gone.** Phase 02 must plan its exercises around that: a change that breaks
+> networking or `sshd` can no longer be fixed at the machine. Keep a second SSH session open, prefer
+> `reload` to `restart`, and validate before applying.
