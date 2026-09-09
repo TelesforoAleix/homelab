@@ -208,6 +208,21 @@ do_status() {
 do_teardown() {
   need_root
 
+  # VALIDATE EVERYTHING BEFORE DESTROYING ANYTHING.
+  #
+  # This used to run the guard check partway through, after the unit had
+  # already been deleted -- so a refusal left the sandbox half removed. A guard
+  # that fires after the first destructive step is not a guard, it is a report.
+  #
+  # guard_delete exits the script outright if the account is not ours to touch,
+  # and returns non-zero (without dying) if it is simply not there. So reaching
+  # the next line at all means "safe to proceed", and USER_REMOVABLE records
+  # whether there is actually a user to remove.
+  USER_REMOVABLE=0
+  if guard_delete "$LAB_USER"; then
+    USER_REMOVABLE=1
+  fi
+
   say "Removing the Phase 02 sandbox."
 
   # The unit goes first: never delete a user an active service is running as.
@@ -222,9 +237,7 @@ do_teardown() {
     info "unit already absent"
   fi
 
-  # guard_delete returns non-zero (without dying) when the user is simply not
-  # there, so this `if` distinguishes "nothing to do" from "refused".
-  if guard_delete "$LAB_USER"; then
+  if [ "$USER_REMOVABLE" -eq 1 ]; then
     userdel "$LAB_USER"
     ok "user '$LAB_USER' removed"
   fi

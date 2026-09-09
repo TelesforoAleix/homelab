@@ -434,26 +434,182 @@ The teardown guard is stricter still. The script writes a marker into the accoun
 and **refuses to delete any account that does not carry it** — if it did not create the account, it
 will not remove it.
 
-#### The exercises the sandbox is for
+#### Exercise 9: setgid, seen rather than described
 
-1. **Ownership and modes.** `ls -ld /srv/lab` — read `drwxrws---`. That `s` is setgid: files created
-   inside inherit the *directory's* group, not the creator's primary group. It is how shared working
-   areas are made to work.
-2. **Group membership is not ownership.** `id labuser` next to `ls -l`. A file's group and a user's
-   groups are different questions.
-3. **Write a unit, run it, read the result.** `systemctl start homelab-lab.service`, then
-   `systemctl status` and `cat /srv/lab/unit.log`.
-4. **Break it on purpose.** Point `ExecStart=` at a path that does not exist, `daemon-reload`,
-   `start`, and diagnose it from `systemctl status` and `journalctl -u` **before** looking at what
-   you changed. This is the exercise that transfers to real incidents.
-5. **`Type=oneshot`.** It runs, exits, and shows `inactive (dead)` — which is success, not failure.
-   Knowing that "inactive" and "failed" are different states saves a lot of confusion.
+```bash
+ls -ld /srv/lab
+sudo touch /srv/lab/made-by-root      # inside the setgid directory
+sudo touch /tmp/made-by-root-elsewhere # outside it
+ls -l /srv/lab/made-by-root /tmp/made-by-root-elsewhere
+```
 
-Then remove all of it:
+```text
+drwxrws--- 2 labuser labgroup 4096 Sep  9 13:23 /srv/lab
+-rw-r--r-- 1 root labgroup 0 Sep  9 13:26 /srv/lab/made-by-root
+-rw-r--r-- 1 root root     0 Sep  9 13:26 /tmp/made-by-root-elsewhere
+```
+
+The same command, run by the same user, two seconds apart, produced files with **different groups**.
+Normally a new file takes the creating user's primary group — root's is `root`. The `s` in
+`drwxrws---` changes that: inside a setgid directory, new files inherit the *directory's* group.
+
+That is how a shared working area is made to actually work. Without it, every file a colleague
+creates lands in their own private group and nobody else can touch it.
+
+#### Exercise 10: group membership is not ownership
+
+```bash
+id labuser
+sudo -u labuser touch /srv/lab/made-by-labuser
+ls -l /srv/lab/
+```
+
+```text
+uid=1001(labuser) gid=1001(labgroup) groups=1001(labgroup)
+
+-rw-r--r-- 1 labuser labgroup 0 Sep  9 13:26 made-by-labuser
+-rw-r--r-- 1 root    labgroup 0 Sep  9 13:26 made-by-root
+```
+
+Two files, two different owners, one shared group. "Who owns it" and "who is in the group" are
+separate questions, and permissions are answered by combining them.
+
+#### Exercise 11: `Type=oneshot` — inactive is success
+
+```bash
+sudo systemctl start homelab-lab.service
+systemctl is-active homelab-lab.service
+systemctl status homelab-lab.service | head -8
+```
+
+```text
+inactive
+
+○ homelab-lab.service - Home Lab Phase 02 practice unit (disposable)
+     Loaded: loaded (/etc/systemd/system/homelab-lab.service; static)
+     Active: inactive (dead)
+
+Sep 09 13:26:12 homelab systemd[1]: homelab-lab.service: Deactivated successfully.
+Sep 09 13:26:12 homelab systemd[1]: Finished homelab-lab.service ...
+```
+
+`inactive (dead)` after a successful run looks alarming and is completely normal. A `Type=oneshot`
+unit does a job and exits; there is no daemon left behind to be "active". **`inactive` and `failed`
+are different states**, and the circle glyph `○` versus a cross `×` tells you which at a glance.
+
+Note `Loaded: … ; static`. That is systemd reporting that the unit has **no `[Install]` section**, so
+it cannot be enabled — the safety property this sandbox was designed around, confirmed by the system
+rather than by the script's own claim.
+
+#### Exercise 12: break it on purpose, then diagnose it
+
+This is the exercise that transfers to real incidents. Override `ExecStart` with a path that does not
+exist — using a drop-in, which is how you modify a unit you do not own:
+
+```bash
+sudo mkdir -p /etc/systemd/system/homelab-lab.service.d
+# /etc/systemd/system/homelab-lab.service.d/break.conf
+[Service]
+ExecStart=
+ExecStart=/usr/bin/definitely-not-here
+```
+
+**The empty `ExecStart=` is not a typo.** `ExecStart` is list-valued, so an assignment *appends*.
+Without the empty line resetting the list first, you get both commands, not a replacement. This
+catches people constantly.
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl start homelab-lab.service
+```
+
+```text
+Job for homelab-lab.service failed because the control process exited with error code.
+```
+
+Now diagnose it **before** looking at what you changed:
+
+```text
+× homelab-lab.service - Home Lab Phase 02 practice unit (disposable)
+     Loaded: loaded (/etc/systemd/system/homelab-lab.service; static)
+    Drop-In: /etc/systemd/system/homelab-lab.service.d
+             └─break.conf
+     Active: failed (Result: exit-code) since Wed 2026-09-09 13:26:13 UTC
+    Process: 5231 ExecStart=/usr/bin/definitely-not-here (code=exited, status=203/EXEC)
+
+homelab-lab.service: Unable to locate executable '/usr/bin/definitely-not-here': No such file or directory
+homelab-lab.service: Failed at step EXEC spawning /usr/bin/definitely-not-here: No such file or directory
+```
+
+Four things in that output answer the question without you knowing anything in advance:
+
+- `×` and `failed (Result: exit-code)` — it ran and returned failure, rather than never starting.
+- **`Drop-In:` names the file that changed the unit.** If someone else had made this change, this
+  line is how you would find it.
+- **`status=203/EXEC`** is systemd's code for "could not execute the binary". 203 means the file was
+  missing or not executable — as opposed to `1` (the program ran and failed) or `226/NAMESPACE`
+  (sandboxing directives blocked it). The number tells you which half of the problem you have.
+- The journal spells it out in English anyway.
+
+Then fix it and confirm the *system* is clean, not just the unit:
+
+```bash
+sudo rm -f /etc/systemd/system/homelab-lab.service.d/break.conf
+sudo rmdir /etc/systemd/system/homelab-lab.service.d
+sudo systemctl daemon-reload
+sudo systemctl reset-failed homelab-lab.service
+sudo systemctl start homelab-lab.service
+systemctl --failed --no-legend | wc -l     # 0
+```
+
+`reset-failed` matters. A failed unit stays on the `systemctl --failed` list after you fix it, until
+it either succeeds or you clear it — and Phase 01's whole lesson was that a lingering failed unit is
+how a "working" machine hides being degraded.
+
+#### Exercise 13: test the guard that protects you
+
+```bash
+sudo usermod -c tampered labuser        # simulate an account we did not create
+sudo bash /tmp/lab-sandbox.sh teardown
+```
+
+```text
+REFUSED: 'labuser' does not carry the sandbox marker — this script did not create it
+```
+
+And then the part that actually matters — check that the refusal happened *before* anything was
+destroyed:
+
+```text
+$ ls -l /etc/systemd/system/homelab-lab.service
+-rw-r--r-- 1 root root 410 Sep  9 13:23 /etc/systemd/system/homelab-lab.service
+$ ls -ld /srv/lab
+drwxrws--- 2 labuser labgroup 4096 Sep  9 13:26 /srv/lab
+```
+
+The first version of this script failed that test. It deleted the unit, *then* checked whether the
+account was safe to remove — so a refusal left the sandbox half dismantled. **A guard that fires
+after the first destructive step is not a guard, it is a report.** The script now validates
+everything before it removes anything.
+
+Then restore the marker and remove all of it:
 
 ```bash
 sudo bash /tmp/lab-sandbox.sh teardown
 sudo bash /tmp/lab-sandbox.sh status
+```
+
+```text
+  ok   unit 'homelab-lab.service' removed
+  ok   user 'labuser' removed
+  ok   group 'labgroup' removed
+  ok   directory '/srv/lab' removed
+
+Phase 02 sandbox status
+  user      absent
+  group     absent
+  directory absent
+  unit      absent
 ```
 
 **Teardown is part of the exercise, not tidying up.** A forgotten practice account is exactly the
@@ -562,6 +718,20 @@ Two lessons, and the second is the bigger one:
 That is the same failure shape as Phase 03's `sshd -T`: a check that answered a question adjacent to
 the one being asked, and agreed with us.
 
+### The teardown guard fired after the first destructive step
+
+`lab-sandbox.sh teardown` removed the systemd unit first — on the sound reasoning that you should
+never delete a user while a service is still running as them — and *then* checked whether the account
+was safe to touch. So pointing it at an account it did not create produced a refusal with the unit
+already gone.
+
+Found by reading the code path before running the guard test, not by the test itself. Fixed by
+validating everything up front and recording what may be removed, then acting. The exercise above now
+checks the unit and directory are still present *after* the refusal, which is what makes it a test of
+the fix rather than a restatement of it.
+
+**A guard that fires after the first destructive step is not a guard, it is a report.**
+
 ### The brief named a file that does not exist
 
 The brief said netplan configuration lives in `/etc/netplan/50-wifi.yaml`. It does not — the real
@@ -621,6 +791,9 @@ worth stating plainly for later phases: **automation on this node stops at the `
 | tmux | 3.6 |
 | OpenSSH server | 10.2p1 Ubuntu-2ubuntu3.6 |
 | lsof | 4.99.4 |
+| tree | 2.3.1-1 |
+| ncdu | 1.22-1build1 |
+| ripgrep | 15.1.0-1ubuntu1 |
 
 `Requires`: nothing here is version-critical **except** the `who`/utmp behaviour, which needs
 systemd ≥ 257 to reproduce. On an older release `who` works normally.
