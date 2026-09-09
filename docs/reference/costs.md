@@ -55,6 +55,17 @@ from a forgotten one.
 hardware, no subscription, no paid service. Reference-build running total unchanged at
 **899 DKK (~121 EUR)**.
 
+## Phase 04 — Git & GitHub Fundamentals
+
+**0 DKK.** Recorded as an explicit zero.
+
+GitHub public repositories are free — but so are private ones, so **cost did not drive the
+visibility decision** and this ledger should not let a future reader infer a constraint that did not
+exist. The choice was made on the project's purpose, not its budget (ADR-021).
+
+`gitleaks` 8.30.1 was installed on the MacBook via Homebrew; free and open source. No new hardware,
+no subscription, no paid service. Reference-build running total unchanged at **899 DKK (~121 EUR)**.
+
 ## Existing subscriptions used by the project
 
 These should be recorded as costs even when they pre-date Home Lab. The exact subscription prices have not yet been supplied by the owner; record them in the phase that first depends on them (Phase 06, AI CLI access).

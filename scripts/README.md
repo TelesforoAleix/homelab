@@ -11,6 +11,7 @@ Scripts are organised by **where they run**, which is not always where they are 
 |---|---|
 | `download-ubuntu-iso.sh` | Downloads the pinned Ubuntu Server image and verifies it two ways: against the checksum recorded in ADR-014, and against the checksum Ubuntu publishes today. Refuses to hand you an unverified file. |
 | `write-ubuntu-usb.sh` | Writes a verified ISO to a USB stick. **Destructive.** Refuses to target an internal disk, rejects partition identifiers, and requires you to retype the disk identifier before writing. |
+| `scan-history.sh` | Scans every blob reachable from every ref for secrets — the pre-publication gate required by ADR-021. Deliberately scans *objects*, not the working tree, because `.gitignore` is not retroactive and a secret deleted in a later commit is still in history. States its own limits in its header. |
 | `preflight.sh` | Checks the safety preconditions from `docs/standards/safe-changes-headless.md` before a lockout-class change (ADR-020). Runs on the Mac deliberately: it proves both access routes from outside, the way a real connection arrives, which a script on the server cannot do. |
 
 ## `server/` — run on the Ubuntu server
@@ -35,3 +36,14 @@ Scripts are organised by **where they run**, which is not always where they are 
 - A check that cannot determine an answer must say **unknown**, never a plausible-looking zero.
   Phase 02's session check first used `who`, which reports no sessions and exits 0 on Ubuntu 26.04
   because systemd 257 removed utmp support. Being confidently wrong is worse than erroring.
+- **An error is not a negative result.** `grep` exit 2 is not exit 1. Phase 04's private-key check
+  passed a pattern beginning with dashes, so grep parsed it as options and failed — and because the
+  code discarded stderr and treated any non-match as clean, the most important class in the scanner
+  was silently dead. Inspect exit status; refuse to produce a verdict a check could not support.
+- **A detector that has only ever reported "clean" is unvalidated.** It has been shown it can say
+  *fine*; it has never been shown it can say *not fine*. Plant a positive case somewhere disposable
+  and confirm it fires. That is how the bug above was found, four checks into the same failure family
+  across three phases.
+- **Report what was actually examined**, not just the conclusion. Phase 04's scanner reported all
+  sixteen classes clean while having searched zero of 213 blobs. It now prints the count and refuses
+  to report a verdict on an empty corpus.

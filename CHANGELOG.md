@@ -22,6 +22,17 @@ This project uses this file for meaningful repository-level milestones rather th
   layout (1 x 8 GB, one slot free) and wireless adapter (Intel Wireless-AC 8260). Adds a firmware
   task to enable CPU virtualization, found disabled. No software installed or marked as tested.
 
+- **Phase 04 complete.** The repository was published: `github.com/TelesforoAleix/homelab`, public,
+  MIT for code and CC BY-SA 4.0 for documentation (ADR-021). Until this phase it had **no remote at
+  all** — 37 commits on one disk with no backup, which was a larger single point of failure than the
+  single SSH key, because it held the knowledge of how to rebuild the machine. A full-history secrets
+  audit ran before the first push and found nothing that had to be removed. Adds
+  `scripts/macos/scan-history.sh`, the guide, `docs/reference/git-workflow.md`, and phase tags
+  `phase-01` … `phase-04`. Closes two known unknowns open since bootstrap (licence, repository name).
+  Four failures recorded, all of the same family — checks that report success by returning nothing;
+  the worst left the scanner's private-key class silently dead and was found only by planting fake
+  secrets and confirming it fired.
+
 - **Phase 02 complete.** Linux fundamentals, taught from this machine's own files rather than from
   invented examples. Adds `docs/standards/safe-changes-headless.md` and ADR-020 — a change-safety
   standard binding on every phase from 02 onward, now that the reference node has no console and
