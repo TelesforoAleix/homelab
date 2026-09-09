@@ -29,6 +29,10 @@ Group=homelab-bot
 
 ExecStart=/usr/bin/python3 /opt/homelab-telegram-bot/bot.py
 
+# bot.py imports router.py and executors.py from its own directory. Python adds
+# the script's directory to sys.path, so no PYTHONPATH is needed -- but all
+# three files must be installed together or the service fails at import.
+
 # --- The token -----------------------------------------------------------
 #
 # LoadCredential puts the file in $CREDENTIALS_DIRECTORY, mode 0400, owned by
@@ -102,10 +106,24 @@ MemoryDenyWriteExecute=yes
 
 # --- Network -------------------------------------------------------------
 #
-# Outbound HTTPS only. AF_UNIX is NOT permitted: the bot talks to nothing
-# locally, and denying it removes any path to the Docker socket even if the
-# account were somehow added to the docker group by mistake.
-RestrictAddressFamilies=AF_INET AF_INET6
+# Outbound HTTPS, plus AF_UNIX.
+#
+# Phase 07 deliberately omitted AF_UNIX, on the grounds that the bot talked to
+# nothing locally. Phase 08 changed that: the privileged executor runs
+# `systemctl restart`, and systemctl reaches PID 1 over a UNIX socket. Without
+# AF_UNIX the call fails at the socket, never reaching polkit.
+#
+# What this does NOT open up, checked rather than assumed: the Docker socket is
+# root:docker 0660 and homelab-bot is in no group but its own, so file
+# permissions still refuse it. AF_UNIX grants the ability to *attempt* a local
+# socket, not the right to use one.
+#
+# This is a real widening of Phase 07's posture and it is recorded as such
+# (ADR-024). It is much smaller than the alternative was: sudo is setuid and is
+# refused under NoNewPrivileges, so the sudoers approach would have meant
+# removing NoNewPrivileges to add an escalation -- weakening the process to
+# grant it privilege, rather than leaving the decision outside it.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 
 # --- System calls --------------------------------------------------------
 SystemCallArchitectures=native

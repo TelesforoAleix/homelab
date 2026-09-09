@@ -2,8 +2,7 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 07 — Telegram Interface (**complete**, 2026-09-09). Next: Phase 08 — Router &
-  Executors.
+- **Current phase:** 08 — Router & Executors (**complete**, 2026-09-09). Next: Phase 09 — Voice.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -115,6 +114,31 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 **Read-only by design, with no escalation built.** Phase 08 owns the executor pattern; widening the
 service account is its decision to make deliberately, not to inherit.
 
+## Phase 08 status
+
+**Complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`08-router-executors.md`](../handovers/08-router-executors.md), committed as `0d2ff86` |
+| Router | ✅ Registry-based, in-process; authorisation check in one function |
+| Executors | ✅ Six, at three capability levels; `/help` generated from the registry |
+| Authorisation | ✅ Two allowlists; privileged enforced as a **subset** at startup |
+| Escalation | ✅ polkit, scoped to **one user, one unit, one verb**; **zero sudoers entries** |
+| Second gate | ✅ Unit allowlist inside the bot, independent of polkit |
+| Account | ✅ `id homelab-bot` **byte-identical to Phase 07** |
+| Denied | ✅ `ssh`, `tailscaled`, `systemd-networkd` — asserted on the reason, not just failure |
+| Audit | ✅ Two independent records (bot + systemd PID 1). **polkit logs denials only** |
+| Model executor | ✅ Registered, **deliberately unwired** — Phase 09 decides |
+| Exposure | ✅ Still **1.3 OK**; listeners still 6 |
+| Reboot test | ✅ 24.4s; service and grant both survived, proved end-to-end |
+| ADR-024 | ✅ **Accepted** |
+| Handover | ✅ [`08-router-executors-handover.md`](../handovers/08-router-executors-handover.md) |
+
+**Two Phase 07 properties were traded deliberately:** the bot now forks (`/restart` execs
+`systemctl`), and `AF_UNIX` is permitted (needed to reach PID 1). Neither opens the Docker socket,
+which is `root:docker 0660` to an account in no group but its own.
+
 ## Open risks carried forward
 
 > **The repository is now public.** Everything below is publicly documented. That is intentional for
@@ -164,6 +188,10 @@ service account is its decision to make deliberately, not to inherit.
 - **Telegram is a third party.** Every bot message transits and is stored on their infrastructure.
   Acceptable for uptime and disk figures; a reason not to extend the bot toward anything sensitive
   without revisiting. Phases 08 and 10.
+- **One thing can now change the system.** `/restart chrony`, scoped two ways and proved. Phase 07's
+  property that a compromise could leak information but not act **no longer holds** (ADR-024).
+- **The unattended-AI-credential question is still open.** ADR-008 covers interactive use only.
+  Phase 09 must decide and record an ADR — not by copying a personal OAuth file to a service account.
 - **No alerting on the bot.** If it dies at 3am, nothing says so — and bounded logging means a quiet
   journal does not mean a healthy service.
 - Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.

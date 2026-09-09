@@ -67,7 +67,7 @@ else
   ok "${SESSIONS} interactive sessions -- one can stay idle as the way back"
 fi
 
-for f in bot.py homelab-telegram-bot.service allowlist.example; do
+for f in bot.py router.py executors.py homelab-telegram-bot.service allowlist.example; do
   [ -f "$STAGE/$f" ] || die "$STAGE/$f not found. scp the staging directory from the repository first."
 done
 ok "staged files present"
@@ -111,8 +111,10 @@ esac
 # so a compromise cannot persist by rewriting it.
 
 install -d -m 0755 -o root -g root "$APP_DIR"
-install -m 0644 -o root -g root "$STAGE/bot.py" "$APP_DIR/bot.py"
-ok "installed $APP_DIR/bot.py (root-owned, not writable by $SVC_USER)"
+for mod in bot.py router.py executors.py; do
+  install -m 0644 -o root -g root "$STAGE/$mod" "$APP_DIR/$mod"
+done
+ok "installed bot.py, router.py, executors.py (root-owned, not writable by $SVC_USER)"
 
 # --- Configuration -------------------------------------------------------
 

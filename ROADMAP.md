@@ -163,6 +163,23 @@ exposure model completely and needs its own ADR.
 
 Introduce an explicit router/executor abstraction and connect multiple model/tool executors, initially keeping routing deterministic and understandable.
 
+Status: **Complete** (2026-09-09). Brief committed before implementation per ADR-017.
+
+Delivered as a **registry-based router** inside the bot process, with six executors at three
+capability levels and **two allowlists** — authentication (may you use the bot) and authorisation
+(may you invoke this executor), the second enforced as a subset at startup.
+
+**One privileged action, and the service account gained nothing.** `/restart` is scoped by a polkit
+rule to one user, one unit and one verb, plus a second allowlist inside the bot; `id homelab-bot` is
+byte-identical to Phase 07 and there are zero sudoers entries. polkit rather than sudo because the
+unit sets `NoNewPrivileges=yes`, which refuses setuid outright — and because a malformed polkit rule
+denies where a malformed sudoers file breaks `sudo` on a console-less node (ADR-024).
+
+**The model executor is registered and deliberately not connected.** ADR-008 authorises
+subscription-backed *interactive* access and is silent on unattended use. **Phase 09 must resolve
+that on its merits and record it as an ADR** — not by copying a personal OAuth credential to a
+service account.
+
 ## Phase 09 — Voice
 
 Receive Telegram voice notes, transcribe them, and route the resulting text through the existing architecture. Cloud transcription may be used first.

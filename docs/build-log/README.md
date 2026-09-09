@@ -14,6 +14,11 @@ Use [`../templates/build-log-template.md`](../templates/build-log-template.md).
 
 ## Recent entries
 
+- [`2026-09-09-phase-08-router-executors.md`](2026-09-09-phase-08-router-executors.md) — the
+  escalation boundary. Five problems: a brief that specified a mechanism the runtime forbids
+  (second phase running), a test that asked the admin to restart `tailscaled` and then reported a
+  pass for the wrong reason, an audit claim about polkit that measurement disproved, and the same
+  reason-versus-outcome mistake repeated four minutes after writing the lesson down.
 - [`2026-09-09-phase-07-telegram-bot.md`](2026-09-09-phase-07-telegram-bot.md) — the first service
   this project wrote. Five problems, four of them the author's: hardening that stopped a system-info
   reporter reading system info, an unguarded exception that became a restart loop on a console-less

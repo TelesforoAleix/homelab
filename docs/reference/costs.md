@@ -98,6 +98,19 @@ from this node to a third party.
 Reference-build running total unchanged at **899 DKK (~121 EUR)**, plus the existing AI
 subscriptions recorded in Phase 06.
 
+## Phase 08 — Router & Executors
+
+**0 DKK.** Recorded as an explicit zero.
+
+No new services, no API calls, no subscriptions. The model executor is **deliberately unwired**, so
+nothing is billed — and that is a cost decision as much as an architectural one. Wiring it to a paid
+API would have introduced per-call billing that ADR-008 defers; wiring it to the existing personal
+subscriptions would have cost nothing in money and an unestablished amount in licensing risk.
+**Phase 09 will have to pay one of those prices and should record which.**
+
+Reference-build running total unchanged at **899 DKK (~121 EUR)**, plus the existing AI
+subscriptions recorded in Phase 06.
+
 ## Existing subscriptions used by the project
 
 These are costs even though they pre-date Home Lab. The owner supplied the actual billed EUR amounts

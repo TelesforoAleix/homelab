@@ -28,6 +28,7 @@ Scripts are organised by **where they run**, which is not always where they are 
 | `verify-ai-cli-access.sh` | Verifies CLI versions, subscription authentication class, absent API-billing variables, credential file metadata, and lack of persistent AI processes/services. Deliberately never prints credential values or account identifiers. |
 | `lab-sandbox.sh` | Creates and destroys the disposable Phase 02 practice environment — a passwordless `nologin` user, a group, a setgid directory, and a systemd unit with no `[Install]` section so it can never run at boot. Refuses to create anything colliding with a real account, and refuses to delete any account not carrying the marker it writes. |
 | `install-telegram-bot.sh` | Deploys the Phase 07 status bot: a dedicated unprivileged account, root-owned code the bot cannot modify, and a hardened unit. Refuses to run with fewer than two sessions (a boot-time unit is lockout-class), and re-checks on **every** run that the service account is in no privileged group — not only at creation. |
+| `install-bot-escalation.sh` | Grants the bot exactly one privileged action via a polkit rule scoped to one user, one unit and one verb. Validates scope and brace balance before installing, checks polkit's journal for load errors, then **proves the grant in both directions** — restarting the permitted unit, and confirming three access-critical units are denied *and that the reason is a denial*. |
 | `verify-telegram-bot.sh` | Proves the bot's posture by **attempting** each forbidden access rather than reading directives. Checks its own privilege first and reports `UNKNOWN` for anything it cannot determine — added after it reported a confident `FAIL` about a file it had no permission to see. |
 | `verify-remote-access.sh` | Reports the live remote-access posture. Probes the **running** SSH daemon over the network rather than trusting `sshd -T`, warns when configuration is newer than the daemon, and redacts the Tailscale account and tailnet suffix so its output is safe to paste. |
 
@@ -51,6 +52,16 @@ Scripts are organised by **where they run**, which is not always where they are 
   *fine*; it has never been shown it can say *not fine*. Plant a positive case somewhere disposable
   and confirm it fires. That is how the bug above was found, four checks into the same failure family
   across three phases.
+- **A test must assert on the reason, not the outcome.** "The command failed" and "the account was
+  denied" are different claims and only one is evidence. Phase 08's escalation test printed
+  `ok ... cannot restart ssh.service` when what had happened was that a polkit agent prompted the
+  admin and nobody answered — a pass for the wrong reason, and one that asked a human to restart
+  `tailscaled` on a console-less node. Never let a test raise an interactive prompt
+  (`--no-ask-password`), and grep the output for the expected refusal.
+- **Any command whose output you will act on is a check** — including the one-off typed at a
+  terminal. Phase 08 read `setpriv: Operation not permitted` as a negative result about a security
+  property, four minutes after writing that exact lesson into the build log. The committed scripts
+  held; the failure moved to the least reviewed code in the project.
 - **Check your own privilege before reporting a result.** Phase 07's verifier reported
   `FAIL: token does not exist` about a file in a `0750` directory it could not traverse, while the
   service was authenticating with that token. That is the **fifth** instance of this family, after

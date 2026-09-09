@@ -69,6 +69,18 @@ This project uses this file for meaningful repository-level milestones rather th
   so the exact before/after ruleset diff is unrecoverable. Attribution by chain name found only
   Docker and Tailscale chains, and final reachability checks passed, but this is weaker evidence than
   the brief required.
+- **Phase 08 complete.** The structure behind the interface: a registry-based router with six
+  executors at three capability levels, and **two allowlists** separating authentication from
+  authorisation. **One privileged action, performed by an account that gained nothing** — `id
+  homelab-bot` is byte-identical to Phase 07 with zero sudoers entries, scoped by a polkit rule to
+  one user, one unit and one verb plus a second allowlist inside the bot. polkit rather than sudo
+  because `NoNewPrivileges=yes` refuses setuid outright, and because a malformed polkit rule denies
+  where a malformed sudoers file breaks `sudo` on a console-less node. The model executor is
+  registered and **deliberately unwired**; ADR-008 covers interactive use only, and Phase 09 must
+  decide. Adds ADR-024, the guide, `router.py`, `executors.py`, the polkit rule and two guarded
+  scripts. Five problems recorded, three of them the author's — including a test that asked the
+  admin to restart `tailscaled` and then reported a pass because nobody answered.
+
 - **Phase 07 complete.** The first thing the node does *for* its owner: a read-only Telegram status
   bot. Delivered as a native systemd service rather than a container, running as a dedicated account
   in no privileged group, scoring 1.3 OK on `systemd-analyze security`. Long polling means it opens
