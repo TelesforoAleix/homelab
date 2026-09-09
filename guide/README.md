@@ -45,4 +45,4 @@ These mirror the numbered project roadmap.
   02 by the owner's sequencing decision, to close Phase 01's principal open risk early.)*
 - [`02-linux-fundamentals`](02-linux-fundamentals/README.md) — operating the node: permissions,
   services, logs, storage, packages, and the habit of recognising a change that could lock you out
-  before typing it. *(Run after Phase 03 by the owner's sequencing decision.)*
+  before typing it. *(Complete 2026-09-09. Run after Phase 03 by the owner's sequencing decision.)*

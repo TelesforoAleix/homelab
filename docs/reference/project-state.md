@@ -17,14 +17,14 @@
 | Item | State |
 |---|---|
 | Phase 01 brief | **Ratified** by Project Planning 2026-09-08 with six amendments, all reconciled (`docs/handovers/01-ubuntu-server.md` §0.1) |
-| Guide | Written (`guide/01-ubuntu-server/README.md`); reference-build experience and tested versions still empty by design |
+| Guide | ✅ Complete (`guide/01-ubuntu-server/README.md`), including reference-build experience and tested versions — filled in by performing the install, which corrected it five times |
 | Scripts | Written and syntax-checked; USB writer safety guards tested |
 | ADR-014 / 015 / 016 | **Accepted**, all amended 2026-09-08 per ratification |
 | Phase 00 hardware prerequisite | ✅ **Closed** 2026-09-08 — identification and physical validation both complete |
 | Installation on hardware | ✅ **Complete** 2026-09-08 |
 | Validation | ✅ **Passed**, including unattended power-loss recovery |
 | Handover | ✅ [`01-ubuntu-server-handover.md`](../handovers/01-ubuntu-server-handover.md) |
-| `main` known-working | ⏳ pending merge of `feature/01-ubuntu-server` |
+| `main` known-working | ✅ **Merged** 2026-09-08 — `77476eb` |
 
 ### Phase 00 closure
 
@@ -113,7 +113,7 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 | Tooling | ✅ `tree` 2.3.1-1, `ncdu` 1.22-1build1, `ripgrep` 15.1.0-1ubuntu1 |
 | Validation | ✅ All checks passed with captured output; sandbox created, exercised and removed |
 | Handover | ✅ [`02-linux-fundamentals-handover.md`](../handovers/02-linux-fundamentals-handover.md) |
-| `main` known-working | ⏳ pending merge of `feature/02-linux-fundamentals` |
+| `main` known-working | ✅ **Merged** 2026-09-09 — `0e26859` |
 
 **What Phase 02 deliberately did not teach**, so no later phase assumes it: no networking changes
 were practised, no `sudoers` editing, no firewalling, no backup or restore, and no LVM growth. Those
@@ -132,7 +132,7 @@ Phase 13 will have a better safety net.
 | ADR-018 / ADR-019 | ✅ **Accepted** |
 | Guide | ✅ [`guide/03-remote-access/`](../../guide/03-remote-access/README.md) |
 | Handover | ✅ [`03-remote-access-handover.md`](../handovers/03-remote-access-handover.md) |
-| `main` known-working | ⏳ pending merge of `feature/03-remote-access` |
+| `main` known-working | ✅ **Merged** 2026-09-09 — `5804da6` |
 
 **Sequencing:** the owner chose on 2026-09-09 to run Phase 03 ahead of Phase 02. Phase 01 named SSH
 password authentication as its principal open risk, and Phase 02 is a long documentation-heavy phase
@@ -143,8 +143,11 @@ console. **Phase 02 is deferred, not skipped, and keeps its number.**
 ## Superseded planning note
 
 The block below was written when Phase 01 closed, before the sequencing decision above. It is kept
-rather than rewritten (`PROJECT.md` §11). Its instruction still applies to Phase 02 when that phase
-runs — it must write and commit its own brief first.
+rather than rewritten (`PROJECT.md` §11).
+
+**Its instruction has since been discharged.** Phase 02 ran on 2026-09-09 and wrote its brief first,
+committing `docs/handovers/02-linux-fundamentals.md` as `6ddf2a5` before any implementation existed.
+The block is retained as the record of what was expected, not as an outstanding action.
 
 **Phase 01 is complete and merged. Phase 02 has not started.**
 
