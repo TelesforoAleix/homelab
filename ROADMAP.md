@@ -89,9 +89,9 @@ removed. Closes Phase 01's principal open risk.
 
 ## Phase 04 — Git & GitHub Fundamentals
 
-**Status: complete 2026-09-09.** Brief committed before implementation per ADR-017.
-
 Use the already-bootstrapped repository to deliberately learn and formalize commits, branches, merges, pull requests, conflict handling, tags/releases, `.gitignore`, and repository hygiene.
+
+Status: **Complete** (2026-09-09). Brief committed before implementation per ADR-017.
 
 **The repository was published in this phase** — `github.com/TelesforoAleix/homelab`, public, MIT for
 code and CC BY-SA 4.0 for documentation (ADR-021). Until then it had no remote at all: 37 commits on
@@ -146,9 +146,9 @@ treated as an availability SLA.
 
 ## Phase 07 — Telegram Interface
 
-**Status: complete 2026-09-09.** Brief committed before implementation per ADR-017.
-
 Build a minimal Telegram bot with deterministic infrastructure/status commands. Keep it unprivileged.
+
+Status: **Complete** (2026-09-09). Brief committed before implementation per ADR-017.
 
 Delivered as a **native systemd service** (not a container), running as a dedicated account in no
 privileged group, scoring **1.3 OK** on `systemd-analyze security`. **Long polling, so it opens no

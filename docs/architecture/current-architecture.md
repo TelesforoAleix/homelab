@@ -1,8 +1,13 @@
 # Current Architecture
 
-**State:** Phases 01–06 complete — the reference node runs Ubuntu Server, is administered remotely
+**State:** Phases 01–07 complete — the reference node runs Ubuntu Server, is administered remotely
 over Tailscale with key-only SSH, and has Docker Engine/Compose plus two subscription-authenticated
 AI operator CLIs. **The console has been physically removed**; the node is genuinely headless.
+
+**Phase 07 is the first phase to change this document's substance rather than its version numbers.**
+The node now runs a service. `Interface → Router → Executor` is no longer entirely aspirational: the
+Interface layer exists, as a read-only Telegram bot on its own unprivileged account. The Router and
+Executor layers do not, and Phase 08 owns them.
 
 Phase 02 changed nothing here, which its brief predicted: it taught the architecture rather than
 altering it. Its only lasting change to the node is three diagnostic packages. What it *did* add is
@@ -29,6 +34,10 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
     SSH: publickey only. No passwords, no root login (ADR-018)
     Docker Engine 29.8.0 + Compose v5.5.1, rootful (ADR-022)
     Claude Code 2.1.236 + Codex CLI 0.153.4, interactive only (ADR-008)
+    homelab-telegram-bot.service — read-only status bot (ADR-023)
+        runs as homelab-bot (uid 999), no shell, no home, no privileged group
+        long polling: OUTBOUND HTTPS only, no listening socket
+        systemd-analyze security: 1.3 OK
     NO MONITOR, NO KEYBOARD — all DRM connectors report disconnected
     Cold-boots headless to a reachable state in ~26 seconds
 ```
@@ -48,6 +57,7 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | Claude Code 2.1.236 | **Active** — `aleix`-scoped operator CLI using Claude Pro subscription OAuth; no daemon |
 | Codex CLI 0.153.4 | **Active** — `aleix`-scoped operator CLI using Sign in with ChatGPT; no daemon |
 | Bubblewrap 0.11.1 | **Active** — Ubuntu package used by the Codex Linux sandbox |
+| **Telegram status bot** | **Active** — `homelab-telegram-bot.service`, the project's first service. Read-only, standard library only, never forks a process. Long polling means **no listening socket**; isolation proved by attempted access (ADR-023) |
 
 ## Confirmed architectural direction
 
@@ -55,16 +65,26 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 Interface  →  Router  →  Executor  →  Tool / Model / Service
 ```
 
-The first remote interface is planned to be Telegram. Claude Code and Codex now work as interactive
-operator tools through existing subscriptions. They are not yet executors: Phase 08 must decide
-whether personal subscription credentials are supported or appropriate for unattended use.
+**The Interface layer now exists.** A read-only Telegram bot runs as its own unprivileged account
+and calls nothing — it answers from `/proc` and `statvfs()` and never forks a process. It is
+deliberately not wired to anything: there is no router, no executor, and no escalation path.
+
+Claude Code and Codex work as interactive operator tools through existing subscriptions. They are
+**not** executors, and `homelab-bot` provably cannot read either credential. Phase 08 must decide
+whether personal subscription credentials are supported or appropriate for unattended use — and must
+not resolve it by copying an OAuth file to a service account because it works interactively.
+
+The boundary Phase 08 inherits is a shape, not a proposal: one access check before dispatch, an
+account that holds nothing, and a service that cannot execute a program.
 
 ## Not implemented yet
 
-- Telegram bot (Phase 07)
 - router/executor code (Phase 08)
 - knowledge/RAG services (Phase 10)
 - automation (Phase 12)
+- escalation / privileged actions from the interface (Phase 08 — deliberately absent, see ADR-011)
+- alerting or metrics on any service (nothing reports the bot dying)
+- any backup of the node (Phase 13)
 - firewall, encryption at rest (Phase 13)
 - local GPU node (Phase 16)
 

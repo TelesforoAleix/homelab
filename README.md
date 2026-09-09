@@ -43,7 +43,7 @@ This repository is aimed at people with a business and some technical background
 
 ## Current status
 
-**Phases 00–06 complete. Next: Phase 07 — Telegram Interface.**
+**Phases 00–07 complete. Next: Phase 08 — Router & Executors.**
 
 | Phase | State |
 |---|---|
@@ -53,7 +53,8 @@ This repository is aimed at people with a business and some technical background
 | 02 — Linux fundamentals | ✅ Complete |
 | 04 — Git & GitHub fundamentals | ✅ Complete |
 | 05 — Docker & Docker Compose | ✅ Complete |
-| 06 — AI CLI Access | Complete |
+| 06 — AI CLI Access | ✅ Complete |
+| 07 — Telegram interface | ✅ Complete |
 
 The reference node runs Ubuntu Server 26.04.1 LTS, is administered entirely
 remotely over Tailscale with key-only SSH, and has **no monitor or keyboard
