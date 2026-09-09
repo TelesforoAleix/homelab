@@ -89,7 +89,18 @@ removed. Closes Phase 01's principal open risk.
 
 ## Phase 04 — Git & GitHub Fundamentals
 
+**Status: complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
 Use the already-bootstrapped repository to deliberately learn and formalize commits, branches, merges, pull requests, conflict handling, tags/releases, `.gitignore`, and repository hygiene.
+
+**The repository was published in this phase** — `github.com/TelesforoAleix/homelab`, public, MIT for
+code and CC BY-SA 4.0 for documentation (ADR-021). Until then it had no remote at all: 37 commits on
+one disk with no backup. A full-history secrets audit ran before the first push and found nothing
+that had to be removed.
+
+**What this phase deliberately did not adopt**, so no later phase assumes it: no branch protection on
+`main`, no commit signing, no CI or GitHub Actions, and no clone of the repository on the reference
+node. Each is recorded with its reasoning in `docs/reference/git-workflow.md`.
 
 ## Phase 05 — Docker & Docker Compose
 

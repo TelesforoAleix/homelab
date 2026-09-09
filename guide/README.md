@@ -46,3 +46,7 @@ These mirror the numbered project roadmap.
 - [`02-linux-fundamentals`](02-linux-fundamentals/README.md) — operating the node: permissions,
   services, logs, storage, packages, and the habit of recognising a change that could lock you out
   before typing it. *(Complete 2026-09-09. Run after Phase 03 by the owner's sequencing decision.)*
+- [`04-git-github`](04-git-github/README.md) — git as this project actually uses it, taught from the
+  repository's own history: what a commit really is, why the phase merges are `--no-ff`, conflicts,
+  the `.gitignore` trap, recovery via the reflog, and auditing a history before publishing it.
+  *(Complete 2026-09-09. The phase in which the repository was first pushed anywhere.)*

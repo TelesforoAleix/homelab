@@ -1,0 +1,57 @@
+# Documentation Licence
+
+Copyright (c) 2026 Aleix Moreno
+
+The **documentation** in this repository is licensed under the
+
+**Creative Commons Attribution-ShareAlike 4.0 International licence
+(CC BY-SA 4.0)**
+
+The authoritative legal text is published by Creative Commons at:
+
+- Full legal code: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+- Plain-language summary: https://creativecommons.org/licenses/by-sa/4.0/
+
+That text is incorporated here by reference rather than copied. Reproducing a
+legal document by hand risks introducing a subtle difference between the copy
+and the original, and for a licence that difference is the only thing that
+matters. The canonical version is the one Creative Commons publishes.
+
+## What this covers
+
+CC BY-SA 4.0 applies to the prose and diagrams:
+
+| Path | Covered by |
+|---|---|
+| `guide/` | CC BY-SA 4.0 |
+| `docs/` | CC BY-SA 4.0 |
+| Root Markdown files (`README.md`, `PROJECT.md`, `ROADMAP.md`, `AGENTS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `BOOTSTRAP.md`, `MANIFEST.md`, `CLAUDE.md`) | CC BY-SA 4.0 |
+
+Everything else — the code — is under the MIT licence in [`LICENSE`](LICENSE):
+
+| Path | Covered by |
+|---|---|
+| `scripts/` | MIT |
+| `config/` | MIT |
+| `infrastructure/` | MIT |
+| `services/` | MIT |
+| `experiments/` | MIT |
+
+Where a file's category is genuinely ambiguous, the licence for its directory
+above applies.
+
+## In short
+
+You may share and adapt the documentation, including commercially, provided
+you give appropriate credit and license your adaptations under the same terms.
+The code carries no such share-alike obligation — MIT lets you do essentially
+anything provided the copyright notice travels with it.
+
+## Why two licences
+
+This repository is roughly 80 files of prose and 8 shell scripts. Licensing it
+entirely under MIT would be the simpler choice, and it is what most homelab
+repositories do — but MIT is written about software, and applying it to a
+written guide leaves attribution and derivative works unclear. CC BY-SA is
+written for exactly this kind of material. The cost of being accurate is this
+one extra file. See `docs/decisions/ADR-021-repository-publication.md`.

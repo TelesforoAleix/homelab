@@ -57,6 +57,22 @@ Never commit:
 
 Use `.env.example` files or documented secret names instead.
 
+## Tags and releases
+
+Phases are tagged, not versions — there is no released artefact to version. Use **annotated** tags
+(`git tag -a phase-05 -m "..."`), which record tagger, date and message; lightweight tags store only
+a pointer. Tags are not pushed by `git push`; push them with `git push origin --tags`.
+
+## Merging
+
+Merge pull requests with `--merge`, never `--squash`. Squashing collapses a phase into a single
+commit and destroys the phase boundaries this project keeps deliberately (ADR-013).
+
+## Before publishing anything
+
+Any repository this project publishes gets a full-history secrets audit **before** its first push,
+not after (ADR-021). See `docs/reference/git-workflow.md`.
+
 ## Pull-request completion check
 
 Before merging to `main`, verify applicable items from the Definition of Done in `PROJECT.md` and ensure `main` remains a known-working state.

@@ -2,8 +2,10 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 02 — Linux Fundamentals (**complete**, 2026-09-09), run after Phase 03 by the
-  owner's sequencing decision. Next: Phase 04 — Git & GitHub Fundamentals.
+- **Current phase:** 04 — Git & GitHub Fundamentals (**complete**, 2026-09-09). Next: Phase 05 —
+  Docker & Docker Compose.
+- **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
+  **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
 - **Target OS:** Ubuntu Server 26.04.1 LTS (ADR-014)
 - **Current implementation state:** Ubuntu Server 26.04.1 LTS on the reference node, administered
@@ -76,10 +78,21 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 - Exact versions of tools to be installed in future phases.
 - Exact Claude/ChatGPT subscription costs to record in the ledger.
-- Public repository license.
-- Final GitHub repository owner/name if different from `homelab`.
+- ~~Public repository license.~~ ✅ **Closed 2026-09-09** by Phase 04 — MIT for code, CC BY-SA 4.0
+  for documentation (ADR-021).
+- ~~Final GitHub repository owner/name if different from `homelab`.~~ ✅ **Closed 2026-09-09** —
+  `TelesforoAleix/homelab`, public.
+- **Whether 2FA is enabled on the GitHub account.** Not verified: the `gh` token lacks the `user`
+  scope, so the API returns `null` rather than a value. Recorded as *unknown* rather than assumed —
+  the token's scope was deliberately not expanded for a convenience check.
 
 ## Open risks carried forward
+
+> **The repository is now public.** Everything below is publicly documented. That is intentional for
+> a reference implementation, and the controls are real — SSH is key-only with `PermitRootLogin no`
+> — but the cost of leaving a known weakness open has risen, and a *new* secret committed from here
+> on is a disclosure, not a mistake that can be quietly amended.
+
 
 - ~~SSH password authentication~~ — ✅ **closed 2026-09-09** by Phase 03 (ADR-018). The server
   advertises `publickey` only.
@@ -87,6 +100,9 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   key as the only way in. New debt, owned by Phase 13. Phase 02 did not close this — it made
   lockout-class changes *recoverable while remote access still works* (ADR-020), which is a different
   thing from a recovery path.
+- **The reference node still has no backup of any kind.** Phase 04 gave the *repository* an offsite
+  copy; it did nothing for the machine. If the SSD fails, the node is rebuilt from the guide. That is
+  survivable by design, but it should not be mistaken for "backup is handled".
 - **The volume group has no free extents.** The root LV consumes all 235.4 G, so storage cannot be
   grown by `lvextend`; it needs another disk. Found in Phase 02, not owned by any phase yet.
 - **Node key expiry deliberately disabled** on the Tailscale node (ADR-019) — a security control
@@ -119,6 +135,29 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 were practised, no `sudoers` editing, no firewalling, no backup or restore, and no LVM growth. Those
 were classified Tier 3 — studied by reading, not by changing — because the node has no console and
 Phase 13 will have a better safety net.
+
+## Phase 04 status
+
+**Complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`04-git-github.md`](../handovers/04-git-github.md), committed before implementation |
+| Pre-publication audit | ✅ Two independent scanners over all 220 blobs; **no secrets found, none removed** |
+| Scanner validation | ✅ 6/6 planted secrets detected — after a bug that left the private-key class dead |
+| ADR-021 | ✅ **Accepted** — publication, visibility and the licence split |
+| Licences | ✅ `LICENSE` (MIT), `LICENSE-docs` (CC BY-SA 4.0) |
+| Publication | ✅ `github.com/TelesforoAleix/homelab`, **public**, all 4 merge commits intact |
+| Pull request | ✅ [#1](https://github.com/TelesforoAleix/homelab/pull/1), merged with `--merge` |
+| Guide | ✅ [`guide/04-git-github/`](../../guide/04-git-github/README.md) |
+| Workflow reference | ✅ [`git-workflow.md`](git-workflow.md) |
+| Scripts | ✅ `scripts/macos/scan-history.sh` |
+| Validation | ✅ All 16 checks passed with captured output |
+| Handover | ✅ [`04-git-github-handover.md`](../handovers/04-git-github-handover.md) |
+
+**Deliberately not adopted**, so no later phase assumes otherwise: no branch protection on `main`, no
+commit signing, no CI/GitHub Actions, no clone of the repository on the reference node. Reasoning in
+[`git-workflow.md`](git-workflow.md).
 
 ## Phase 03 status
 

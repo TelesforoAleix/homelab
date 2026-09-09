@@ -10,7 +10,10 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | intel-microcode | **Active** | 3.20260210.1ubuntu2 | No | Mitigates the 2016-era firmware; see `hardware.md` |
 | unattended-upgrades | **Active** | — | No | Enabled; `apt-daily-upgrade.timer` confirmed scheduled |
 | OpenSSH server | **Active** | OpenSSH_10.2p1 Ubuntu-2ubuntu3.6 (OpenSSL 3.5.5) | Required for target workflow | Installed Phase 01 via socket activation (`ssh.socket` enabled). **Key-only since Phase 03** (ADR-018): passwords and keyboard-interactive disabled, `PermitRootLogin no`. Note `ssh.socket` uses `Accept=no`, so config changes need `systemctl reload ssh`. |
-| Git | Planned | — | Yes for repository workflow | Fundamentals in Phase 04 |
+| Git (MacBook) | **Active** | 2.39.5 (Apple Git-154) | Yes for repository workflow | Phase 04. Ships with macOS/Xcode CLT and is **behind upstream git** — relevant if a later phase needs a newer feature. Not a constraint today. |
+| Git (server) | **Active** | — | No | Present from Phase 01 base tooling; the repository is **not** cloned on the node (Phase 04 decision) |
+| GitHub CLI (`gh`) | **Active** | 2.90.0 | No, but used for PRs/releases | Phase 04. Homebrew. Token in the macOS keyring with `gist`, `read:org`, `repo`, `workflow` scopes — **never in the repository** |
+| gitleaks | **Active** | 8.30.1 | No | Phase 04. Homebrew. Independent cross-check on `scan-history.sh`. **Scans diffs, so it skips merge commits** — 34 of 38 on 2026-09-09 |
 | OpenSSH client (MacBook) | **Active** | OpenSSH_9.9p2, LibreSSL 3.3.6 | Ships with macOS | Ed25519 key, passphrase in the login keychain (ADR-018) |
 | Tailscale (server) | **Active** | 1.102.3 | Chosen remote-access approach (ADR-005) | Installed 2026-09-09 from the `resolute` repository, re-verified that day. MagicDNS primary route; node key expiry disabled (ADR-019). |
 | Tailscale (MacBook) | **Active** | 1.102.3 | Same tailnet | Homebrew cask `tailscale-app`. Same version as the server. |
