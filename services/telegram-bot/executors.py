@@ -170,7 +170,12 @@ def make_restart(allowed_units: set[str], log) -> Executor:
         # supplied reaches a shell at any point.
         try:
             proc = subprocess.run(
-                [SYSTEMCTL, "restart", unit],
+                # --no-ask-password is defence in depth. The service has no
+                # controlling TTY so polkit cannot find an agent anyway -- but
+                # relying on "there is no TTY" is relying on an accident of the
+                # environment. Stating it means a denial stays a denial even if
+                # this code is ever run from a terminal.
+                [SYSTEMCTL, "--no-ask-password", "restart", unit],
                 capture_output=True,
                 text=True,
                 timeout=30,

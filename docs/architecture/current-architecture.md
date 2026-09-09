@@ -4,10 +4,13 @@
 over Tailscale with key-only SSH, and has Docker Engine/Compose plus two subscription-authenticated
 AI operator CLIs. **The console has been physically removed**; the node is genuinely headless.
 
-**Phase 07 is the first phase to change this document's substance rather than its version numbers.**
-The node now runs a service. `Interface → Router → Executor` is no longer entirely aspirational: the
-Interface layer exists, as a read-only Telegram bot on its own unprivileged account. The Router and
-Executor layers do not, and Phase 08 owns them.
+**`Interface → Router → Executor` now exists as code**, not as a diagram. Phase 07 built the
+Interface; Phase 08 built the Router and the Executors. The one thing still missing is a *model*
+executor with a credential behind it — registered, visible in `/help`, and deliberately unwired
+until Phase 09 decides how it may be paid for (ADR-024).
+
+The node performs exactly one privileged action, and the account that performs it gained nothing:
+`id homelab-bot` is byte-identical to Phase 07 and there are zero sudoers entries.
 
 Phase 02 changed nothing here, which its brief predicted: it taught the architecture rather than
 altering it. Its only lasting change to the node is three diagnostic packages. What it *did* add is
@@ -57,6 +60,8 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | Claude Code 2.1.236 | **Active** — `aleix`-scoped operator CLI using Claude Pro subscription OAuth; no daemon |
 | Codex CLI 0.153.4 | **Active** — `aleix`-scoped operator CLI using Sign in with ChatGPT; no daemon |
 | Bubblewrap 0.11.1 | **Active** — Ubuntu package used by the Codex Linux sandbox |
+| **Router / executors** | **Active** — registry-based, in the bot process. Six executors at three capability levels; authorisation in one function; two allowlists with privileged enforced as a subset (ADR-024) |
+| **Escalation grant** | **Active** — polkit, one user / one unit / one verb, plus a second allowlist inside the bot. Zero sudoers entries; `NoNewPrivileges` retained |
 | **Telegram status bot** | **Active** — `homelab-telegram-bot.service`, the project's first service. Read-only, standard library only, never forks a process. Long polling means **no listening socket**; isolation proved by attempted access (ADR-023) |
 
 ## Confirmed architectural direction
@@ -79,7 +84,7 @@ account that holds nothing, and a service that cannot execute a program.
 
 ## Not implemented yet
 
-- router/executor code (Phase 08)
+- a **model executor with a credential** — the interface exists and is inert (Phase 09)
 - knowledge/RAG services (Phase 10)
 - automation (Phase 12)
 - escalation / privileged actions from the interface (Phase 08 — deliberately absent, see ADR-011)

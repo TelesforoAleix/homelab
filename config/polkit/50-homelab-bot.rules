@@ -31,11 +31,36 @@
 //   sudoers: it would reach ssh, tailscaled and systemd-networkd -- every
 //   service whose loss costs access to this machine.
 //
-// AUDIT
+// AUDIT -- and a correction, because the first version of this file was wrong
 //
-//   polkit logs every authorisation decision to the journal, and the bot logs
-//   its own invocation. Two independent records in two processes that do not
-//   share a failure mode.
+//   The claim here used to be "polkit logs every authorisation decision". It
+//   does not. Measured on this node:
+//
+//     denials  -> polkitd logs "FAILED to authenticate to gain authorization
+//                 for action org.freedesktop.systemd1.manage-units ...
+//                 (owned by unix-user:homelab-bot)"
+//     grants   -> NOTHING. Zero lines.
+//
+//   A polkit.log() call was added here to cover that and produced no output
+//   either; polkitd filters it out at its default log level, and turning on
+//   polkit debugging globally to record one rule is not a trade worth making.
+//   The dead call has been removed rather than left in place implying a
+//   guarantee it never provided.
+//
+//   An audit trail that records refusals but not approvals is half an audit
+//   trail, and it is the wrong half: for a privileged action, the successes are
+//   what you most want to be able to reconstruct.
+//
+//   The second independent record is therefore SYSTEMD's, not polkit's:
+//
+//     Sep 09 19:53:09 systemd[1]: Stopping chrony.service ...
+//     Sep 09 19:53:09 systemd[1]: Started chrony.service ...
+//
+//   That is PID 1, a different process from the bot with a different failure
+//   mode, and it records the action actually happening rather than someone's
+//   intention to perform it. Together with the bot's own log -- which names the
+//   requesting user, the executor and the outcome -- that is two independent
+//   records. polkit contributes a third, for denials only.
 
 polkit.addRule(function(action, subject) {
     if (action.id == "org.freedesktop.systemd1.manage-units" &&
@@ -43,7 +68,9 @@ polkit.addRule(function(action, subject) {
         action.lookup("unit") == "chrony.service" &&
         action.lookup("verb") == "restart") {
 
-        polkit.log("homelab-bot: authorised restart of chrony.service");
+        // No polkit.log() here: it is filtered out at the default log level and
+        // produced nothing when tested. See the AUDIT note above -- systemd's
+        // own record of the unit starting is the durable evidence of a grant.
         return polkit.Result.YES;
     }
 

@@ -129,7 +129,7 @@ fi
 printf '\n--- proving the grant works (as %s) ---\n' "$SVC_USER"
 BEFORE="$(systemctl show -p ActiveEnterTimestamp --value "$TARGET_UNIT")"
 if setpriv --reuid="$SVC_USER" --regid="$SVC_USER" --clear-groups --no-new-privs \
-     /usr/bin/systemctl restart "$TARGET_UNIT" 2>&1 | sed 's/^/  /'; then
+     /usr/bin/systemctl --no-ask-password restart "$TARGET_UNIT" 2>&1 | sed 's/^/  /'; then
   AFTER="$(systemctl show -p ActiveEnterTimestamp --value "$TARGET_UNIT")"
   if [ "$BEFORE" != "$AFTER" ]; then
     ok "$TARGET_UNIT restarted (ActiveEnterTimestamp moved)"
@@ -141,12 +141,37 @@ else
 fi
 
 printf '\n--- proving it does NOT extend (as %s) ---\n' "$SVC_USER"
+#
+# --no-ask-password is MANDATORY here, and the first version of this script
+# omitted it. Without it, systemctl registers a polkit interactive agent on the
+# controlling TTY, so instead of being denied the test PROMPTED THE ADMIN for
+# their password -- to restart tailscaled, on a node with no console.
+#
+# Two things were wrong with that, and the second is worse:
+#
+#   1. Answering it would have restarted an access-critical service.
+#   2. The test reported "ok, cannot restart ssh.service" when what had actually
+#      happened was "a human declined to authorise it". That proves nothing
+#      about the service account's authority. It was a pass for the wrong
+#      reason, which is worse than a failure.
+#
+# With --no-ask-password there is no agent, so polkit answers on its own and the
+# result reflects the account's real authority.
 for forbidden in ssh.service tailscaled.service systemd-networkd.service; do
-  if setpriv --reuid="$SVC_USER" --regid="$SVC_USER" --clear-groups --no-new-privs \
-       /usr/bin/systemctl restart "$forbidden" >/dev/null 2>&1; then
+  OUT="$(setpriv --reuid="$SVC_USER" --regid="$SVC_USER" --clear-groups --no-new-privs \
+         /usr/bin/systemctl --no-ask-password restart "$forbidden" 2>&1)" && {
     die "SECURITY FAILURE: $SVC_USER restarted $forbidden. Remove $RULE_DST now."
+  }
+  # Assert on the REASON, not merely on failure. A non-zero exit could mean the
+  # unit does not exist, or systemctl is missing -- neither of which would say
+  # anything about authorisation.
+  if printf '%s' "$OUT" | grep -qiE 'access denied|not authorized|interactive authentication'; then
+    ok "$SVC_USER is DENIED $forbidden (polkit refused, no agent involved)"
+  else
+    die "$SVC_USER failed to restart $forbidden, but not because it was denied:
+  $OUT
+Refusing to claim this as proof of the escalation boundary."
   fi
-  ok "$SVC_USER cannot restart $forbidden"
 done
 
 cat <<'NEXT'

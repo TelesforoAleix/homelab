@@ -23,6 +23,7 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | Docker Buildx plugin | **Active** | Installed with Docker 29.8.0 | No | Phase 05 package set from Docker's repository. |
 | containerd | **Active** | v2.3.5, commit 1294c24a7da8e5a793ed378161673abe94118892 | Docker dependency | Installed as Docker's `containerd.io` package; no conflicting distribution `containerd` was installed. |
 | Python | **Active** | 3.14.4 | Runtime for the Telegram bot | Phase 07. Ships with Ubuntu. **Standard library only** — the bot introduces no third-party package, so there is no dependency to audit or upgrade |
+| polkit | **Active** | 127 | Escalation mechanism (ADR-024) | Phase 08. Ships with Ubuntu. Grants `homelab-bot` one action, scoped to one user/unit/verb. Chosen over `sudo`, which `NoNewPrivileges=yes` refuses outright. **Logs denials but not grants** |
 | Telegram status bot | **Active** | — | First user-facing interface (ADR-009) | Phase 07. Native systemd unit as `homelab-bot`; long polling, so **no listening socket**; `systemd-analyze security` 1.3 OK (ADR-023) |
 | Node.js | Planned | — | Likely runtime/tooling | Deliberately not installed for Phase 06; both AI CLIs use native binaries |
 | Claude Code CLI (server) | **Active** | 2.1.236, stable channel | Initial AI tool (ADR-008) | Phase 06. Native user-scoped install under `/home/aleix`; subscription OAuth reports Claude Pro. `claude doctor` confirmed native install and automatic updates enabled on the stable channel. Interactive operator command, not a service. |
