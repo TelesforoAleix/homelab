@@ -1,8 +1,8 @@
 # Current Architecture
 
-**State:** Phases 01–05 complete — the reference node runs Ubuntu Server, is administered remotely
-over Tailscale with key-only SSH, and has Docker Engine/Compose installed as the container runtime.
-**The console has been physically removed**; the node is genuinely headless.
+**State:** Phases 01–06 complete — the reference node runs Ubuntu Server, is administered remotely
+over Tailscale with key-only SSH, and has Docker Engine/Compose plus two subscription-authenticated
+AI operator CLIs. **The console has been physically removed**; the node is genuinely headless.
 
 Phase 02 changed nothing here, which its brief predicted: it taught the architecture rather than
 altering it. Its only lasting change to the node is three diagnostic packages. What it *did* add is
@@ -28,6 +28,7 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
     Wi-Fi wlp1s0, 2.4 GHz (ADR-016) · eno1 present, unused
     SSH: publickey only. No passwords, no root login (ADR-018)
     Docker Engine 29.8.0 + Compose v5.5.1, rootful (ADR-022)
+    Claude Code 2.1.236 + Codex CLI 0.153.4, interactive only (ADR-008)
     NO MONITOR, NO KEYBOARD — all DRM connectors report disconnected
     Cold-boots headless to a reachable state in ~26 seconds
 ```
@@ -44,6 +45,9 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | unattended-upgrades | **Active** |
 | Wi-Fi power-save suppression | **Active** — `config/systemd/` |
 | Docker Engine / Compose | **Active** — no persistent containers; explicit-interface port publishing required (ADR-022) |
+| Claude Code 2.1.236 | **Active** — `aleix`-scoped operator CLI using Claude Pro subscription OAuth; no daemon |
+| Codex CLI 0.153.4 | **Active** — `aleix`-scoped operator CLI using Sign in with ChatGPT; no daemon |
+| Bubblewrap 0.11.1 | **Active** — Ubuntu package used by the Codex Linux sandbox |
 
 ## Confirmed architectural direction
 
@@ -51,8 +55,9 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 Interface  →  Router  →  Executor  →  Tool / Model / Service
 ```
 
-The first remote interface is planned to be Telegram. Initial model executors are planned around
-Claude Code CLI and OpenAI Codex CLI where officially supported through existing subscriptions.
+The first remote interface is planned to be Telegram. Claude Code and Codex now work as interactive
+operator tools through existing subscriptions. They are not yet executors: Phase 08 must decide
+whether personal subscription credentials are supported or appropriate for unattended use.
 
 ## Not implemented yet
 

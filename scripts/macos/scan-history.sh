@@ -296,9 +296,17 @@ check FAIL "MAC addresses" \
 # --- Identity. Generic patterns, known-safe values excluded. ---
 # The GitHub noreply address is the whole point of using a noreply address:
 # it is designed to be public and it is what all commits already use.
+#
+# The reserved namespaces are allowed on principle, not case by case. RFC 2606
+# and RFC 6761 permanently reserve the .test, .example, .invalid and .localhost
+# TLDs plus example.com/net/org, precisely so documentation can use them. An
+# address in those spaces cannot be a real person's, so it cannot be a leak.
+# Added after `fixture@invalid.example` -- a doubly-reserved documentation
+# address -- was flagged CRITICAL in a guide. Note the gate worked: it caught
+# it in the working tree, before the commit.
 check FAIL "email addresses" \
   '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b' \
-  "users\.noreply\.github\.com|noreply@anthropic\.com|@example\.(com|org)|@[a-z]+\.invalid|$EVIDENCE"
+  "users\.noreply\.github\.com|noreply@anthropic\.com|@[A-Za-z0-9.-]*\.(example|invalid|test|localhost)\b|@example\.(com|net|org)\b|$EVIDENCE"
 
 # A real tailnet is a name plus .ts.net. The repo's placeholders are excluded;
 # anything else reaching this line is a real tailnet name and must not ship.

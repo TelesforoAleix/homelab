@@ -2,8 +2,8 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 05 — Docker & Docker Compose (**complete**, 2026-09-09). Next: Phase 06 —
-  AI CLI Access.
+- **Current phase:** 06 — AI CLI Access (**complete**, 2026-09-09). Next: Phase 07 — Telegram
+  Interface.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -11,9 +11,10 @@
 - **Current implementation state:** Ubuntu Server 26.04.1 LTS on the reference node, administered
   entirely remotely. `ssh homelab` reaches it over Tailscale by MagicDNS name, authenticated by an
   Ed25519 key; passwords, keyboard-interactive and root login are all refused. VS Code Remote SSH
-  works. Docker Engine and Compose are installed, with no persistent containers running. **The
-  monitor and keyboard have been physically removed** — the node is genuinely headless and cold-boots
-  to a reachable state in 25.8s.
+  works. Docker Engine and Compose are installed, with no persistent containers running. Claude Code
+  and Codex are installed as interactive `aleix`-scoped tools and authenticated through existing
+  subscriptions; neither is a service. **The monitor and keyboard have been physically removed** —
+  the node is genuinely headless and cold-boots to a reachable state in 25.8s.
 
 ## Phase 01 status
 
@@ -79,9 +80,10 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 
 ## Known unknowns
 
-- Exact versions of tools to be installed in future phases, except Docker/Compose/containerd which
-  are now recorded from Phase 05.
-- Exact Claude/ChatGPT subscription costs to record in the ledger.
+- Exact versions of tools to be installed in future phases. Docker/Compose/containerd and both Phase
+  06 AI CLIs are now recorded.
+- ~~Exact Claude/ChatGPT subscription costs to record in the ledger.~~ **Closed 2026-09-09** —
+  23.00 EUR/month for the ChatGPT subscription used by Codex and 22.50 EUR/month for Claude Pro.
 - ~~Public repository license.~~ ✅ **Closed 2026-09-09** by Phase 04 — MIT for code, CC BY-SA 4.0
   for documentation (ADR-021).
 - ~~Final GitHub repository owner/name if different from `homelab`.~~ ✅ **Closed 2026-09-09** —
@@ -114,6 +116,16 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   the root filesystem.
 - **`aleix` is in the `docker` group.** This is root-equivalent access without a password prompt.
   Accepted for the sole administrator in ADR-022; must never be granted to service accounts.
+- **Personal AI OAuth credentials now exist in `/home/aleix`.** Both files are mode `0600`, but a
+  process running as `aleix` can read them and the root filesystem is not encrypted. Phase 07 must
+  not inherit them; Phase 08 must decide separately whether personal subscription credentials are
+  supported or appropriate for unattended execution.
+- **Subscription inference is capacity-limited, not an availability SLA.** Claude reached its
+  five-hour session limit during Phase 06 despite valid authentication. User-facing services need
+  an explicit failure policy rather than an assumed always-available executor.
+- **Claude Code automatically updates on its stable channel.** Tested versions remain recorded, but
+  client behavior can drift between phases. Re-run the constrained fixture and record the new
+  version after a material update.
 - **Rootful Docker without user-namespace remapping.** Container root maps to host root; mitigated by
   non-root container defaults and Compose hardening. Phase 13 should revisit rootless Docker or
   userns-remap on its merits.
@@ -202,6 +214,28 @@ passed, but that is weaker than the diff the brief required.
 drop capabilities, use `no-new-privileges`, and use read-only filesystems where practical; every
 published port names an interface; never grant the `docker` group to service accounts.
 
+## Phase 06 status
+
+**Complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
+| Item | State |
+|---|---|
+| Brief | [`06-ai-cli-access.md`](../handovers/06-ai-cli-access.md), committed before implementation |
+| Implementation | Claude Code `2.1.236` stable and Codex CLI `0.153.4`, native user-scoped installs |
+| Authentication | Claude Pro subscription OAuth and Codex Sign in with ChatGPT; no API keys |
+| Linux sandbox | Ubuntu `bubblewrap` `0.11.1-1ubuntu0.1`; AppArmor restriction left enabled |
+| MacBook Codex | Broken npm `0.118.0` package removed; standalone `0.153.4` active |
+| Guide | [`guide/06-ai-cli-access/`](../../guide/06-ai-cli-access/README.md) |
+| Reference | [`ai-cli-reference.md`](ai-cli-reference.md) |
+| Scripts | `install-ai-clis.sh`, `verify-ai-cli-access.sh` |
+| Host impact | No daemon, unit, listener, container, Node.js runtime, or API billing path added |
+| Handover | [`06-ai-cli-access-handover.md`](../handovers/06-ai-cli-access-handover.md) |
+
+**Boundary established:** these are interactive tools belonging to the administrator. Phase 07's
+Telegram process must run under a separate unprivileged identity with no access to `/home/aleix`,
+the Docker group, or either OAuth file. Connecting providers to unattended executors remains Phase
+08 work.
+
 ## Phase 03 status
 
 **Complete 2026-09-09.** Brief committed before implementation per ADR-017.
@@ -253,7 +287,7 @@ The block is retained as the record of what was expected, not as an outstanding 
 
 ## Starting state for the next phase
 
-Re-verified 2026-09-09 at the close of Phase 05.
+Re-verified 2026-09-09 at the close of Phase 06.
 
 | Fact | Value |
 |---|---|
@@ -265,11 +299,14 @@ Re-verified 2026-09-09 at the close of Phase 05.
 | Tailnet | `100.71.62.71`; node key expiry disabled |
 | Admin user | `aleix`, sudo-capable; **`sudo` requires a password — no `NOPASSWD`** |
 | Docker access | `aleix` is in `docker` group `983`; this is root-equivalent (ADR-022) |
-| Storage | LVM, 232 GB root, unencrypted |
+| Storage | LVM, 232 GB root, 8.9 GB used, 212 GB available (5%), unencrypted |
 | Health | `systemctl is-system-running` → `running`, no failed units |
-| Tooling | `tmux` 3.6, `htop`, `jq`, `git`, `vim`, `nano`, `less`, `lsof`, plus `tree`, `ncdu`, `ripgrep`, Docker 29.8.0, Compose v5.5.1, containerd 2.3.5 |
-| Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache at Phase 05 close |
-| Listening | `:22` only off-box; everything else on loopback or the tailnet. Docker left no published ports. |
+| Tooling | `tmux` 3.6, `htop`, `jq`, `git`, `vim`, `nano`, `less`, `lsof`, `tree`, `ncdu`, `ripgrep`, Docker 29.8.0, Compose v5.5.1, containerd 2.3.5, Claude Code 2.1.236, Codex CLI 0.153.4, `bubblewrap` 0.11.1 |
+| AI authentication | Claude `claude.ai` / first-party / Pro; Codex `Logged in using ChatGPT`; relevant API-key variables unset |
+| AI credential files | `/home/aleix/.claude/.credentials.json` and `/home/aleix/.codex/auth.json`, both mode `0600`, owner `aleix:aleix`; contents never captured |
+| AI processes/services | None; both CLIs are interactive operator commands |
+| Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache at Phase 06 close |
+| Listening | `:22` only off-box; everything else on loopback or the tailnet. Docker and the AI CLIs left no published ports. |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | 25.8s cold, headless, to reachable |
 | **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |

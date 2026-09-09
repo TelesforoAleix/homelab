@@ -23,9 +23,11 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | Docker Buildx plugin | **Active** | Installed with Docker 29.8.0 | No | Phase 05 package set from Docker's repository. |
 | containerd | **Active** | v2.3.5, commit 1294c24a7da8e5a793ed378161673abe94118892 | Docker dependency | Installed as Docker's `containerd.io` package; no conflicting distribution `containerd` was installed. |
 | Python | Planned | — | Likely runtime/tooling | Version selected when needed |
-| Node.js | Planned | — | Likely runtime/tooling | Version selected when needed |
-| Claude Code CLI | Planned | — | Initial AI tool | Phase 06 |
-| OpenAI Codex CLI | Planned | — | Initial AI tool | Phase 06 |
+| Node.js | Planned | — | Likely runtime/tooling | Deliberately not installed for Phase 06; both AI CLIs use native binaries |
+| Claude Code CLI (server) | **Active** | 2.1.236, stable channel | Initial AI tool (ADR-008) | Phase 06. Native user-scoped install under `/home/aleix`; subscription OAuth reports Claude Pro. `claude doctor` confirmed native install and automatic updates enabled on the stable channel. Interactive operator command, not a service. |
+| OpenAI Codex CLI (server) | **Active** | 0.153.4 | Initial AI tool (ADR-008) | Phase 06. Native user-scoped install under `/home/aleix`; authenticated with ChatGPT device authorization. Interactive operator command, not a service. |
+| OpenAI Codex CLI (MacBook) | **Active** | 0.153.4 standalone | Administration workstation | Phase 06 replaced a broken npm `0.118.0` installation whose platform executable was missing. |
+| Bubblewrap | **Active** | 0.11.1-1ubuntu0.1 | Codex Linux sandbox prerequisite | Phase 06. Ubuntu package; works with the distribution's AppArmor profile while unprivileged user namespaces remain restricted. |
 | Telegram Bot | Planned | — | First remote interface | Phase 07 |
 | netplan | **Active** | 1.2-1ubuntu5 | Ships with Ubuntu Server | Declares the Wi-Fi link (ADR-016). Config at `/etc/netplan/00-installer-config.yaml`, mode `0600`. |
 | tmux | **Active** | 3.6 | No, but strongly advised | Ships with Ubuntu Server. Anything long-running on this node belongs in a tmux session: both access routes share one Wi-Fi adapter, and a dropped link mid-`apt` can leave dpkg half-configured. |

@@ -76,14 +76,26 @@ service, hosted account, or usage-based dependency was introduced.
 
 Reference-build running total unchanged at **899 DKK (~121 EUR)**.
 
+## Phase 06 — AI CLI Access
+
+**0 DKK incremental project spend.** Claude Code `2.1.236`, Codex CLI `0.153.4`, and Ubuntu's
+`bubblewrap` package were installed without a licence or package charge. No API key, usage credit,
+or paid-overage path was enabled.
+
+The phase uses two subscriptions that the owner already paid for before Home Lab. They are recorded
+below as recurring project dependencies, but do not change the one-time reference-build total of
+**899 DKK (~121 EUR)**.
+
 ## Existing subscriptions used by the project
 
-These should be recorded as costs even when they pre-date Home Lab. The exact subscription prices have not yet been supplied by the owner; record them in the phase that first depends on them (Phase 06, AI CLI access).
+These are costs even though they pre-date Home Lab. The owner supplied the actual billed EUR amounts
+on 2026-09-09; DKK values are approximate conversions at the ledger's 7.46 DKK/EUR reference rate.
 
 | Service | Category | Billing model | Actual cost | Project-specific incremental cost | Notes |
 |---|---|---|---|---|---|
-| ChatGPT subscription | AI | Recurring | TBD | TBD | Intended for Codex CLI where officially supported |
-| Claude subscription | AI | Recurring | TBD | TBD | Intended for Claude Code CLI where officially supported |
+| ChatGPT subscription used for Codex | AI | Recurring | **23.00 EUR/month (~172 DKK/month)** | **0 DKK** | Existing subscription; owner did not supply the account's plan label. Codex reports `Logged in using ChatGPT`. |
+| Claude Pro | AI | Recurring | **22.50 EUR/month (~168 DKK/month)** | **0 DKK** | Existing subscription; Claude reports subscription type `pro`. |
+| **Combined existing AI subscriptions** | AI | Recurring | **45.50 EUR/month (~339 DKK/month)** | **0 DKK** | Finite subscription allowance, not an availability SLA. |
 
 ## Usage-based services
 

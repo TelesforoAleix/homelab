@@ -43,7 +43,7 @@ This repository is aimed at people with a business and some technical background
 
 ## Current status
 
-**Phases 00–05 complete. Next: Phase 06 — AI CLI Access.**
+**Phases 00–06 complete. Next: Phase 07 — Telegram Interface.**
 
 | Phase | State |
 |---|---|
@@ -53,11 +53,13 @@ This repository is aimed at people with a business and some technical background
 | 02 — Linux fundamentals | ✅ Complete |
 | 04 — Git & GitHub fundamentals | ✅ Complete |
 | 05 — Docker & Docker Compose | ✅ Complete |
+| 06 — AI CLI Access | Complete |
 
 The reference node runs Ubuntu Server 26.04.1 LTS, is administered entirely
 remotely over Tailscale with key-only SSH, and has **no monitor or keyboard
 attached**. Docker Engine and Compose are installed, with no persistent
-containers running. See [`ROADMAP.md`](ROADMAP.md) for what comes next and
+containers running. Claude Code and Codex are available as subscription-authenticated interactive
+operator tools; neither runs as a service. See [`ROADMAP.md`](ROADMAP.md) for what comes next and
 [`docs/reference/project-state.md`](docs/reference/project-state.md) for the
 verified current state.
 
