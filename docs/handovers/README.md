@@ -49,3 +49,5 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 | `07-telegram.md` | Phase 07 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |
 | `07-telegram-handover.md` | Phase 07 completion handover | **Written** 2026-09-09 — addressed to Phase 08; outcome Complete |
 | `06-ai-cli-access-handover.md` | Phase 06 completion handover | **Written** 2026-09-09 — addressed to Phase 07; outcome Complete |
+| `09-model-executor.md` | Phase 09 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation as `351f825`. Carries the roadmap amendment (Voice → Phase 17) in its §0.1 |
+| `09-model-executor-handover.md` | Phase 09 completion handover | **Written** 2026-09-09 — addressed to the **foundations** phase (backup + ADR-015 encryption); outcome Complete. Records three deviations |

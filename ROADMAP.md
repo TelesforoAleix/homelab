@@ -182,8 +182,30 @@ service account.
 
 ## Phase 09 — Model Executor (subscription-backed)
 
+Status: **Complete** (2026-09-09). Brief committed before implementation per ADR-017 (`351f825`).
+
 Connect the model executor that Phase 08 registered and deliberately left inert, so the bot can
 answer open questions rather than only fixed ones.
+
+**How it was connected is the result worth remembering.** `homelab-bot` provably cannot read either
+AI credential, so the call moved into a separate service running as `aleix` that the bot asks over a
+UNIX socket. The credential never moved. `id homelab-bot` is byte-identical and `ss -tln` still
+reports six listeners — a UNIX socket is a file, not a port (ADR-025).
+
+- ✅ Two providers with **independent** usage limits and automatic fallback. Not a demonstration:
+  Claude was exhausted when the first live `/ask` ran, and Codex answered it. Wiring both was the
+  owner's decision, against the assistant's recommendation, and the owner was right.
+- ✅ Cheapest model by default — `haiku`, `gpt-5.6-luna`.
+- ✅ The model gets **no tools**, verified with a canary file rather than assumed, and its output is
+  never dispatched — proved by asking the model to emit `/restart ssh.service`, which it did, with
+  no effect.
+- ✅ Only the question and the five `/status` figures leave the machine. Logs are excluded because
+  anything able to write a log line could otherwise choose what gets sent.
+- ⚠️ **The licensing question is still open.** ADR-008 covers interactive use only. Phase 09
+  connected the model under a constraint rather than an answer: **owner-initiated calls only.**
+  **Phase 12 must not make unattended calls without a new ADR.**
+- ⚠️ Fixed a Phase 07 defect found here: `StartLimitIntervalSec` sat in `[Service]`, where systemd
+  ignores it, leaving the bot's restart limit **unreachable** for two phases.
 
 **Amended 2026-09-09.** This slot was "Voice". The owner's reasoning, recorded rather than applied
 silently: **voice on top of six deterministic commands is a slower way to type `/status`.**

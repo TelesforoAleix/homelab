@@ -69,6 +69,34 @@ This project uses this file for meaningful repository-level milestones rather th
   so the exact before/after ruleset diff is unrecoverable. Attribution by chain name found only
   Docker and Tailscale chains, and final reachability checks passed, but this is weaker evidence than
   the brief required.
+- **Phase 09 complete.** The model executor, connected — `/ask <question>` answers from Telegram
+  using the existing subscriptions. The design problem was that `homelab-bot` **provably cannot read
+  either AI credential** (a Phase 07 property proved by attempting the read), so the call moved to a
+  separate service running as `aleix` that the bot asks over a UNIX socket. The bot gained no group,
+  no sudoers entry and no read access to `/home/aleix`; `id homelab-bot` is byte-identical and
+  `ss -tln` still shows **6 listeners** — a UNIX socket is a file, not a port. Access control lives
+  in the socket unit (`SocketGroup=homelab-bot`, mode 0660), not in Python, because a rule in a unit
+  file cannot be bypassed by a bug in the program it protects. Two providers with independent usage
+  limits and automatic fallback, which earned itself immediately: Claude was exhausted when the first
+  live `/ask` ran and Codex answered it. Cheapest models by default (`haiku`, `gpt-5.6-luna`). The
+  model gets **no tools**, verified with a canary file rather than assumed, and its output is never
+  dispatched — tested by asking the model to emit `/restart ssh.service`, which it did, with no
+  effect. Only the question and the five `/status` figures leave the machine; logs are excluded
+  because anything that can write a log line could otherwise choose what gets sent. Owner-initiated
+  only, which is the constraint that substitutes for the still-unresolved licensing question:
+  **Phase 12 must not make unattended calls without a new ADR.** Adds ADR-025, the guide,
+  `services/model-helper/`, `model_client.py`, two systemd units and a guarded installer. Nine
+  problems recorded, most of them the author's — including an exhaustion pattern written from
+  guesses that misread a normal limit as a mystery, and suppressing the evidence needed to diagnose
+  it while calling that a security decision.
+
+- **Phase 07's restart limit is fixed.** `StartLimitIntervalSec` sat in `[Service]`, where systemd
+  ignores it; the running unit had a 10s window against a `RestartSec=10` policy, so five starts
+  could never land inside it and the limit was **unreachable**. Found by `systemd-analyze verify`,
+  which `install-telegram-bot.sh` now runs on every install. `StartLimitBurst=5` *is* accepted in
+  `[Service]`, so half the setting worked and `systemctl show` reported a plausible pair — which is
+  how it survived two phases.
+
 - **Phase 08 complete.** The structure behind the interface: a registry-based router with six
   executors at three capability levels, and **two allowlists** separating authentication from
   authorisation. **One privileged action, performed by an account that gained nothing** — `id

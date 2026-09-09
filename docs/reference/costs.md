@@ -111,6 +111,49 @@ subscriptions would have cost nothing in money and an unestablished amount in li
 Reference-build running total unchanged at **899 DKK (~121 EUR)**, plus the existing AI
 subscriptions recorded in Phase 06.
 
+## Phase 09 — Model Executor (subscription-backed)
+
+**0 DKK.** Recorded as an explicit zero **in money**.
+
+Phase 08 asked which of two prices this phase would pay. **It paid the second:** the existing
+personal subscriptions, at no monetary cost and an unresolved amount of licensing risk. No API key,
+no metered billing, no new service, no overage. ADR-008's prohibition on paid API access is intact.
+
+What that risk is bounded by is written down rather than waved at: **every model call is initiated
+by the owner**, in response to a message just sent, which keeps the usage pattern the same shape as
+a person using their own subscription interactively (ADR-025 §9). That is a constraint, not an
+answer, and Phase 12 must not break it without a new ADR.
+
+### The cost that is real and is not money
+
+Every `/ask` spends allowance from the same bucket the owner needs for their own work. This is the
+first phase where the project consumes a resource it cannot buy more of.
+
+It was paid immediately and visibly during this phase:
+
+- **Codex was already exhausted** when the Phase 09 brief was written (reset ~20:55 UTC).
+- **Claude Pro hit its session limit** partway through implementation — `resets 11pm (UTC)` — and
+  the very first live `/ask` therefore fell back to Codex.
+
+A meaningful share of the Claude spend was verification rather than use: the canary test that proved
+`--tools ""` actually disables tools, its inconclusive first control, the model-name probes, and
+several `Reply with exactly: OK` calls. That was the right trade — the alternative was assuming a
+security control worked — but it was the owner's capacity that paid for it and the ledger should
+say so plainly.
+
+**Mitigation, and what it is for:** per-provider caps of 6/hour and 30/day, enforced *before* the
+call. Not a billing control — there is nothing to bill. It exists so that idle poking from a phone
+cannot cost the owner their next working session, which Phase 06 already lost once to an exhausted
+window.
+
+**Accounting note:** the caps count a *failed* attempt. A fallback that finds Claude exhausted and
+is answered by Codex spends one call from each, because two calls were made. Counting one would be
+tidier and untrue.
+
+Reference-build running total unchanged at **899 DKK (~121 EUR)**, plus the existing AI
+subscriptions recorded in Phase 06 (€45.50/month ≈ 339 DKK/month), which this phase now uses
+programmatically for the first time.
+
 ## Existing subscriptions used by the project
 
 These are costs even though they pre-date Home Lab. The owner supplied the actual billed EUR amounts

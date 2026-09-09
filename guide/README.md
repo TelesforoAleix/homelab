@@ -54,6 +54,11 @@ These mirror the numbered project roadmap.
   host processes, non-root containers, explicit-interface port publishing, layer caching, logs,
   diagnostics, disk accounting, and the Docker/firewall interaction Phase 13 inherits.
   *(Complete 2026-09-09. Leaves Docker installed and no containers running.)*
+- [`09-model-executor`](09-model-executor/README.md) — asking a model a question without giving the
+  bot a credential. Why the bot cannot just run `claude -p`, why the access rule belongs in the
+  socket unit rather than in Python, what leaves the machine on every call and why logs do not,
+  prompt injection explained concretely, and why the model's answer is text and nothing else.
+
 - [`08-router-executors`](08-router-executors/README.md) — the structure behind the interface:
   authentication versus authorisation, a registry instead of a chain of ifs, and one privileged
   action performed by an account that gained nothing. Why polkit rather than sudo, and why a
