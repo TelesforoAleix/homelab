@@ -2,8 +2,8 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 03 — Remote Access (**complete**, 2026-09-09). Next: Phase 02 — Linux
-  Fundamentals, deferred behind Phase 03 by the owner's sequencing decision.
+- **Current phase:** 02 — Linux Fundamentals (**complete**, 2026-09-09), run after Phase 03 by the
+  owner's sequencing decision. Next: Phase 04 — Git & GitHub Fundamentals.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
 - **Target OS:** Ubuntu Server 26.04.1 LTS (ADR-014)
 - **Current implementation state:** Ubuntu Server 26.04.1 LTS on the reference node, administered
@@ -84,7 +84,11 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - ~~SSH password authentication~~ — ✅ **closed 2026-09-09** by Phase 03 (ADR-018). The server
   advertises `publickey` only.
 - **Single SSH key, no backup, and no console.** Phase 03 removed the monitor and left one Ed25519
-  key as the only way in. New debt, owned by Phase 13.
+  key as the only way in. New debt, owned by Phase 13. Phase 02 did not close this — it made
+  lockout-class changes *recoverable while remote access still works* (ADR-020), which is a different
+  thing from a recovery path.
+- **The volume group has no free extents.** The root LV consumes all 235.4 G, so storage cannot be
+  grown by `lvextend`; it needs another disk. Found in Phase 02, not owned by any phase yet.
 - **Node key expiry deliberately disabled** on the Tailscale node (ADR-019) — a security control
   traded for availability. Phase 13 must revisit it rather than inherit it.
 - Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.
@@ -93,6 +97,28 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - **Phase 10 must not silently inherit ADR-015.** Once the node stores significant sensitive or
   personal Second Brain data, encryption at rest must be reconsidered on its merits — and converting
   an unencrypted root filesystem after the fact usually means a reinstall.
+
+## Phase 02 status
+
+**Complete 2026-09-09.** Brief committed before implementation per ADR-017.
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`02-linux-fundamentals.md`](../handovers/02-linux-fundamentals.md), committed before implementation |
+| Standard | ✅ [`safe-changes-headless.md`](../standards/safe-changes-headless.md), referenced from `AGENTS.md` |
+| ADR-020 | ✅ **Accepted** — change safety on a console-less node |
+| Guide | ✅ [`guide/02-linux-fundamentals/`](../../guide/02-linux-fundamentals/README.md) |
+| Command reference | ✅ [`linux-command-reference.md`](linux-command-reference.md) |
+| Scripts | ✅ `scripts/macos/preflight.sh`, `scripts/server/lab-sandbox.sh` — both run on the real machine |
+| Tooling | ✅ `tree` 2.3.1-1, `ncdu` 1.22-1build1, `ripgrep` 15.1.0-1ubuntu1 |
+| Validation | ✅ All checks passed with captured output; sandbox created, exercised and removed |
+| Handover | ✅ [`02-linux-fundamentals-handover.md`](../handovers/02-linux-fundamentals-handover.md) |
+| `main` known-working | ⏳ pending merge of `feature/02-linux-fundamentals` |
+
+**What Phase 02 deliberately did not teach**, so no later phase assumes it: no networking changes
+were practised, no `sudoers` editing, no firewalling, no backup or restore, and no LVM growth. Those
+were classified Tier 3 — studied by reading, not by changing — because the node has no console and
+Phase 13 will have a better safety net.
 
 ## Phase 03 status
 
@@ -142,7 +168,7 @@ runs — it must write and commit its own brief first.
 
 ## Starting state for the next phase
 
-Verified as of 2026-09-09, after the headless reboot.
+Re-verified 2026-09-09 at the close of Phase 02.
 
 | Fact | Value |
 |---|---|
@@ -155,12 +181,16 @@ Verified as of 2026-09-09, after the headless reboot.
 | Admin user | `aleix`, sudo-capable; **`sudo` requires a password — no `NOPASSWD`** |
 | Storage | LVM, 232 GB root, unencrypted |
 | Health | `systemctl is-system-running` → `running`, no failed units |
+| Tooling | `tmux` 3.6, `htop`, `jq`, `git`, `vim`, `nano`, `less`, `lsof`, plus `tree`, `ncdu`, `ripgrep` |
+| Listening | `:22` only off-box; everything else on loopback or the tailnet — unchanged by Phase 02 |
 | Boot | 25.8s cold, headless, to reachable |
 | **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |
 
 Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and
 `scripts/server/verify-remote-access.sh` (Phase 03 posture; run under `sudo` for a complete report).
 
-> **The console is gone.** Phase 02 must plan its exercises around that: a change that breaks
-> networking or `sshd` can no longer be fixed at the machine. Keep a second SSH session open, prefer
-> `reload` to `restart`, and validate before applying.
+> **The console is gone.** This is now a written standard rather than a warning:
+> [`docs/standards/safe-changes-headless.md`](../standards/safe-changes-headless.md), adopted as
+> ADR-020 and referenced from `AGENTS.md`. Apply it before any change touching network, remote
+> access, authentication, boot, or the admin account. `scripts/macos/preflight.sh` checks the parts
+> a machine can check.

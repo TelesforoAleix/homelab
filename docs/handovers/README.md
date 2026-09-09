@@ -36,3 +36,6 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 | `01-ubuntu-server.md` | Phase 01 brief | **Ratified** 2026-09-08, subject to six amendments (recorded in its §0.1) — all reconciled |
 | `01-ubuntu-server-handover.md` | Phase 01 completion handover | **Returned to Project Planning** 2026-09-08 — outcome Complete |
 | `03-remote-access.md` | Phase 03 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |
+| `03-remote-access-handover.md` | Phase 03 completion handover | **Written** 2026-09-09 — addressed to Phase 02; outcome Complete |
+| `02-linux-fundamentals.md` | Phase 02 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |
+| `02-linux-fundamentals-handover.md` | Phase 02 completion handover | **Written** 2026-09-09 — addressed to Phase 04; outcome Complete |

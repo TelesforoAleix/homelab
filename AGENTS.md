@@ -19,6 +19,10 @@ Read these files before material work:
 - Never commit secrets, tokens, passwords, private keys, environment files containing credentials, or personal data.
 - Never make a Telegram/user-facing service root by default.
 - Treat destructive shell commands, privilege changes, firewall changes, package removal, database destruction, Docker pruning, shutdown, and reboot as high-impact operations requiring explicit justification and appropriate confirmation/control.
+- **The reference node has no console.** Before any change touching network, remote access,
+  authentication, boot, or the admin account, apply
+  [`docs/standards/safe-changes-headless.md`](docs/standards/safe-changes-headless.md) (ADR-020).
+  Classifying the change is the control; the checklist only helps once you have noticed it applies.
 - Record versions tested and meaningful validation results.
 - Update costs when a phase creates a new paid dependency.
 - Record failures and reversals rather than hiding them.

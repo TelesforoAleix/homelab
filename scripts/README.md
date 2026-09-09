@@ -11,6 +11,7 @@ Scripts are organised by **where they run**, which is not always where they are 
 |---|---|
 | `download-ubuntu-iso.sh` | Downloads the pinned Ubuntu Server image and verifies it two ways: against the checksum recorded in ADR-014, and against the checksum Ubuntu publishes today. Refuses to hand you an unverified file. |
 | `write-ubuntu-usb.sh` | Writes a verified ISO to a USB stick. **Destructive.** Refuses to target an internal disk, rejects partition identifiers, and requires you to retype the disk identifier before writing. |
+| `preflight.sh` | Checks the safety preconditions from `docs/standards/safe-changes-headless.md` before a lockout-class change (ADR-020). Runs on the Mac deliberately: it proves both access routes from outside, the way a real connection arrives, which a script on the server cannot do. |
 
 ## `server/` — run on the Ubuntu server
 
@@ -19,6 +20,7 @@ Scripts are organised by **where they run**, which is not always where they are 
 | `verify-install.sh` | Produces a Markdown report of the server's real state — hardware, LVM layout, network, services, versions — for pasting into `docs/`. Deliberately never prints netplan file contents, which hold the Wi-Fi passphrase in cleartext. |
 | `apply-ssh-hardening.sh` | Installs the key-only sshd configuration (ADR-018). Refuses to run if the invoking user has no `authorized_keys` entry, reverts itself if `sshd -t` rejects the result, and reloads sshd — because the running daemon does not re-read its configuration on its own. |
 | `install-tailscale.sh` | Adds Tailscale's apt repository and installs it. Derives the codename from `/etc/os-release` and refuses to continue unless the repository declares `Origin: Tailscale` and the running architecture, so an unsupported release becomes a recorded problem rather than a silent fallback (ADR-014). |
+| `lab-sandbox.sh` | Creates and destroys the disposable Phase 02 practice environment — a passwordless `nologin` user, a group, a setgid directory, and a systemd unit with no `[Install]` section so it can never run at boot. Refuses to create anything colliding with a real account, and refuses to delete any account not carrying the marker it writes. |
 | `verify-remote-access.sh` | Reports the live remote-access posture. Probes the **running** SSH daemon over the network rather than trusting `sshd -T`, warns when configuration is newer than the daemon, and redacts the Tailscale account and tailnet suffix so its output is safe to paste. |
 
 ## Conventions
@@ -30,3 +32,6 @@ Scripts are organised by **where they run**, which is not always where they are 
   Tailscale account and tailnet name, which `tailscale status` prints against every node.
 - A script that changes a security control should verify the **running system**, not the file it
   just wrote. Phase 03 shipped a correct configuration to a daemon that never re-read it.
+- A check that cannot determine an answer must say **unknown**, never a plausible-looking zero.
+  Phase 02's session check first used `who`, which reports no sessions and exits 0 on Ubuntu 26.04
+  because systemd 257 removed utmp support. Being confidently wrong is worse than erroring.
