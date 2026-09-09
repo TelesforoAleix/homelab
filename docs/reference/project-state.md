@@ -397,7 +397,7 @@ The block is retained as the record of what was expected, not as an outstanding 
 
 ## Starting state for the next phase
 
-Re-verified 2026-09-09 at the close of Phase 07, after a reboot.
+Re-verified 2026-09-09 at the close of **Phase 09**.
 
 | Fact | Value |
 |---|---|
@@ -416,10 +416,13 @@ Re-verified 2026-09-09 at the close of Phase 07, after a reboot.
 | AI credential files | `/home/aleix/.claude/.credentials.json` and `/home/aleix/.codex/auth.json`, both mode `0600`, owner `aleix:aleix`; contents never captured |
 | AI processes/services | None; both CLIs are interactive operator commands |
 | Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache |
-| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts since boot** |
+| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts**. **`homelab-model-helper.socket`** — active, enabled; templated service instantiated per connection |
+| Model helper socket | `/run/homelab-model-helper.sock`, `aleix:homelab-bot`, mode `660` |
+| Model access | `/ask` works. Claude `haiku`, Codex `gpt-5.6-luna`; caps 6/hour, 30/day per provider |
+| Restart limit | **`StartLimitIntervalUSec=5min`** on the running unit — was silently 10s until Phase 09 fixed it |
 | Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |
 | Service hardening | `systemd-analyze security` → **1.3 OK** |
-| Listening | **6 sockets; `:22` only off-box.** Everything else on loopback or the tailnet. Docker, the AI CLIs and the bot published nothing — the bot long-polls outbound |
+| Listening | **6 sockets; `:22` only off-box.** Everything else on loopback or the tailnet. Docker, the AI CLIs and the bot published nothing — the bot long-polls outbound. **Unchanged by Phase 09: the model helper uses a UNIX socket, which is a file, not a port** |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | **24.4s** cold, headless, to reachable |
 | **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |
