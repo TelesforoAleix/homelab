@@ -69,6 +69,17 @@ This project uses this file for meaningful repository-level milestones rather th
   so the exact before/after ruleset diff is unrecoverable. Attribution by chain name found only
   Docker and Tailscale chains, and final reachability checks passed, but this is weaker evidence than
   the brief required.
+- **The bot's Telegram profile and command menu are now set from the registry.** A phone client
+  offers no autocomplete for unregistered commands, so `/ask` had to be typed from memory. The
+  command list is derived from `executors.register_all()` — the same single source of truth that
+  generates `/help` — and `/restart` is withheld from the default scope so a privileged action is
+  not advertised to strangers. This replaced a hand-set BotFather list that had drifted for two
+  phases: it advertised `/model` as "Chat with AI" while that executor was deliberately unwired, and
+  omitted `/ask` entirely. Four bugs recorded, all the author's, including the **ninth** instance of
+  a check reporting a confident FAIL about something it could not read — this time an environment
+  variable assigned to the wrong end of a pipeline, laundered into a plausible string by a bare
+  `except Exception`.
+
 - **Phase 09 complete.** The model executor, connected — `/ask <question>` answers from Telegram
   using the existing subscriptions. The design problem was that `homelab-bot` **provably cannot read
   either AI credential** (a Phase 07 property proved by attempting the read), so the call moved to a

@@ -318,7 +318,11 @@ def build_help(router) -> Executor:
         name="/help",
         capability=Capability.READ,
         handler=handler,
-        summary="this message",
+        # "list the commands", not "this message". The summary is now read in
+        # two places -- /help itself, and the Telegram command menu on the
+        # phone, which configure-telegram-bot-profile.sh derives from this
+        # registry. "this message" only made sense in one of them.
+        summary="list the commands",
     )
 
 
