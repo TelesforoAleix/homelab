@@ -9,10 +9,12 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | systemd | **Active** | 259 | Ships with the release | Socket activation used for SSH |
 | intel-microcode | **Active** | 3.20260210.1ubuntu2 | No | Mitigates the 2016-era firmware; see `hardware.md` |
 | unattended-upgrades | **Active** | — | No | Enabled; `apt-daily-upgrade.timer` confirmed scheduled |
-| OpenSSH server | **Active** | OpenSSH_10.2p1 Ubuntu-2ubuntu3.6 (OpenSSL 3.5.5) | Required for target workflow | Installed Phase 01 via socket activation (`ssh.socket` enabled). **Password auth still on** — key-only auth and hardening are Phase 03. |
+| OpenSSH server | **Active** | OpenSSH_10.2p1 Ubuntu-2ubuntu3.6 (OpenSSL 3.5.5) | Required for target workflow | Installed Phase 01 via socket activation (`ssh.socket` enabled). **Key-only since Phase 03** (ADR-018): passwords and keyboard-interactive disabled, `PermitRootLogin no`. Note `ssh.socket` uses `Accept=no`, so config changes need `systemctl reload ssh`. |
 | Git | Planned | — | Yes for repository workflow | Fundamentals in Phase 04 |
-| Tailscale | Planned | — | Chosen remote-access approach | Phase 03; `resolute` repository confirmed available 2026-09-08 |
-| VS Code Remote SSH | Planned | — | Development workflow | Phase 03 |
+| OpenSSH client (MacBook) | **Active** | OpenSSH_9.9p2, LibreSSL 3.3.6 | Ships with macOS | Ed25519 key, passphrase in the login keychain (ADR-018) |
+| Tailscale (server) | **Active** | 1.102.3 | Chosen remote-access approach (ADR-005) | Installed 2026-09-09 from the `resolute` repository, re-verified that day. MagicDNS primary route; node key expiry disabled (ADR-019). |
+| Tailscale (MacBook) | **Active** | 1.102.3 | Same tailnet | Homebrew cask `tailscale-app`. Same version as the server. |
+| VS Code Remote SSH | **Active** | extension 0.124.0 (`remote-ssh-edit` 0.87.0, `remote-explorer` 0.5.0) | Development workflow (ADR-004) | Connects via the `homelab` alias in `~/.ssh/config`; bootstraps `~/.vscode-server` on the node. |
 | Docker Engine | Planned | — | Expected core infrastructure | Phase 05; `resolute` repository confirmed available 2026-09-08 |
 | Docker Compose | Planned | — | Expected core infrastructure | Phase 05 |
 | Python | Planned | — | Likely runtime/tooling | Version selected when needed |

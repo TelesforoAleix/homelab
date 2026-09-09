@@ -28,6 +28,24 @@ M700 Tiny with an HDMI monitor will face the same purchase.
 free, and no subscription or usage-based cost was introduced.
 | 2026-09-08 | RAM upgrade | Hardware | One-time | **0** | **0** | **Not required.** Part A confirmed 1 × 8 GB with a free slot; 8 GB is sufficient for Phase 01. Upgrade to 16 GB deferred until real services justify it. |
 
+### Phase 03 — Remote Access
+
+**Phase 03 actual spend: 0 DKK.** Recorded explicitly rather than omitted, because "no cost" is a
+finding and an absent row is an oversight.
+
+| Date | Item | Category | One-time / recurring / usage | Actual DKK | EUR equivalent | Notes |
+|---|---|---|---|---:|---:|---|
+| 2026-09-09 | Tailscale | Service | Recurring | **0** | **0** | Personal plan. Covers this tailnet, MagicDNS, and disabling node key expiry — the two features Phase 03 depends on (ADR-019). Verified at implementation, as ADR-005 required. |
+| 2026-09-09 | SSH keys, OpenSSH, VS Code Remote SSH | Software | One-time | **0** | **0** | All already-owned or free software. |
+
+Revisit if the tailnet outgrows the Personal plan's limits, or if a feature Home Lab depends on
+moves behind a paid tier (ADR-019).
+
+**Note on the DisplayPort→HDMI cable.** The 199 DKK cable bought in Phase 01 became redundant in
+Phase 03 Part F, when the monitor was removed. It is not re-recorded here and the running total is
+unchanged — it was genuinely spent, and it was genuinely needed to install the machine. But anyone
+reproducing this build who installs headless from the start may not need it at all.
+
 ## Existing subscriptions used by the project
 
 These should be recorded as costs even when they pre-date Home Lab. The exact subscription prices have not yet been supplied by the owner; record them in the phase that first depends on them (Phase 06, AI CLI access).

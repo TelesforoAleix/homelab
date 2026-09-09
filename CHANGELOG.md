@@ -22,6 +22,19 @@ This project uses this file for meaningful repository-level milestones rather th
   layout (1 x 8 GB, one slot free) and wireless adapter (Intel Wireless-AC 8260). Adds a firmware
   task to enable CPU virtualization, found disabled. No software installed or marked as tested.
 
+- **Phase 03 complete.** Remote access: Ed25519 key-only SSH (ADR-018), Tailscale 1.102.3 with
+  MagicDNS (ADR-019), VS Code Remote SSH, and the console physically removed. Closes Phase 01's
+  principal open risk — the server no longer accepts password authentication. Run ahead of Phase 02
+  by the owner's sequencing decision; Phase 02 is deferred, not skipped.
+- Phase 03 scripts: `apply-ssh-hardening.sh` (refuses to run without an installed key, reverts
+  itself if `sshd -t` fails), `install-tailscale.sh` (verifies the repository publishes for the
+  running codename before touching `/etc`), `verify-remote-access.sh` (probes the running daemon
+  rather than trusting `sshd -T`, and redacts account and tailnet identifiers).
+- Phase 03 recorded a failure worth keeping: `sshd -T` reported password authentication disabled
+  while the running server still accepted passwords. Ubuntu's `ssh.socket` uses `Accept=no`, so one
+  long-running daemon serves every connection using the configuration it parsed at start. A
+  configuration file is not a control until the process holding it has re-read it.
+
 ### Changed
 
 - **Governance model replaced (ADR-017).** The separate Project Planning context is retired; phases
