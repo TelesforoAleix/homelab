@@ -2,7 +2,10 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 08 — Router & Executors (**complete**, 2026-09-09). Next: Phase 09 — Voice.
+- **Current phase:** 09 — Model Executor, subscription-backed (**complete**, 2026-09-09). Next:
+  the **foundations** phase — backup plus the ADR-015 encryption decision — then Phase 17 (Voice),
+  10 (Knowledge), 11 (Frameworks), 12 (Automation). Voice was **moved out of Phase 09 to Phase 17**
+  at the owner's request; the roadmap records the reason rather than being quietly rewritten.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -129,7 +132,7 @@ service account is its decision to make deliberately, not to inherit.
 | Account | ✅ `id homelab-bot` **byte-identical to Phase 07** |
 | Denied | ✅ `ssh`, `tailscaled`, `systemd-networkd` — asserted on the reason, not just failure |
 | Audit | ✅ Two independent records (bot + systemd PID 1). **polkit logs denials only** |
-| Model executor | ✅ Registered, **deliberately unwired** — Phase 09 decides |
+| Model executor | ✅ Registered, **deliberately unwired** — Phase 09 connected it (ADR-025) |
 | Exposure | ✅ Still **1.3 OK**; listeners still 6 |
 | Reboot test | ✅ 24.4s; service and grant both survived, proved end-to-end |
 | ADR-024 | ✅ **Accepted** |
@@ -138,6 +141,39 @@ service account is its decision to make deliberately, not to inherit.
 **Two Phase 07 properties were traded deliberately:** the bot now forks (`/restart` execs
 `systemctl`), and `AF_UNIX` is permitted (needed to reach PID 1). Neither opens the Docker socket,
 which is `root:docker 0660` to an account in no group but its own.
+
+## Phase 09 status
+
+**Complete 2026-09-09.** Brief committed before implementation per ADR-017 (`351f825`).
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`09-model-executor.md`](../handovers/09-model-executor.md), committed as `351f825` |
+| Credential boundary | ✅ `homelab-bot` **still cannot read either OAuth file** — tested by attempting it |
+| How the call is made | ✅ `homelab-model-helper`, runs as `aleix`, socket-activated, one process per connection |
+| Access control | ✅ The socket's group and mode (`aleix:homelab-bot:660`), enforced by the kernel — **not** a check in Python |
+| Account | ✅ `id homelab-bot` **byte-identical**; no group, no sudoers entry, no `/home/aleix` access |
+| Listeners | ✅ `ss -tln` still **6** — a UNIX socket adds none |
+| Providers | ✅ Two, independent limits, automatic fallback. **Only exhaustion falls back; a hard error does not** |
+| Models | ✅ Cheapest by default: `haiku`, `gpt-5.6-luna` (`gpt-5.4-mini` is rejected on a ChatGPT account) |
+| Tool suppression | ✅ Verified with a canary file inside the working directory, against a positive control |
+| Model output | ✅ Never dispatched — proved by asking the model to emit `/restart ssh.service`, which it did, with no effect |
+| What is sent | ✅ Question + the five `/status` figures only; prompt printed verbatim |
+| Caps | ✅ 6/hour, 30/day per provider, enforced **before** the call; lock proved with 10 racing processes |
+| Fallback | ✅ Proved against a **genuinely exhausted** Claude, not a mock |
+| Exposure | ✅ Bot still **1.3 OK** |
+| ADR-025 | ✅ **Accepted** |
+| Handover | ✅ [`09-model-executor-handover.md`](../handovers/09-model-executor-handover.md) |
+
+**A second service now runs as the human's account.** It is the only one, and it is the concession
+that keeps the credential out of the bot. Three hardening directives are deliberately absent, with
+reasons in the unit: `MemoryDenyWriteExecute` (both CLIs ship a JIT), `RestrictNamespaces` (Codex's
+sandbox is built from namespaces) and `SystemCallFilter` (unmeasured surface).
+
+**A Phase 07 defect was found and fixed here:** `StartLimitIntervalSec` was in `[Service]`, where
+systemd ignores it. The effective window was 10s against `RestartSec=10`, so the restart limit was
+**unreachable** for two phases. `install-telegram-bot.sh` now runs `systemd-analyze verify` on
+every install.
 
 ## Open risks carried forward
 
@@ -164,8 +200,10 @@ which is `root:docker 0660` to an account in no group but its own.
 - **`aleix` is in the `docker` group.** This is root-equivalent access without a password prompt.
   Accepted for the sole administrator in ADR-022; must never be granted to service accounts.
 - **Personal AI OAuth credentials now exist in `/home/aleix`.** Both files are mode `0600`, but a
-  process running as `aleix` can read them and the root filesystem is not encrypted. Phase 07 must
-  not inherit them; Phase 08 must decide separately whether personal subscription credentials are
+  process running as `aleix` can read them and the root filesystem is not encrypted. Phase 07 did
+  not inherit them and Phase 09 did not either — but Phase 09 **did** add a service running as
+  `aleix`, so a process that can read them now starts on demand (ADR-025). Whether personal
+  subscription credentials are
   supported or appropriate for unattended execution.
 - **Subscription inference is capacity-limited, not an availability SLA.** Claude reached its
   five-hour session limit during Phase 06 despite valid authentication. User-facing services need
@@ -190,8 +228,23 @@ which is `root:docker 0660` to an account in no group but its own.
   without revisiting. Phases 08 and 10.
 - **One thing can now change the system.** `/restart chrony`, scoped two ways and proved. Phase 07's
   property that a compromise could leak information but not act **no longer holds** (ADR-024).
-- **The unattended-AI-credential question is still open.** ADR-008 covers interactive use only.
-  Phase 09 must decide and record an ADR — not by copying a personal OAuth file to a service account.
+- **The licensing question is STILL OPEN, and Phase 09 did not resolve it.** ADR-008 covers
+  interactive use only. Phase 09 connected the model under a **constraint instead of an answer**:
+  every call is owner-initiated, in response to a message just sent (ADR-025 §9). It did **not**
+  copy an OAuth file to a service account — the credential never moved. **Phase 12 must not make
+  unattended model calls without a new ADR that addresses licensing directly.**
+- **Data now leaves the machine on every `/ask`** — the owner's question plus the five `/status`
+  figures, to Anthropic or OpenAI. Bounded deliberately: no logs, no file contents, no journal.
+  Widening that context needs its own ADR, because anything able to write a log line could
+  otherwise choose what gets sent (prompt injection). The backup and encryption decisions
+  (ADR-015) must account for this.
+- **The subscription allowance is a shared resource, and the bot spends it.** Not money — capacity.
+  Both subscriptions hit their limits during Phase 09 itself. Capped at 6/hour and 30/day per
+  provider, enforced before the call, but the bot and the owner draw from the same bucket.
+- **A service now runs as `aleix`.** `homelab-model-helper` is the only one, and it exists so the
+  credential stays out of `homelab-bot`. `aleix` can `sudo` and is in the `docker` group, so this
+  process is a more valuable target than the bot; `NoNewPrivileges=yes` is retained and three
+  further directives are deliberately absent with reasons recorded in the unit.
 - **No alerting on the bot.** If it dies at 3am, nothing says so — and bounded logging means a quiet
   journal does not mean a healthy service.
 - Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.
@@ -344,7 +397,7 @@ The block is retained as the record of what was expected, not as an outstanding 
 
 ## Starting state for the next phase
 
-Re-verified 2026-09-09 at the close of Phase 07, after a reboot.
+Re-verified 2026-09-09 at the close of **Phase 09**.
 
 | Fact | Value |
 |---|---|
@@ -363,10 +416,13 @@ Re-verified 2026-09-09 at the close of Phase 07, after a reboot.
 | AI credential files | `/home/aleix/.claude/.credentials.json` and `/home/aleix/.codex/auth.json`, both mode `0600`, owner `aleix:aleix`; contents never captured |
 | AI processes/services | None; both CLIs are interactive operator commands |
 | Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache |
-| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts since boot** |
+| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts**. **`homelab-model-helper.socket`** — active, enabled; templated service instantiated per connection |
+| Model helper socket | `/run/homelab-model-helper.sock`, `aleix:homelab-bot`, mode `660` |
+| Model access | `/ask` works. Claude `haiku`, Codex `gpt-5.6-luna`; caps 6/hour, 30/day per provider |
+| Restart limit | **`StartLimitIntervalUSec=5min`** on the running unit — was silently 10s until Phase 09 fixed it |
 | Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |
 | Service hardening | `systemd-analyze security` → **1.3 OK** |
-| Listening | **6 sockets; `:22` only off-box.** Everything else on loopback or the tailnet. Docker, the AI CLIs and the bot published nothing — the bot long-polls outbound |
+| Listening | **6 sockets; `:22` only off-box.** Everything else on loopback or the tailnet. Docker, the AI CLIs and the bot published nothing — the bot long-polls outbound. **Unchanged by Phase 09: the model helper uses a UNIX socket, which is a file, not a port** |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | **24.4s** cold, headless, to reachable |
 | **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |

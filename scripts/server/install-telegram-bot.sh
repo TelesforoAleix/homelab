@@ -67,7 +67,7 @@ else
   ok "${SESSIONS} interactive sessions -- one can stay idle as the way back"
 fi
 
-for f in bot.py router.py executors.py homelab-telegram-bot.service allowlist.example; do
+for f in bot.py router.py executors.py model_client.py homelab-telegram-bot.service allowlist.example; do
   [ -f "$STAGE/$f" ] || die "$STAGE/$f not found. scp the staging directory from the repository first."
 done
 ok "staged files present"
@@ -111,10 +111,33 @@ esac
 # so a compromise cannot persist by rewriting it.
 
 install -d -m 0755 -o root -g root "$APP_DIR"
-for mod in bot.py router.py executors.py; do
+# model_client.py added in Phase 09. It is the ONLY part of the model feature
+# that runs as this service account: it opens a UNIX socket and speaks JSON.
+# The credentials, the CLIs and the caps are all on the far side of that socket,
+# in homelab-model-helper, which runs as the owner.
+for mod in bot.py router.py executors.py model_client.py; do
   install -m 0644 -o root -g root "$STAGE/$mod" "$APP_DIR/$mod"
 done
-ok "installed bot.py, router.py, executors.py (root-owned, not writable by $SVC_USER)"
+ok "installed bot.py, router.py, executors.py, model_client.py (root-owned, not writable by $SVC_USER)"
+
+# --- Does systemd actually accept the unit? ------------------------------
+#
+# Added in Phase 09, which found that Phase 07 put StartLimitIntervalSec in
+# [Service], where systemd IGNORES it and carries on with its 10s default. The
+# unit loaded, the service ran, and the restart-loop protection was never
+# capable of firing. Nothing in the install output said so.
+#
+# A misplaced or misspelled directive is silent by design: systemd logs a note
+# and applies the rest. So ask it, every install, and print what it says.
+VOUT=$(systemd-analyze verify "$STAGE/homelab-telegram-bot.service" 2>&1 \
+         | grep -F 'homelab-telegram-bot.service' || true)
+if [ -n "$VOUT" ]; then
+  note "systemd-analyze verify has complaints about the unit:"
+  printf '%s\n' "$VOUT" | sed 's/^/       /'
+  note "a directive systemd ignores is not a directive. Fix these."
+else
+  ok "systemd-analyze verify accepts the unit with no complaint"
+fi
 
 # --- Configuration -------------------------------------------------------
 

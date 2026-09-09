@@ -1,13 +1,17 @@
 # Current Architecture
 
-**State:** Phases 01–07 complete — the reference node runs Ubuntu Server, is administered remotely
+**State:** Phases 01–09 complete — the reference node runs Ubuntu Server, is administered remotely
 over Tailscale with key-only SSH, and has Docker Engine/Compose plus two subscription-authenticated
 AI operator CLIs. **The console has been physically removed**; the node is genuinely headless.
 
-**`Interface → Router → Executor` now exists as code**, not as a diagram. Phase 07 built the
-Interface; Phase 08 built the Router and the Executors. The one thing still missing is a *model*
-executor with a credential behind it — registered, visible in `/help`, and deliberately unwired
-until Phase 09 decides how it may be paid for (ADR-024).
+**`Interface → Router → Executor → Model` now exists as code**, not as a diagram. Phase 07 built the
+Interface; Phase 08 built the Router and the Executors; Phase 09 connected the model.
+
+The way it was connected is the architectural point. `homelab-bot` provably cannot read either AI
+credential and **still cannot** — so the model call happens in a separate service running as
+`aleix`, which the bot asks over a UNIX socket. The credential never moves. The bot gained no group,
+no sudoers entry and no read access to `/home/aleix`, and the machine gained no listening socket
+(ADR-025).
 
 The node performs exactly one privileged action, and the account that performs it gained nothing:
 `id homelab-bot` is byte-identical to Phase 07 and there are zero sudoers entries.
@@ -63,6 +67,8 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | **Router / executors** | **Active** — registry-based, in the bot process. Six executors at three capability levels; authorisation in one function; two allowlists with privileged enforced as a subset (ADR-024) |
 | **Escalation grant** | **Active** — polkit, one user / one unit / one verb, plus a second allowlist inside the bot. Zero sudoers entries; `NoNewPrivileges` retained |
 | **Telegram status bot** | **Active** — `homelab-telegram-bot.service`, the project's first service. Read-only, standard library only, never forks a process. Long polling means **no listening socket**; isolation proved by attempted access (ADR-023) |
+| **Model helper** | **Active** — `homelab-model-helper.socket` + templated service. Runs as `aleix` because it must reach the credentials the bot cannot; socket-activated, one process per connection, so nothing holds an OAuth token between requests. Access control is the socket's group and mode, not code (ADR-025) |
+| **Model executor** | **Active** — `/ask`, two providers with independent usage limits and automatic fallback, cheapest model by default. The model gets **no tools** (verified with a canary), and its output is never dispatched |
 
 ## Confirmed architectural direction
 
@@ -70,25 +76,36 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 Interface  →  Router  →  Executor  →  Tool / Model / Service
 ```
 
-**The Interface layer now exists.** A read-only Telegram bot runs as its own unprivileged account
-and calls nothing — it answers from `/proc` and `statvfs()` and never forks a process. It is
-deliberately not wired to anything: there is no router, no executor, and no escalation path.
+**Every layer now exists.** A Telegram bot runs as its own unprivileged account, a registry-based
+router performs one authorisation check before dispatch, executors do one thing each, and the model
+executor reaches a model without the bot holding a credential.
 
-Claude Code and Codex work as interactive operator tools through existing subscriptions. They are
-**not** executors, and `homelab-bot` provably cannot read either credential. Phase 08 must decide
-whether personal subscription credentials are supported or appropriate for unattended use — and must
-not resolve it by copying an OAuth file to a service account because it works interactively.
+The question Phase 08 left open — whether personal subscription credentials are appropriate for
+unattended use, and specifically that it must **not** be resolved by copying an OAuth file to a
+service account — was answered by not moving the credential at all:
 
-The boundary Phase 08 inherits is a shape, not a proposal: one access check before dispatch, an
-account that holds nothing, and a service that cannot execute a program.
+```text
+Telegram → homelab-bot ──socket──▶ homelab-model-helper → Claude / Codex
+           (no credential)         (runs as aleix, already has them)
+```
+
+Two boundaries hold this together, and neither trusts the other:
+
+- **the socket's group and mode**, enforced by the kernel before the helper process exists;
+- **the router's capability check**, which is why `/ask` cannot reach `/restart`.
+
+The licensing question is **still unresolved.** What substitutes for an answer is a constraint:
+every model call is owner-initiated, in response to a message just sent. **Phase 12 must not make
+unattended calls without a new ADR** (ADR-025 §9).
 
 ## Not implemented yet
 
-- a **model executor with a credential** — the interface exists and is inert (Phase 09)
 - knowledge/RAG services (Phase 10)
-- automation (Phase 12)
-- escalation / privileged actions from the interface (Phase 08 — deliberately absent, see ADR-011)
+- automation (Phase 12) — **constrained**: no unattended model calls without a new ADR (ADR-025)
+- voice input (Phase 17 — moved out of Phase 09, see `ROADMAP.md`)
 - alerting or metrics on any service (nothing reports the bot dying)
+- narrower filesystem confinement for the model helper — `ReadWritePaths=/home/aleix` is broader
+  than it should eventually be, and was deliberately not guessed at (ADR-025)
 - any backup of the node (Phase 13)
 - firewall, encryption at rest (Phase 13)
 - local GPU node (Phase 16)

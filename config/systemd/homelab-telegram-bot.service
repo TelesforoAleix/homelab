@@ -22,6 +22,12 @@ Documentation=https://github.com/TelesforoAleix/homelab
 # ordering barrier on a node with no console (ADR-020).
 After=network.target
 
+# The start rate limit belongs to the UNIT, not the service. systemd moved
+# these out of [Service] and does not error on the misplacement -- it ignores
+# the interval and carries on. See the note further down.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
 [Service]
 Type=simple
 User=homelab-bot
@@ -29,9 +35,10 @@ Group=homelab-bot
 
 ExecStart=/usr/bin/python3 /opt/homelab-telegram-bot/bot.py
 
-# bot.py imports router.py and executors.py from its own directory. Python adds
-# the script's directory to sys.path, so no PYTHONPATH is needed -- but all
-# three files must be installed together or the service fails at import.
+# bot.py imports router.py, executors.py and model_client.py from its own
+# directory. Python adds the script's directory to sys.path, so no PYTHONPATH is
+# needed -- but all four must be installed together or the service fails at
+# import. model_client.py joined the set in Phase 09.
 
 # --- The token -----------------------------------------------------------
 #
@@ -56,8 +63,20 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 # group with no free extents.
 Restart=on-failure
 RestartSec=10
-StartLimitIntervalSec=300
-StartLimitBurst=5
+
+# StartLimitIntervalSec and StartLimitBurst are in [Unit], NOT here.
+#
+# Phase 07 put them in [Service]. systemd silently ignored the interval and
+# used its 10s default, which Phase 09 found with `systemd-analyze verify`:
+#     Unknown key 'StartLimitIntervalSec' in section [Service], ignoring.
+#
+# The running unit confirmed it: StartLimitIntervalUSec=10s, not 300s. With
+# RestartSec=10 the starts are ~10s apart, so five of them could never fall
+# inside a 10s window -- the limit was not merely wrong, it was unreachable,
+# and the restart loop it was written to stop could have run forever.
+#
+# StartLimitBurst=5 WAS accepted in [Service], which is what made the mistake
+# survive: half the setting appeared to work.
 
 # --- Privilege -----------------------------------------------------------
 NoNewPrivileges=yes

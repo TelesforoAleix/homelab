@@ -30,6 +30,7 @@ Scripts are organised by **where they run**, which is not always where they are 
 | `install-telegram-bot.sh` | Deploys the Phase 07 status bot: a dedicated unprivileged account, root-owned code the bot cannot modify, and a hardened unit. Refuses to run with fewer than two sessions (a boot-time unit is lockout-class), and re-checks on **every** run that the service account is in no privileged group — not only at creation. |
 | `install-bot-escalation.sh` | Grants the bot exactly one privileged action via a polkit rule scoped to one user, one unit and one verb. Validates scope and brace balance before installing, checks polkit's journal for load errors, then **proves the grant in both directions** — restarting the permitted unit, and confirming three access-critical units are denied *and that the reason is a denial*. |
 | `verify-telegram-bot.sh` | Proves the bot's posture by **attempting** each forbidden access rather than reading directives. Checks its own privilege first and reports `UNKNOWN` for anything it cannot determine — added after it reported a confident `FAIL` about a file it had no permission to see. |
+| `install-model-helper.sh` | Deploys the Phase 09 model helper — the service that makes model calls as `aleix` so the bot never holds a credential. Installs code root-owned so the account that runs it cannot rewrite it, and proves the boundary both ways: a probe running **as `homelab-bot` inside the bot's own systemd sandbox** must reach the socket, and `homelab-bot` must still fail to read both OAuth credentials. Reports errno rather than a verdict, because EROFS, EACCES and ENOENT need different fixes. |
 | `verify-remote-access.sh` | Reports the live remote-access posture. Probes the **running** SSH daemon over the network rather than trusting `sshd -T`, warns when configuration is newer than the daemon, and redacts the Tailscale account and tailnet suffix so its output is safe to paste. |
 
 ## Conventions
@@ -70,3 +71,29 @@ Scripts are organised by **where they run**, which is not always where they are 
 - **Report what was actually examined**, not just the conclusion. Phase 04's scanner reported all
   sixteen classes clean while having searched zero of 213 blobs. It now prints the count and refuses
   to report a verdict on an empty corpus.
+- **A directive a tool ignores is not a directive, and it will not tell you.** Phase 07 put
+  `StartLimitIntervalSec` in `[Service]`, where systemd ignores it and starts the unit anyway. The
+  effective window was 10s against a `RestartSec=10` policy, so five starts could never fall inside
+  it: the restart-loop protection was not merely misconfigured, it was **unreachable**, for two
+  phases. `StartLimitBurst=5` *is* valid in `[Service]`, so half the setting worked and
+  `systemctl show` reported a plausible pair. Found in Phase 09 by running `systemd-analyze verify`,
+  which `install-telegram-bot.sh` now does on every install and prints the output of. Reading the
+  file more carefully would not have found this; asking the tool did.
+- **"Do not show the user" and "do not record it" are different decisions.** Phase 09 kept raw
+  provider output out of the Telegram reply — correct, it carries absolute paths and the reply
+  leaves the machine — and thereby logged it nowhere. The first real failure arrived with no
+  evidence anywhere. Suppressing something from a user-facing message says nothing about where it
+  should be written down; the journal is usually the answer.
+- **A branch exercised only against invented input is untested.** Phase 09's exhaustion detector was
+  built from one provider's observed wording plus guesses at the other's. The guesses missed
+  Claude's actual phrase — `session limit` — so a completely normal condition was reported as an
+  unrecognised failure and no fallback was attempted. The observed half was right and the guessed
+  half was wrong, which is the Phase 04 scanner lesson in new clothing.
+- **The first control you think of often varies two things at once.** Phase 09 tested that
+  `--tools ""` disables model tools by asking the model to read a file *outside* the working
+  directory. It was refused with the flag and also refused without it — for a different reason. The
+  discriminating test used a canary **inside** the working directory, where the only difference
+  between the two runs was the flag.
+- **A capability a tool advertises is not a capability your account has.** The Codex binary's
+  embedded catalogue lists `gpt-5.4-mini`; a ChatGPT subscription rejects it outright. Enumerating
+  what a CLI knows about is not the same as discovering what it is entitled to use.

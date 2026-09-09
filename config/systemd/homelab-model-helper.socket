@@ -1,0 +1,47 @@
+# Home Lab model helper socket — Phase 09, ADR-025.
+#
+# Installed to /etc/systemd/system/homelab-model-helper.socket
+#
+# THIS FILE IS THE ACCESS CONTROL.
+#
+# Who may ask for a model call is decided here, by systemd, before the helper
+# process exists -- not by a check inside the helper. The socket inode is owned
+# aleix:homelab-bot with mode 0660, so the kernel refuses connect(2) to anyone
+# who is neither. That is a rule in a committed file, reviewable in one line,
+# and it cannot be bypassed by a bug in the Python it protects.
+#
+# Note carefully what this does NOT do: homelab-bot is not added to any group.
+# The SOCKET is given the group the bot already has. `id homelab-bot` is
+# unchanged by this phase, which is a Phase 09 Definition-of-Done item.
+
+[Unit]
+Description=Home Lab model helper socket
+Documentation=https://github.com/TelesforoAleix/homelab
+
+[Socket]
+ListenStream=/run/homelab-model-helper.sock
+
+# /run is a tmpfs, root:root 0755 -- world-traversable, so the bot can reach
+# the socket, and cleared on reboot, so a stale socket cannot survive a crash.
+SocketUser=aleix
+SocketGroup=homelab-bot
+SocketMode=0660
+
+# Accept=yes: one short-lived process per connection, from the template unit.
+#
+# Chosen over a long-running daemon on purpose. A daemon holding an OAuth
+# credential in memory between requests is a bigger thing to protect than a
+# process that starts, answers one question and exits. It also means a crash
+# cannot take the service down -- there is nothing persistent to crash.
+#
+# The cost is that no state survives the process, which is why the call counter
+# is a locked file rather than a variable (limits.py).
+Accept=yes
+
+# A bounded queue. The bot is single-threaded and asks one question at a time,
+# so this is a backstop against something that is not the bot, not a tuning
+# parameter. Refusing a connection is the correct response to a flood here.
+MaxConnections=4
+
+[Install]
+WantedBy=sockets.target

@@ -57,9 +57,31 @@ class Executor:
 
     name: str
     capability: Capability
-    handler: Callable[[list[str]], str]
+    handler: Callable[..., str]
     summary: str
     usage: str = ""
+
+    # Phase 09 added these two, and they are the first change to this class
+    # since it was written. The Phase 08 handover hoped a new executor would
+    # never require touching dispatch(); /ask does, and the reason is recorded
+    # rather than worked around with a module-level "current user" variable,
+    # which is how this kind of thing usually gets smuggled in.
+
+    # wants_user: the handler is called with (args, user_id) instead of (args).
+    #
+    # /ask is the first executor whose action costs a shared resource -- the
+    # owner's own subscription allowance. The audit record of who spent it has
+    # to be in the record written by the process that spent it, not stitched
+    # together from two journals by timestamp.
+    wants_user: bool = False
+
+    # log_args: whether the router writes the arguments to the journal.
+    #
+    # True for everything before Phase 09, and deliberately so: `/restart
+    # chrony.service` without the unit name is a useless audit line. False for
+    # /ask, because its argument is the owner's own prose. The journal should
+    # record that a question was asked and what it cost, not what was asked.
+    log_args: bool = True
 
 
 class Router:
@@ -135,7 +157,13 @@ class Router:
                 "This refusal has been logged."
             )
 
-        self._log(f"user {user_id}: {executor.name} {' '.join(args)}".rstrip())
+        if executor.log_args:
+            self._log(f"user {user_id}: {executor.name} {' '.join(args)}".rstrip())
+        else:
+            self._log(f"user {user_id}: {executor.name} ({len(' '.join(args))} chars)")
+
+        if executor.wants_user:
+            return executor.handler(args, user_id)
         return executor.handler(args)
 
 
