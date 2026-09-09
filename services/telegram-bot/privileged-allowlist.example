@@ -1,0 +1,20 @@
+# Home Lab Telegram bot — ids permitted to invoke PRIVILEGED commands.
+#
+# Installed to /etc/homelab-telegram-bot/privileged-allowlist
+#
+# This is AUTHORISATION, and it is a different question from the one
+# `allowlist` answers.
+#
+#   allowlist             may this user talk to the bot at all?   (authentication)
+#   privileged-allowlist  may this user invoke /restart?          (authorisation)
+#
+# Every id here MUST also appear in `allowlist`. The bot enforces that at
+# startup and refuses to run otherwise: a user cannot be authorised for
+# privileged commands without first being permitted to use the bot.
+#
+# EMPTY IS FINE AND MEANS "NOBODY MAY ESCALATE".
+#
+# Note this is the opposite of `allowlist`, where empty is fatal. The asymmetry
+# is deliberate: empty-means-nobody fails safe, empty-means-everybody does not.
+
+# 123456789

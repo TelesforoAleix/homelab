@@ -1,0 +1,24 @@
+# Home Lab Telegram bot — units the /restart executor may target.
+#
+# Installed to /etc/homelab-telegram-bot/restart-allowlist
+#
+# THIS IS THE SECOND GATE, NOT THE ONLY ONE.
+#
+# The first is the polkit rule in /etc/polkit-1/rules.d/50-homelab-bot.rules,
+# which is evaluated inside PID 1 and is scoped to one user, one unit and one
+# verb. This file is checked inside the bot before it even calls systemctl.
+#
+# Neither trusts the other. A bug in the bot cannot reach a unit polkit refuses;
+# a mistake in the polkit rule cannot reach a unit this file does not name.
+# Adding a line here does NOT grant anything on its own.
+#
+# NEVER add a unit whose loss would cost access to this machine. From
+# docs/standards/safe-changes-headless.md, that means at minimum:
+#
+#   ssh, tailscaled, systemd-networkd, systemd-resolved, wpa_supplicant,
+#   netplan-wpa-*, systemd-logind, dbus, polkit
+#
+# The node has no console. A service you cannot restart is an inconvenience; a
+# network you cannot reach is a trip to find a monitor.
+
+chrony.service

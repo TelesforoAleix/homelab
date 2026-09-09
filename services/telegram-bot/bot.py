@@ -60,6 +60,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import executors
+from router import Router, load_ids
+
 API_ROOT = "https://api.telegram.org"
 
 # Long-poll timeout. Telegram holds the request open this long waiting for a
@@ -161,6 +164,40 @@ def load_allowlist() -> set[int]:
     return ids
 
 
+def load_privileged() -> set[int]:
+    """
+    Read the ids permitted to invoke PRIVILEGED executors.
+
+    Absent or empty is FINE and means "nobody may escalate" -- a perfectly
+    reasonable posture that must not stop the bot starting. That is the opposite
+    of the main allowlist, where empty is fatal, and the difference is
+    deliberate: empty-means-nobody is safe, empty-means-everybody is not.
+    """
+    path = os.environ.get(
+        "HOMELAB_BOT_PRIVILEGED_ALLOWLIST",
+        "/etc/homelab-telegram-bot/privileged-allowlist",
+    )
+    return load_ids(path, required=False)
+
+
+def load_restart_units() -> set[str]:
+    """Unit names the restart executor may target. Empty means it can do nothing."""
+    path = os.environ.get(
+        "HOMELAB_BOT_RESTART_ALLOWLIST",
+        "/etc/homelab-telegram-bot/restart-allowlist",
+    )
+    units: set[str] = set()
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.split("#", 1)[0].strip()
+                if line:
+                    units.add(line if line.endswith(".service") else f"{line}.service")
+    except FileNotFoundError:
+        return set()
+    return units
+
+
 # --------------------------------------------------------------------------
 # Telegram API
 # --------------------------------------------------------------------------
@@ -186,142 +223,10 @@ def send_message(chat_id: int, text: str) -> None:
 
 
 # --------------------------------------------------------------------------
-# Host state. /proc and statvfs only -- no subprocess anywhere.
-# --------------------------------------------------------------------------
-
-def _fmt_duration(seconds: float) -> str:
-    s = int(seconds)
-    d, s = divmod(s, 86400)
-    h, s = divmod(s, 3600)
-    m, _ = divmod(s, 60)
-    if d:
-        return f"{d}d {h}h {m}m"
-    if h:
-        return f"{h}h {m}m"
-    return f"{m}m"
-
-
-def _fmt_bytes(n: float) -> str:
-    for unit in ("B", "K", "M", "G", "T"):
-        if abs(n) < 1024:
-            return f"{n:.1f}{unit}"
-        n /= 1024
-    return f"{n:.1f}P"
-
-
-def host_uptime() -> str:
-    with open("/proc/uptime", "r", encoding="utf-8") as fh:
-        return _fmt_duration(float(fh.read().split()[0]))
-
-
-def host_load() -> str:
-    with open("/proc/loadavg", "r", encoding="utf-8") as fh:
-        one, five, fifteen = fh.read().split()[:3]
-    return f"{one} {five} {fifteen}"
-
-
-def host_memory() -> str:
-    vals = {}
-    with open("/proc/meminfo", "r", encoding="utf-8") as fh:
-        for line in fh:
-            key, _, rest = line.partition(":")
-            vals[key] = int(rest.split()[0]) * 1024  # kB -> bytes
-    total = vals.get("MemTotal", 0)
-    available = vals.get("MemAvailable", 0)
-    used = total - available
-    pct = (used / total * 100) if total else 0
-    return f"{_fmt_bytes(used)} / {_fmt_bytes(total)} used ({pct:.0f}%)"
-
-
-def host_disk(path: str = "/") -> str:
-    """
-    Report disk usage the way `df` does.
-
-    The naive version -- used = total - available -- is wrong, and wrong in a
-    way that looks plausible. A filesystem reserves a percentage of blocks for
-    root (5% by default on ext4), and those blocks are neither used nor
-    available to anyone else. Counting them as "used" reported 19.3G on this
-    node where `df` reported 8.9G: more than double, with no error anywhere.
-
-    So: used comes from f_bfree (genuinely free, including reserved), while
-    available comes from f_bavail (free to an unprivileged process). The
-    percentage is used/(used+available), which is what df prints as Use%.
-
-    A status bot that disagrees with df is worse than no status bot, because
-    someone will believe it.
-    """
-    st = os.statvfs(path)
-    total = st.f_blocks * st.f_frsize
-    used = (st.f_blocks - st.f_bfree) * st.f_frsize
-    avail = st.f_bavail * st.f_frsize
-    pct = (used / (used + avail) * 100) if (used + avail) else 0
-    return f"{_fmt_bytes(used)} used, {_fmt_bytes(avail)} free of {_fmt_bytes(total)} ({pct:.0f}%)"
-
-
-def host_name() -> str:
-    try:
-        with open("/etc/hostname", "r", encoding="utf-8") as fh:
-            return fh.read().strip()
-    except OSError:
-        return socket.gethostname()
-
-
-# --------------------------------------------------------------------------
-# Commands. All read-only. Adding one here does NOT bypass the allowlist,
-# because the allowlist is enforced in the dispatch loop.
-# --------------------------------------------------------------------------
-
-def cmd_status() -> str:
-    return (
-        f"host:   {host_name()}\n"
-        f"uptime: {host_uptime()}\n"
-        f"load:   {host_load()}\n"
-        f"memory: {host_memory()}\n"
-        f"disk /: {host_disk()}"
-    )
-
-
-def cmd_disk() -> str:
-    return f"disk /: {host_disk()}"
-
-
-def cmd_uptime() -> str:
-    return f"uptime: {host_uptime()}\nload:   {host_load()}"
-
-
-def cmd_help() -> str:
-    return (
-        "Home Lab status bot — read-only.\n\n"
-        "/status  host, uptime, load, memory, disk\n"
-        "/disk    root filesystem usage\n"
-        "/uptime  uptime and load average\n"
-        "/help    this message\n\n"
-        "This bot reports state and changes nothing."
-    )
-
-
-COMMANDS = {
-    "/status": cmd_status,
-    "/disk": cmd_disk,
-    "/uptime": cmd_uptime,
-    "/help": cmd_help,
-    "/start": cmd_help,
-}
-
-
-def handle(text: str) -> str | None:
-    # Telegram sends "/status@BotName" in groups; take the command word only.
-    word = text.strip().split()[0] if text.strip() else ""
-    word = word.split("@", 1)[0].lower()
-    fn = COMMANDS.get(word)
-    return fn() if fn else None
-
-
-# --------------------------------------------------------------------------
 # Main loop
 # --------------------------------------------------------------------------
 
-def poll_forever(allowlist: set[int]) -> None:
+def poll_forever(allowlist: set[int], router: Router) -> None:
     offset = 0
     backoff = BACKOFF_START
     outage_logged = False
@@ -386,26 +291,47 @@ def poll_forever(allowlist: set[int]) -> None:
             # Found in the reference build: ProcSubset=pid in the unit hid
             # /proc/uptime, so every /status raised FileNotFoundError.
             try:
-                reply = handle(text)
+                reply = router.dispatch(user_id, text)
             except Exception as exc:  # noqa: BLE001 - a command must never be fatal
                 log(f"ERROR: command failed for user {user_id}: {redact(str(exc))}")
                 send_message(chat_id, "That command failed. The error is in the journal.")
                 continue
 
-            if reply is None:
-                log(f"user {user_id}: unknown command")
-                send_message(chat_id, "Unknown command. Try /help")
-            else:
-                log(f"user {user_id}: {text.strip().split()[0] if text.strip() else '?'}")
-                send_message(chat_id, reply)
+            send_message(chat_id, reply)
 
 
 def main() -> None:
     global _TOKEN
     _TOKEN = load_token()
     allowlist = load_allowlist()
+    privileged = load_privileged()
+    restart_units = load_restart_units()
+
+    # THE SUBSET RULE, enforced at startup rather than per request.
+    #
+    # A user cannot be privileged without first being permitted. Checking it here
+    # turns a misconfiguration into a refusal to start, which someone notices,
+    # instead of a surprise the first time an unlisted id sends /restart.
+    stray = privileged - allowlist
+    if stray:
+        sys.exit(
+            f"ERROR: {len(stray)} id(s) are in the privileged allowlist but not in "
+            "the main allowlist.\n"
+            "Refusing to start. A user cannot be authorised for privileged commands "
+            "without first being permitted to use the bot at all."
+        )
+
+    router = Router(privileged_users=privileged, log=log)
+    executors.register_all(router, allowed_units=restart_units, log=log)
+
+    log(
+        f"{len(allowlist)} allowlisted, {len(privileged)} privileged, "
+        f"{len(restart_units)} restartable unit(s), "
+        f"{len(router.unique_executors())} executors registered"
+    )
+
     try:
-        poll_forever(allowlist)
+        poll_forever(allowlist, router)
     except KeyboardInterrupt:
         log("stopping")
 
