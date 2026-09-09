@@ -182,11 +182,34 @@ echo
 # ---------------------------------------------------------------------------
 check() {
   local severity="$1" label="$2" regex="$3" allow="${4:-}"
-  local hits
+  local hits status
 
-  hits="$(LC_ALL=C grep -n -E "$regex" "$WORK/corpus.txt" 2>/dev/null)"
+  # -e is MANDATORY here, not stylistic. Several patterns below begin with a
+  # dash (a PEM header is "-----BEGIN ..."). Without -e, grep parses the
+  # pattern as command-line options, fails with exit 2, prints nothing on
+  # stdout, and the caller cannot tell that from "no matches". The private-key
+  # class -- the most important one in this file -- was silently dead for
+  # exactly this reason until a planted-secret test caught it.
+  hits="$(LC_ALL=C grep -n -E -e "$regex" "$WORK/corpus.txt")"
+  status=$?
+
+  # grep: 0 = matched, 1 = no match, 2+ = error. Treating an error as "no
+  # match" is how a broken check reports clean. Refuse to continue instead.
+  if [ "$status" -gt 1 ]; then
+    echo
+    c_red " ERROR: the pattern for '$label' could not be applied (grep exit $status)."
+    c_red " This is a broken check, not a clean result. Refusing to report a verdict."
+    exit 2
+  fi
+
   if [ -n "$allow" ] && [ -n "$hits" ]; then
-    hits="$(printf '%s\n' "$hits" | LC_ALL=C grep -v -E "$allow")"
+    hits="$(printf '%s\n' "$hits" | LC_ALL=C grep -v -E -e "$allow")"
+    status=$?
+    if [ "$status" -gt 1 ]; then
+      echo
+      c_red " ERROR: the allow-list for '$label' could not be applied (grep exit $status)."
+      exit 2
+    fi
   fi
 
   if [ -z "$hits" ]; then
@@ -210,7 +233,7 @@ check() {
   # from 59 hits of 59 real values, and the count alone cannot tell them apart.
   printf '%s\n' "$hits" \
     | sed -E 's/^[0-9]+://' \
-    | LC_ALL=C grep -o -E "$regex" \
+    | LC_ALL=C grep -o -E -e "$regex" \
     | sort | uniq -c | sort -rn | head -12 \
     | sed 's/^/        /'
   echo
