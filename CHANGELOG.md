@@ -69,6 +69,19 @@ This project uses this file for meaningful repository-level milestones rather th
   so the exact before/after ruleset diff is unrecoverable. Attribution by chain name found only
   Docker and Tailscale chains, and final reachability checks passed, but this is weaker evidence than
   the brief required.
+- **Phase 06 complete.** Claude Code `2.1.236` stable and Codex CLI `0.153.4` installed as native,
+  user-scoped operator tools and authenticated through existing Claude Pro and ChatGPT
+  subscriptions. Adds `guide/06-ai-cli-access/`, `docs/reference/ai-cli-reference.md`,
+  `scripts/server/install-ai-clis.sh`, and `scripts/server/verify-ai-cli-access.sh`. Ubuntu
+  `bubblewrap` `0.11.1-1ubuntu0.1` supplies Codex's Linux sandbox. No API key, API billing, Node.js,
+  daemon, listener, or persistent container was added.
+- Phase 06 recorded three boundaries through real failures: Codex device authorization had to be
+  enabled before generating a fresh code; a model call can exit `0` even when its local sandbox
+  fails; and valid Claude Pro authentication does not imply capacity remains in the current
+  five-hour window. The MacBook's broken npm Codex install was also replaced after its platform
+  executable proved missing. A consumed one-time Claude authorization code was mistakenly pasted
+  into the agent conversation; it never entered the repository, and the build log records the
+  correct direct-to-terminal handling.
 
 ### Changed
 

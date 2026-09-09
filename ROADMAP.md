@@ -127,6 +127,23 @@ asymmetry.
 
 Install and validate Claude Code CLI and OpenAI Codex CLI using officially supported subscription-backed authentication where available. Document trade-offs against API usage without prematurely introducing an API architecture.
 
+Status: **Complete** (2026-09-09). Claude Code `2.1.236` stable and Codex CLI `0.153.4` are installed
+as native, user-scoped interactive tools on the reference node. Claude uses Claude Pro subscription
+OAuth; Codex uses Sign in with ChatGPT. No API key, usage-billed fallback, Node.js runtime, daemon,
+listener, or persistent container was introduced.
+
+- Brief: [`docs/handovers/06-ai-cli-access.md`](docs/handovers/06-ai-cli-access.md)
+- Handover: [`docs/handovers/06-ai-cli-access-handover.md`](docs/handovers/06-ai-cli-access-handover.md)
+- Guide: [`guide/06-ai-cli-access/`](guide/06-ai-cli-access/README.md)
+- Reference: [`docs/reference/ai-cli-reference.md`](docs/reference/ai-cli-reference.md)
+- Decision implemented: ADR-008 (subscription-backed AI CLI access first)
+
+**Inherited forward:** these credentials belong to the human administrator and live in
+`/home/aleix`; they are not a service identity. Phase 07 must not give its Telegram account access
+to them or the Docker group. Phase 08 must decide explicitly whether personal subscription-backed
+CLIs are supportable for unattended execution. Subscription windows are finite and cannot be
+treated as an availability SLA.
+
 ## Phase 07 — Telegram Interface
 
 Build a minimal Telegram bot with deterministic infrastructure/status commands. Keep it unprivileged.

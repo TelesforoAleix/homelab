@@ -54,3 +54,7 @@ These mirror the numbered project roadmap.
   host processes, non-root containers, explicit-interface port publishing, layer caching, logs,
   diagnostics, disk accounting, and the Docker/firewall interaction Phase 13 inherits.
   *(Complete 2026-09-09. Leaves Docker installed and no containers running.)*
+- [`06-ai-cli-access`](06-ai-cli-access/README.md) — native Claude Code and Codex installation,
+  subscription versus API billing, headless authentication, credential handling, constrained
+  disposable-workspace exercises, sandbox prerequisites, and why operator CLIs are not service
+  identities. *(Complete 2026-09-09. Leaves no AI process or service running.)*
