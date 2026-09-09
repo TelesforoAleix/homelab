@@ -1,0 +1,21 @@
+# Home Lab Telegram bot — permitted user IDs, one per line.
+#
+# Installed to /etc/homelab-telegram-bot/allowlist
+#
+# These are numeric TELEGRAM USER IDs, not usernames. A username can be changed
+# by its owner; the numeric id cannot, which is why the allowlist uses it.
+#
+# Find yours by messaging @userinfobot on Telegram, or by starting this bot,
+# sending it any message, and reading the journal:
+#
+#     journalctl -u homelab-telegram-bot -n 20
+#     refused: user 123456789 is not allowlisted
+#
+# This file is NOT a secret -- it holds numeric ids, nothing more -- but it is
+# deployment-specific, so it lives on the node rather than in the repository.
+#
+# An EMPTY file is a hard error and the bot refuses to start. That is
+# deliberate: the failure mode of a misconfigured allowlist must never be
+# "answer everyone".
+
+# 123456789

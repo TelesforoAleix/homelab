@@ -27,6 +27,8 @@ Scripts are organised by **where they run**, which is not always where they are 
 | `install-ai-clis.sh` | Stages the official Claude Code and Codex native installers for review, records their SHA-256 hashes, then verifies and runs the exact staged files as a non-root user. Refuses Linux root execution and does not install Node.js or configure credentials. |
 | `verify-ai-cli-access.sh` | Verifies CLI versions, subscription authentication class, absent API-billing variables, credential file metadata, and lack of persistent AI processes/services. Deliberately never prints credential values or account identifiers. |
 | `lab-sandbox.sh` | Creates and destroys the disposable Phase 02 practice environment — a passwordless `nologin` user, a group, a setgid directory, and a systemd unit with no `[Install]` section so it can never run at boot. Refuses to create anything colliding with a real account, and refuses to delete any account not carrying the marker it writes. |
+| `install-telegram-bot.sh` | Deploys the Phase 07 status bot: a dedicated unprivileged account, root-owned code the bot cannot modify, and a hardened unit. Refuses to run with fewer than two sessions (a boot-time unit is lockout-class), and re-checks on **every** run that the service account is in no privileged group — not only at creation. |
+| `verify-telegram-bot.sh` | Proves the bot's posture by **attempting** each forbidden access rather than reading directives. Checks its own privilege first and reports `UNKNOWN` for anything it cannot determine — added after it reported a confident `FAIL` about a file it had no permission to see. |
 | `verify-remote-access.sh` | Reports the live remote-access posture. Probes the **running** SSH daemon over the network rather than trusting `sshd -T`, warns when configuration is newer than the daemon, and redacts the Tailscale account and tailnet suffix so its output is safe to paste. |
 
 ## Conventions
@@ -49,6 +51,11 @@ Scripts are organised by **where they run**, which is not always where they are 
   *fine*; it has never been shown it can say *not fine*. Plant a positive case somewhere disposable
   and confirm it fires. That is how the bug above was found, four checks into the same failure family
   across three phases.
+- **Check your own privilege before reporting a result.** Phase 07's verifier reported
+  `FAIL: token does not exist` about a file in a `0750` directory it could not traverse, while the
+  service was authenticating with that token. That is the **fifth** instance of this family, after
+  `sshd -T`, `who`, and two Phase 04 scanner bugs — written after the rule had been documented four
+  times. Intention has failed repeatedly; make `UNKNOWN` a result the report can express.
 - **Report what was actually examined**, not just the conclusion. Phase 04's scanner reported all
   sixteen classes clean while having searched zero of 213 blobs. It now prints the count and refuses
   to report a verdict on an empty corpus.

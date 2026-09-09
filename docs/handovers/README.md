@@ -44,4 +44,6 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 | `05-docker.md` | Phase 05 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |
 | `05-docker-handover.md` | Phase 05 completion handover | **Written** 2026-09-09 — addressed to Phase 06; outcome Complete |
 | `06-ai-cli-access.md` | Phase 06 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |
+| `07-telegram.md` | Phase 07 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation |
+| `07-telegram-handover.md` | Phase 07 completion handover | **Written** 2026-09-09 — addressed to Phase 08; outcome Complete |
 | `06-ai-cli-access-handover.md` | Phase 06 completion handover | **Written** 2026-09-09 — addressed to Phase 07; outcome Complete |

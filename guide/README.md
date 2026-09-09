@@ -54,6 +54,9 @@ These mirror the numbered project roadmap.
   host processes, non-root containers, explicit-interface port publishing, layer caching, logs,
   diagnostics, disk accounting, and the Docker/firewall interaction Phase 13 inherits.
   *(Complete 2026-09-09. Leaves Docker installed and no containers running.)*
+- [`07-telegram`](07-telegram/README.md) — the first thing the node does *for* you: a read-only
+  Telegram status bot that needs no open port, runs as an account that can barely do anything, and
+  fails closed on a misconfigured allowlist. *(Complete 2026-09-09.)*
 - [`06-ai-cli-access`](06-ai-cli-access/README.md) — native Claude Code and Codex installation,
   subscription versus API billing, headless authentication, credential handling, constrained
   disposable-workspace exercises, sandbox prerequisites, and why operator CLIs are not service

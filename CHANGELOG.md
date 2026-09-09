@@ -69,6 +69,17 @@ This project uses this file for meaningful repository-level milestones rather th
   so the exact before/after ruleset diff is unrecoverable. Attribution by chain name found only
   Docker and Tailscale chains, and final reachability checks passed, but this is weaker evidence than
   the brief required.
+- **Phase 07 complete.** The first thing the node does *for* its owner: a read-only Telegram status
+  bot. Delivered as a native systemd service rather than a container, running as a dedicated account
+  in no privileged group, scoring 1.3 OK on `systemd-analyze security`. Long polling means it opens
+  **no listening socket**, which is what makes a network service acceptable on a node with no
+  firewall. Standard library only; the bot never forks a process. Isolation proved by attempted
+  access rather than asserted from directives. Adds ADR-023, the guide, `bot.py`, a hardened unit,
+  and two guarded scripts. Five problems recorded, four of them the author's — including hardening
+  that stopped a system-info reporter reading system info, an unguarded exception that turned the
+  bot into a restart loop on a console-less node, and a verifier that reported a confident `FAIL`
+  about a file it lacked permission to see.
+
 - **Phase 06 complete.** Claude Code `2.1.236` stable and Codex CLI `0.153.4` installed as native,
   user-scoped operator tools and authenticated through existing Claude Pro and ChatGPT
   subscriptions. Adds `guide/06-ai-cli-access/`, `docs/reference/ai-cli-reference.md`,
