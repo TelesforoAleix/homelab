@@ -7,17 +7,26 @@ the right pattern regardless: what is running should be traceable to a committed
 
 | File | Side | Destination |
 |---|---|---|
-| `10-homelab-hardening.conf` | Server | `/etc/ssh/sshd_config.d/10-homelab-hardening.conf`, `root:root`, `0644` |
+| `10-homelab-hardening.conf` | Server | `/etc/ssh/sshd_config.d/10-homelab-hardening.conf`, `root:root`, `0600` |
 | `homelab.ssh-config.example` | MacBook | appended to `~/.ssh/config`, `0600` |
 
 ## Applying the server drop-in
 
+Use the script, which performs the steps below and reverts itself if the result would not parse:
+
 ```bash
-scp config/ssh/10-homelab-hardening.conf aleix@homelab:/tmp/
-ssh aleix@homelab
+scp config/ssh/10-homelab-hardening.conf homelab:/tmp/
+scp scripts/server/apply-ssh-hardening.sh homelab:/tmp/
+ssh homelab
+sudo bash /tmp/apply-ssh-hardening.sh
+```
+
+What it does, and what you would otherwise type by hand:
+
+```bash
 sudo mv /tmp/10-homelab-hardening.conf /etc/ssh/sshd_config.d/
 sudo chown root:root /etc/ssh/sshd_config.d/10-homelab-hardening.conf
-sudo chmod 644 /etc/ssh/sshd_config.d/10-homelab-hardening.conf
+sudo chmod 600 /etc/ssh/sshd_config.d/10-homelab-hardening.conf
 sudo sshd -t
 ```
 
