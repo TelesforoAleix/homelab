@@ -31,6 +31,7 @@ Scripts are organised by **where they run**, which is not always where they are 
 | `install-bot-escalation.sh` | Grants the bot exactly one privileged action via a polkit rule scoped to one user, one unit and one verb. Validates scope and brace balance before installing, checks polkit's journal for load errors, then **proves the grant in both directions** — restarting the permitted unit, and confirming three access-critical units are denied *and that the reason is a denial*. |
 | `verify-telegram-bot.sh` | Proves the bot's posture by **attempting** each forbidden access rather than reading directives. Checks its own privilege first and reports `UNKNOWN` for anything it cannot determine — added after it reported a confident `FAIL` about a file it had no permission to see. |
 | `install-model-helper.sh` | Deploys the Phase 09 model helper — the service that makes model calls as `aleix` so the bot never holds a credential. Installs code root-owned so the account that runs it cannot rewrite it, and proves the boundary both ways: a probe running **as `homelab-bot` inside the bot's own systemd sandbox** must reach the socket, and `homelab-bot` must still fail to read both OAuth credentials. Reports errno rather than a verdict, because EROFS, EACCES and ENOENT need different fixes. |
+| `configure-telegram-bot-profile.sh` | Sets the bot's name, descriptions and **command list** so a phone client offers autocomplete. The command list is derived from the executor registry, not typed out, so adding an executor updates the menu with nobody editing a list. `/restart` is withheld from the default command scope — not as access control (the allowlist does that) but so a privileged action is not advertised to strangers. The token never reaches curl's `argv`, and all output passes through a redactor. `show` is the default and makes no writing call. |
 | `verify-remote-access.sh` | Reports the live remote-access posture. Probes the **running** SSH daemon over the network rather than trusting `sshd -T`, warns when configuration is newer than the daemon, and redacts the Tailscale account and tailnet suffix so its output is safe to paste. |
 
 ## Conventions
@@ -97,3 +98,18 @@ Scripts are organised by **where they run**, which is not always where they are 
 - **A capability a tool advertises is not a capability your account has.** The Codex binary's
   embedded catalogue lists `gpt-5.4-mini`; a ChatGPT subscription rejects it outright. Enumerating
   what a CLI knows about is not the same as discovering what it is entitled to use.
+- **Every network call needs a timeout, including the one you are sure is fast.**
+  `configure-telegram-bot-profile.sh` shipped its first draft with no `--max-time`, and its first
+  real run hung until Ctrl-C. The cause was not logic: identical Telegram API calls from this node
+  measured between **207ms and 8.9 seconds**, because both access routes share one Wi-Fi adapter.
+  A call with no bound is a call that can hang forever, and a script that can hang forever cannot be
+  put in a verification path. Do not add `--retry` instead — that hides the very variance that makes
+  the timeout necessary.
+- **Address-family selection is a measurement, not a default.** The same script now passes `--ipv4`
+  because this host has **no working global IPv6 route** — `curl -6 https://api.telegram.org/` fails
+  in 9ms while the node's only IPv6 address is the Tailscale one. `api.telegram.org` publishes AAAA
+  records, so leaving selection to chance means sometimes racing toward an address that cannot work.
+  The flag carries the measurement in a comment so it can be removed deliberately when that changes.
+- **An empty response is not a result.** The same script's `show` mode now says
+  "no response within 30s — network, not configuration" rather than printing an empty block, because
+  a blank section reads as "Telegram has nothing set", which is a completely different claim.

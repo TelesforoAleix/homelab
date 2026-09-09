@@ -1,0 +1,7 @@
+{
+  "name": "Home Lab",
+
+  "short_description": "Status and one privileged action for a self-hosted home lab node. Allowlisted users only.",
+
+  "description": "Read-only status for a self-hosted Ubuntu node: uptime, load, memory and disk, read straight from /proc. One privileged action, scoped to a single service. /ask sends your question and those status figures to a model.\n\nOnly allowlisted user ids get a reply. Everything else is refused and logged."
+}
