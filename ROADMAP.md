@@ -46,21 +46,24 @@ Absorbs the remaining Phase 00 hardware validation as Part A.
 
 Learn and document the Linux concepts required to operate Home Lab safely: filesystem, users/groups, permissions, packages, processes/services, logs, storage basics, networking basics, shell workflow, and `tmux`/core tooling as appropriate.
 
-Status: **Next.** Deferred, not skipped — the owner chose on 2026-09-09 to run Phase 03 first, so that
-Phase 01's principal open risk — SSH password authentication — is closed before a long
-documentation-heavy phase, and so that Phase 02 is carried out over key-based remote access rather
-than password login with a monitor attached. Phase numbers are stable by the rule below; this is a
-sequencing decision, not a renumbering.
+Status: **Complete** (2026-09-09), run after Phase 03 by the owner's sequencing decision. Phase
+numbers are stable by the rule below; that was a sequencing decision, not a renumbering.
 
-**Inherited from Phase 01 and Phase 03 — read
-[`03-remote-access-handover.md`](docs/handovers/03-remote-access-handover.md) first:**
+- Brief: [`docs/handovers/02-linux-fundamentals.md`](docs/handovers/02-linux-fundamentals.md)
+- Handover: [`docs/handovers/02-linux-fundamentals-handover.md`](docs/handovers/02-linux-fundamentals-handover.md)
+- Guide: [`guide/02-linux-fundamentals/`](guide/02-linux-fundamentals/README.md)
+- Standard: [`docs/standards/safe-changes-headless.md`](docs/standards/safe-changes-headless.md)
+- Reference: [`docs/reference/linux-command-reference.md`](docs/reference/linux-command-reference.md)
+- Decision: ADR-020 (change safety on a console-less node) — Accepted
 
-- **The server has no console.** A mistake that breaks networking or `sshd` is no longer a walk to
-  the monitor. This changes how user, network and service exercises should be practised.
-- Both handovers carry a "ground already covered" table: LVM, permissions and ownership, systemd
-  units, apt, netplan and `journalctl` from Phase 01; drop-in configuration, third-party apt
-  repositories and keyrings, socket activation, reload-vs-restart and `known_hosts` from Phase 03.
-  Build on them as worked examples rather than teaching from zero.
+**Delivered:** a guide taught from this machine's own files, an operator command reference, a
+change-safety standard binding on every later phase, `scripts/macos/preflight.sh`, and
+`scripts/server/lab-sandbox.sh` for practising the write side of users, groups, permissions and
+units on disposable objects. Three diagnostic packages installed; nothing else on the node changed.
+
+**Deliberately not taught** — later phases must not assume it: no networking changes were practised,
+no `sudoers` editing, no firewalling, no backup or restore, and no LVM growth. Those were classified
+read-only because the node has no console.
 
 ## Phase 03 — Remote Access
 

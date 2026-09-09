@@ -55,6 +55,15 @@ These should be recorded as costs even when they pre-date Home Lab. The exact su
 | ChatGPT subscription | AI | Recurring | TBD | TBD | Intended for Codex CLI where officially supported |
 | Claude subscription | AI | Recurring | TBD | TBD | Intended for Claude Code CLI where officially supported |
 
+## Phase 02 — Linux Fundamentals
+
+**0 DKK.** Recorded as an explicit zero rather than omitted: an omitted cost is indistinguishable
+from a forgotten one.
+
+`tree`, `ncdu` and `ripgrep` all come from Ubuntu's own repositories (1,671 kB downloaded). No new
+hardware, no subscription, no paid service. Reference-build running total unchanged at
+**899 DKK (~121 EUR)**.
+
 ## Usage-based services
 
 None recorded yet.

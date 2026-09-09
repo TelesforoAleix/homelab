@@ -22,6 +22,17 @@ This project uses this file for meaningful repository-level milestones rather th
   layout (1 x 8 GB, one slot free) and wireless adapter (Intel Wireless-AC 8260). Adds a firmware
   task to enable CPU virtualization, found disabled. No software installed or marked as tested.
 
+- **Phase 02 complete.** Linux fundamentals, taught from this machine's own files rather than from
+  invented examples. Adds `docs/standards/safe-changes-headless.md` and ADR-020 — a change-safety
+  standard binding on every phase from 02 onward, now that the reference node has no console and
+  recovery from a lockout is physical. Adds `scripts/macos/preflight.sh`,
+  `scripts/server/lab-sandbox.sh`, the guide, and `docs/reference/linux-command-reference.md`.
+  Nothing on the node changed except three diagnostic packages; the sandbox was removed and its
+  absence proved.
+- Phase 02 found that `who` reports zero sessions and exits 0 on Ubuntu 26.04: systemd 257 removed
+  utmp support, so `/run/utmp` does not exist. It was being used for the most important check in the
+  new standard. Recorded in the standard itself, and the check now reports *unknown* rather than
+  *zero* when it cannot tell.
 - **Phase 03 complete.** Remote access: Ed25519 key-only SSH (ADR-018), Tailscale 1.102.3 with
   MagicDNS (ADR-019), VS Code Remote SSH, and the console physically removed. Closes Phase 01's
   principal open risk — the server no longer accepts password authentication. Run ahead of Phase 02

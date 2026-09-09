@@ -23,6 +23,10 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | OpenAI Codex CLI | Planned | — | Initial AI tool | Phase 06 |
 | Telegram Bot | Planned | — | First remote interface | Phase 07 |
 | netplan | **Active** | 1.2-1ubuntu5 | Ships with Ubuntu Server | Declares the Wi-Fi link (ADR-016). Config at `/etc/netplan/00-installer-config.yaml`, mode `0600`. |
+| tmux | **Active** | 3.6 | No, but strongly advised | Ships with Ubuntu Server. Anything long-running on this node belongs in a tmux session: both access routes share one Wi-Fi adapter, and a dropped link mid-`apt` can leave dpkg half-configured. |
+| tree | **Active** | 2.3.1-1 | No | Phase 02. Directory structure at a glance where repeated `ls` gets tedious. |
+| ncdu | **Active** | 1.22-1build1 | No | Phase 02. Interactive drill-down for "where has the disk gone", far faster than `du \| sort`. |
+| ripgrep | **Active** | 15.1.0-1ubuntu1 | No | Phase 02. Fast content search; respects `.gitignore` in a repository, which matters from Phase 04. |
 | wpasupplicant | **Active** | 2:2.11-0ubuntu5 | Required for Wi-Fi under `systemd-networkd` | Confirmed active and enabled; without it the networkd renderer cannot drive a wireless link |
 
 ## Version rule
