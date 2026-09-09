@@ -113,3 +113,22 @@ Scripts are organised by **where they run**, which is not always where they are 
 - **An empty response is not a result.** The same script's `show` mode now says
   "no response within 30s — network, not configuration" rather than printing an empty block, because
   a blank section reads as "Telegram has nothing set", which is a completely different claim.
+- **An exception handler that returns a plausible value is how this project's oldest bug keeps
+  coming back.** `configure-telegram-bot-profile.sh` read API fields with
+  `FIELD="$f" api "$m" | python3 -c '... os.environ["FIELD"] ...'`. In a pipeline, `VAR=val cmd1 |
+  cmd2` sets the variable for **cmd1 only**, so python never received `FIELD`, raised `KeyError`, and
+  a bare `except Exception` converted that into the string `"<unreadable>"`. The caller compared
+  that string to the expected value and printed **FAIL** — reporting a bug in the check as a defect
+  in the thing checked. The values had almost certainly been set correctly.
+
+  That is the **ninth** instance, after `sshd -T`, `who`, two Phase 04 scanner bugs, the Phase 07
+  verifier, the Phase 08 escalation test, the Phase 08 `setpriv` misread and the Phase 09 installer's
+  group check — and it was written in the same session in which two of those were documented.
+  Reading the rule is demonstrably not sufficient. What works is structural: **a reader returns a
+  value or returns nothing with a non-zero status, never a sentinel string**, and the caller has
+  three branches — matched, differs, could-not-check. Validate all three against crafted input
+  before trusting any of them.
+- **Pick timeout numbers from measurements, not from what sounds generous.** The same script's first
+  `--connect-timeout 10` failed on a real write with `Connection timed out after 10001 ms`, on a
+  node whose identical API calls had already been measured at up to 8.9s. The decision to have a
+  timeout was right; the number was a guess inside the observed spread.

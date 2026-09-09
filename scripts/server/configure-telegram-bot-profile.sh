@@ -112,7 +112,12 @@ redact() { sed "s|${TOKEN}|[REDACTED-TOKEN]|g"; }
 #
 # Note what is NOT here: --retry. A retry would paper over exactly the
 # intermittent stall that made this comment necessary.
-CURL_OPTS=(--silent --show-error --ipv4 --connect-timeout 10 --max-time 30)
+# 20s to connect, not 10. The description write failed on the first real run
+# with "Connection timed out after 10001 milliseconds", and identical calls
+# from this node had already been measured at up to 8.9s -- so a 10s connect
+# budget was inside the observed spread. The timeout was right; the number was
+# guessed. Measure, then choose.
+CURL_OPTS=(--silent --show-error --ipv4 --connect-timeout 20 --max-time 60)
 
 # $1 = method, $2 = optional path to a JSON body file.
 api() {
@@ -131,6 +136,38 @@ api() {
 # Telegram signals rejection as HTTP 200 with ok:false. curl exiting 0 means
 # the conversation happened, nothing more -- treating that as success is the
 # failure family this project keeps hitting, so the field is checked.
+# One field out of a successful reply. Exits non-zero, printing NOTHING, when
+# the reply is unusable -- so the caller can tell "could not check" apart from
+# "does not match".
+readonly PY_GET='
+import json, os, sys
+try:
+    doc = json.load(sys.stdin)
+except Exception:
+    sys.exit(3)
+if doc.get("ok") is not True:
+    sys.exit(4)
+try:
+    print(doc["result"][os.environ["FIELD"]], end="")
+except (KeyError, TypeError):
+    sys.exit(5)
+'
+
+# Compare the command list as a set. Prints match | differ | unknown.
+readonly PY_CMP='
+import json, os, sys
+try:
+    doc = json.load(sys.stdin)
+except Exception:
+    print("unknown"); sys.exit(0)
+if doc.get("ok") is not True or not isinstance(doc.get("result"), list):
+    print("unknown"); sys.exit(0)
+want = sorted((c["command"], c["description"])
+              for c in json.load(open(os.environ["WANT"], encoding="utf-8")))
+got = sorted((c["command"], c["description"]) for c in doc["result"])
+print("match" if want == got else "differ")
+'
+
 readonly PY_OK='
 import json, sys
 raw = sys.stdin.read()
@@ -263,7 +300,7 @@ do_show() {
         echo "${m}:"
         out="$(api "$m")"
         if [[ -z "${out//[[:space:]]/}" ]]; then
-            info "(no response within $(printf '%s' "${CURL_OPTS[-1]}")s — network, not configuration)"
+            info "(no usable reply within ${CURL_OPTS[-1]}s — network, not configuration)"
         else
             printf '%s\n' "$out" | pretty | sed 's/^/      /'
         fi
@@ -324,54 +361,110 @@ do_apply() {
     return $rc
 }
 
+# Print one field from a successful API reply.
+#
+# Returns 0 and the value, or NON-ZERO AND NOTHING. It does not invent a
+# placeholder, and that is the whole point of this comment.
+#
+# The first version did:
+#
+#     FIELD="$field" api "$method" | python3 -c '... os.environ["FIELD"] ...'
+#
+# In a pipeline, VAR=val cmd1 | cmd2 sets the variable for cmd1 ONLY -- so
+# python never received FIELD, raised KeyError, and a bare `except Exception`
+# turned that into the string "<unreadable>". The caller then compared that
+# string against the expected value and reported FAIL.
+#
+# So a bug in the check was reported as a defect in the thing being checked.
+# The values had almost certainly been set correctly. This is the NINTH
+# instance of this project's oldest failure family -- after `sshd -T`, `who`,
+# two Phase 04 scanner bugs, the Phase 07 verifier, the Phase 08 escalation
+# test, the Phase 08 `setpriv` misread, and the Phase 09 installer's group
+# check -- and the mechanism was, once again, an exception handler that
+# produced something plausible instead of admitting it had nothing.
+#
+# Rule made concrete here: a check reports UNKNOWN when it cannot determine an
+# answer, and UNKNOWN is not FAIL. They are different claims and only one of
+# them is evidence.
 get_result_field() {
-    local method="$1" field="$2"
-    FIELD="$field" api "$method" | python3 -c '
-import json, os, sys
-try:
-    print(json.load(sys.stdin)["result"][os.environ["FIELD"]], end="")
-except Exception:
-    print("<unreadable>", end="")
-'
+    local method="$1" field="$2" out
+    out="$(api "$method")" || return 1
+    [[ -n "${out//[[:space:]]/}" ]] || return 1
+    # -c, not `python3 - <<HEREDOC`. A heredoc AND a herestring on the same
+    # command are two stdin redirections and the last one wins, so python would
+    # have tried to read its own program out of the JSON.
+    FIELD="$field" python3 -c "$PY_GET" <<<"$out"
+}
+
+# Three outcomes, three messages. Returns 0 matched, 1 differs, 2 unknown.
+compare_field() {
+    local method="$1" field="$2" want="$3" label="$4" got
+    if ! got="$(get_result_field "$method" "$field")"; then
+        echo "UNKNOWN  $label could not be read — no usable reply. This is NOT a mismatch."
+        return 2
+    fi
+    if [[ "$got" == "$want" ]]; then
+        ok "$label matches"
+        return 0
+    fi
+    echo "FAIL  $label differs"
+    info "want: $want"
+    info "got:  $got"
+    return 1
 }
 
 do_verify() {
-    local rc=0 got
+    local failed=0 unknown=0
 
-    got="$(get_result_field getMyName name)"
-    if [[ "$got" == "$NAME" ]]; then ok "name reads back as: $got"
-    else echo "FAIL  name reads back as '$got', expected '$NAME'"; rc=1; fi
+    compare_field getMyName name "$NAME" "name" \
+        || { [[ $? -eq 2 ]] && unknown=$((unknown + 1)) || failed=$((failed + 1)); }
+    compare_field getMyShortDescription short_description "$SHORT" "short description" \
+        || { [[ $? -eq 2 ]] && unknown=$((unknown + 1)) || failed=$((failed + 1)); }
+    compare_field getMyDescription description "$LONG" "description" \
+        || { [[ $? -eq 2 ]] && unknown=$((unknown + 1)) || failed=$((failed + 1)); }
 
-    got="$(get_result_field getMyShortDescription short_description)"
-    if [[ "$got" == "$SHORT" ]]; then ok "short description matches"
-    else echo "FAIL  short description differs (got: $got)"; rc=1; fi
-
-    got="$(get_result_field getMyDescription description)"
-    if [[ "$got" == "$LONG" ]]; then ok "description matches"
-    else echo "FAIL  description differs"; rc=1; fi
-
-    # Compared as a SET. Telegram is not obliged to preserve ordering, and a
-    # check that fails on ordering is a check that gets ignored.
-    if api getMyCommands | WANT="$PUBLIC_FILE" python3 -c '
-import json, os, sys
-want = sorted((c["command"], c["description"])
-              for c in json.load(open(os.environ["WANT"], encoding="utf-8")))
-got = sorted((c["command"], c["description"])
-             for c in json.load(sys.stdin)["result"])
-sys.exit(0 if want == got else 1)
-'; then
-        ok "default-scope command list matches what was sent"
-        api getMyCommands | python3 -c '
+    # The command list, compared as a SET -- Telegram is not obliged to preserve
+    # ordering, and a check that fails on ordering is a check that gets ignored.
+    #
+    # Distinguishes the same three outcomes: exit 3 means the reply could not be
+    # read, which is unknown, not a mismatch.
+    local raw
+    if ! raw="$(api getMyCommands)" || [[ -z "${raw//[[:space:]]/}" ]]; then
+        echo "UNKNOWN  command list could not be read — no usable reply."
+        unknown=$((unknown + 1))
+    else
+        local verdict
+        verdict="$(WANT="$PUBLIC_FILE" python3 -c "$PY_CMP" <<<"$raw")"
+        case "$verdict" in
+            match)
+                ok "default-scope command list matches what was sent"
+                printf '%s' "$raw" | python3 -c '
 import json, sys
 for c in json.load(sys.stdin)["result"]:
     print("      /" + c["command"], "--", c["description"])
 '
-    else
-        echo "FAIL  default-scope command list differs from the profile"
-        api getMyCommands | pretty | sed 's/^/      /'
-        rc=1
+                ;;
+            differ)
+                echo "FAIL  default-scope command list differs from the profile"
+                printf '%s' "$raw" | pretty | sed 's/^/      /'
+                failed=$((failed + 1))
+                ;;
+            *)
+                echo "UNKNOWN  command list reply could not be parsed."
+                unknown=$((unknown + 1))
+                ;;
+        esac
     fi
-    return $rc
+
+    echo
+    if [[ $failed -eq 0 && $unknown -eq 0 ]]; then
+        ok "everything read back as sent"
+        return 0
+    fi
+    [[ $failed  -gt 0 ]] && echo "${failed} field(s) genuinely differ."
+    [[ $unknown -gt 0 ]] && echo "${unknown} field(s) COULD NOT BE CHECKED — re-run 'verify'. \
+Unknown is not failure; this link measures 200ms to 9s."
+    return 1
 }
 
 case "$MODE" in
