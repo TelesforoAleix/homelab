@@ -157,11 +157,26 @@ Everything above assumed a private home LAN with a handful of trusted devices. T
 
 | Fact | Established by |
 |---|---|
-| The Wi-Fi is shared across **40–50 rooms** | The owner |
+| The node is on a **shared building network** with many other tenants | The owner |
 | The router is **not under the owner's control** | The owner |
-| The router's management interface **is reachable from the internet** | The owner loaded its login page from cellular, off-Wi-Fi |
-| The router is an EOL business gateway answering SSH with **OpenSSH 7.0** (2015) on its public address | Banner comparison |
+| The network edge cannot be audited, patched or reconfigured by this project | The owner |
+| Its specific configuration is **deliberately not recorded here** — it belongs to a third party | Judgement, see §8.1 |
 | The subnet is **`192.168.0.0/21` — 2046 usable addresses**, one flat network | `ip -4 addr` on the node |
+
+### 8.1 What is deliberately not recorded, and why
+
+This review found specific facts about the network edge. **They are not written down here.**
+
+The device belongs to a third party. Publishing its configuration in a public repository would
+disclose another party's security posture to people who have no business knowing it, and the owner
+has no ability to fix what would be disclosed. The disclosure would create risk for other tenants
+while doing nothing for this node.
+
+**Nothing in the argument depends on those details.** The controls below follow from a single fact
+that is safe to state: *the network edge is administered by a third party and can be neither audited
+nor reconfigured by this project.* Anything you cannot verify and cannot fix earns zero trust — and
+that reasoning is stronger than any particular finding, because it does not expire when the
+equipment is replaced.
 
 **No port is forwarded to the node** — that part of §2 stands, and was proved by host-key
 comparison: the public address answers with a different SSH implementation, version and key from the

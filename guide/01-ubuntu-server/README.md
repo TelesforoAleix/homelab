@@ -582,7 +582,7 @@ those hide exactly the failure this test exists to catch.
 | **SSH accepts passwords** | Known and time-boxed. Phase 03 replaces this with key-only authentication. Until then the server is only as protected as your password and the fact that it is not exposed to the internet. Do not port-forward SSH from the router. |
 | **No encryption at rest** | Accepted trade-off (ADR-015). Anyone with physical possession of the SSD has everything on it. |
 | **Wi-Fi passphrase in cleartext** | Mitigated to `0600` file permissions — which protects it from other users on the machine, but not from someone holding the unencrypted disk. These two risks compound; Phase 13 should treat them together. |
-| **No firewall yet** | The server is behind the router's NAT and exposes only SSH on the LAN. UFW arrives in Phase 13. **Superseded 2026-09-10** — a firewall was added out of phase; see [`guide/security-shared-network`](../security-shared-network/README.md). That entry also records why *"only SSH on the LAN"* was misleading: the LAN turned out to be shared with 40–50 rooms. |
+| **No firewall yet** | The server is behind the router's NAT and exposes only SSH on the LAN. UFW arrives in Phase 13. **Superseded 2026-09-10** — a firewall was added out of phase; see [`guide/security-shared-network`](../security-shared-network/README.md). That entry also records why *"only SSH on the LAN"* was misleading: the LAN turned out to be a shared building network. |
 | **Root login** | Not used. Administration goes through a `sudo`-capable user. |
 | **Physical access** | Equals full access. Documented, not mitigated, at this stage. |
 

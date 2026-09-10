@@ -274,9 +274,9 @@ every install.
   journal does not mean a healthy service.
 - Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.
 - **The LAN is not a home network, and must be treated as hostile.** Corrected 2026-09-10: the
-  Wi-Fi is shared across 40–50 rooms on a flat `192.168.0.0/21` (2046 usable addresses), behind a
-  router the owner does not administer, whose management interface is reachable from the internet
-  and which cannot be patched by this project. Confidentiality between residents on a shared WPA2
+  node sits on a shared building network — a flat `192.168.0.0/21`, 2046 usable addresses, occupied
+  by many other tenants' devices — whose edge is administered by a third party and can be neither
+  audited nor reconfigured by this project. Confidentiality between residents on a shared WPA2
   passphrase is effectively nil. **Treat the link as open Wi-Fi.** No port is forwarded to the node
   — proved by SSH host-key comparison — and no auto-forwarding protocol is available.
 - No encryption at rest (ADR-015), which compounds with the cleartext Wi-Fi passphrase (ADR-016).

@@ -8,9 +8,9 @@ This project uses this file for meaningful repository-level milestones rather th
 
 - **Security reassessment and firewall (2026-09-10, out of phase).** Answering whether publishing
   the repository was safe uncovered that the premise every earlier security decision rested on was
-  false. The node is not on a home LAN: the Wi-Fi is shared across 40–50 rooms on a flat
-  `192.168.0.0/21` (2046 usable addresses), behind a router the owner does not administer and whose
-  management interface answers from the public internet.
+  false. The node is not on a home LAN: it sits on a shared building network, a flat
+  `192.168.0.0/21` with 2046 usable addresses, whose edge is administered by a third party and can
+  be neither audited nor reconfigured by this project.
   - **`ufw` applied**, closing SSH to the shared network while keeping the tailnet path. Proved in
     three directions: tailnet SSH works, LAN SSH times out, and ICMP to the same address succeeds —
     the last proving the host is up and the port filtered rather than the machine unreachable.

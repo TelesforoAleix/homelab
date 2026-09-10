@@ -9,10 +9,11 @@
 #
 # WHY THIS EXISTS
 # ---------------
-# The node is not on a home LAN. Its Wi-Fi is shared across 40-50 rooms on a
-# flat 192.168.0.0/21 -- 2046 usable addresses -- behind a router the owner does
-# not control, whose management interface is reachable from the internet and
-# which answers SSH with OpenSSH 7.0.
+# The node is not on a home LAN. It sits on a shared building network -- a flat
+# 192.168.0.0/21, 2046 usable addresses -- occupied by many other tenants'
+# devices, whose edge is administered by a third party and can be neither
+# audited nor reconfigured by this project. Anything you cannot verify and
+# cannot fix earns zero trust.
 #
 # sshd currently listens on 0.0.0.0:22, so every host on that /21 can reach it.
 # Authentication is public-key only (ADR-018), so this is exposure rather than

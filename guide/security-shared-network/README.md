@@ -24,9 +24,10 @@ That is what made three deferrals reasonable:
 | No encryption at rest (ADR-015) | The node holds nothing sensitive, and physical access means someone is already in the house |
 | SSH on the LAN as a fallback path | A safety net if Tailscale fails |
 
-**None of it was true.** The Wi-Fi is shared across 40–50 rooms. The subnet is a flat
-`192.168.0.0/21` — 2046 usable addresses. The router is not the owner's, cannot be configured by
-them, and its management interface answers from the public internet.
+**None of it was true.** The node sits on a **shared building network**: a flat
+`192.168.0.0/21`, 2046 usable addresses, occupied by many other tenants' devices. The network edge
+is administered by a third party. The owner cannot configure it, cannot audit it, and cannot change
+its security posture.
 
 The reference build's own documentation said "the server is behind the router's NAT and exposes only
 SSH on the LAN" — which is *literally* true and completely misleading, because "the LAN" was doing
@@ -146,12 +147,17 @@ did. Reading the listener list would have told you nothing.
 
 ## 9. What the reference build actually encountered
 
-The router's own management interface **is** reachable from the public internet, on an end-of-life
-business gateway answering SSH with OpenSSH 7.0 (released 2015). The owner cannot patch it, cannot
-configure it, and cannot get it fixed.
+The network edge turned out to be outside the owner's control in every sense that matters: not
+theirs to configure, not theirs to patch, and not theirs to audit. Its actual configuration is
+deliberately not described here — it belongs to a third party, and publishing another party's
+security posture is not this project's to do.
 
-That is not a problem this project can solve. What it can do — and now has — is ensure the node
-trusts that network for nothing at all.
+**That is the whole point, and it is a stronger rule than any specific finding.** You do not need to
+know what is wrong with a network you do not control in order to decide how much to trust it. The
+answer is already *nothing*, because you cannot verify it and cannot fix it.
+
+What this project can do — and now has — is ensure the node trusts that network for nothing at
+all.
 
 **The honest summary:** Tailscale was the right decision from Phase 03, and it was not finishing the
 job. A secure tunnel is not much use with an open door beside it.
