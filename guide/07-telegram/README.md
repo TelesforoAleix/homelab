@@ -49,7 +49,7 @@ Telegram offers two ways to receive messages:
 This bot uses **long polling**. It makes an outbound HTTPS request that Telegram
 holds open for ~50 seconds waiting for a message, then makes another.
 
-That is not a style preference. **This node has no firewall.** `:22` is the only
+That is not a style preference. **This node had no firewall when this was written** **Superseded 2026-09-10** — a firewall was added out of phase; see [`guide/security-shared-network`](../security-shared-network/README.md). `:22` was the only
 port reachable off-box, and anything published here would be published to the
 LAN. Long polling is what makes running a network service on this machine
 acceptable at all.

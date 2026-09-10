@@ -313,7 +313,7 @@ merely ignored.
   adopting silently.
 - **Disabling key expiry trades security for availability**, deliberately. Recorded in ADR-019 and
   flagged for Phase 13.
-- **There is still no firewall.** Port 22 is open on the LAN and answers. Phase 13.
+- **There is still no firewall.** Port 22 is open on the LAN and answers. Phase 13. **Superseded 2026-09-10** — a firewall was added out of phase; see [`guide/security-shared-network`](../security-shared-network/README.md).
 - **Do not port-forward SSH.** Tailscale makes it unnecessary.
 
 ## Reference-build experience

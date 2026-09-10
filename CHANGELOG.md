@@ -6,6 +6,26 @@ This project uses this file for meaningful repository-level milestones rather th
 
 ### Added
 
+- **Security reassessment and firewall (2026-09-10, out of phase).** Answering whether publishing
+  the repository was safe uncovered that the premise every earlier security decision rested on was
+  false. The node is not on a home LAN: the Wi-Fi is shared across 40–50 rooms on a flat
+  `192.168.0.0/21` (2046 usable addresses), behind a router the owner does not administer and whose
+  management interface answers from the public internet.
+  - **`ufw` applied**, closing SSH to the shared network while keeping the tailnet path. Proved in
+    three directions: tailnet SSH works, LAN SSH times out, and ICMP to the same address succeeds —
+    the last proving the host is up and the port filtered rather than the machine unreachable.
+  - **Branch protection on `main`** — force pushes and deletion blocked, enforced on admins. Proved
+    by attempting a violation, which took four attempts; the first three were invalid and each
+    looked like a pass.
+  - **No port is forwarded to the node**, proved by SSH host-key comparison rather than assumed.
+  - `scripts/server/apply-firewall.sh` arms a timed self-revert *before* applying anything.
+  - New guide: `guide/security-shared-network/`.
+  - Corrected: **the node has a console** — unplugged, not absent — which reopens two encryption
+    options Phase 18 had ruled out, and the TPM is **1.2, not 2.0**.
+  - `scan-history.sh` gained a Telegram bot token class; the scanner predated that secret by three
+    phases. A systemd template instance name had also been tripping the email class, leaving the
+    gate permanently red since Phase 09.
+
 - **Architecture contracts (2026-09-10).** Four ADRs written ahead of Phase 18 and carried into its
   brief per ADR-017, defining how this repository relates to a separate public `factory` repository
   and to private knowledge/product repositories:

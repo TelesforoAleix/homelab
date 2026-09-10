@@ -230,6 +230,11 @@ every install.
 - **Rootful Docker without user-namespace remapping.** Container root maps to host root; mitigated by
   non-root container defaults and Compose hardening. Phase 13 should revisit rootless Docker or
   userns-remap on its merits.
+- ~~No firewall.~~ **Closed 2026-09-10, out of phase**, because the shared-network finding made it
+  the highest-value control available. `ufw` denies inbound by default and permits only `tailscale0`
+  plus Tailscale's UDP port. Applied with a timed self-revert and verified in both directions.
+  **Phase 13 still owns the rest** — `fail2ban` is deliberately absent (this server accepts no
+  passwords), node key expiry, Tailscale ACLs and rootless Docker are untouched.
 - **Docker and Tailscale now both own packet-filtering chains.** Docker publishes with DNAT before
   host firewall `INPUT` rules, so Phase 13 must design firewalling around Docker rather than
   assuming `ufw deny` controls published container ports.
@@ -268,6 +273,12 @@ every install.
 - **No alerting on the bot.** If it dies at 3am, nothing says so — and bounded logging means a quiet
   journal does not mean a healthy service.
 - Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.
+- **The LAN is not a home network, and must be treated as hostile.** Corrected 2026-09-10: the
+  Wi-Fi is shared across 40–50 rooms on a flat `192.168.0.0/21` (2046 usable addresses), behind a
+  router the owner does not administer, whose management interface is reachable from the internet
+  and which cannot be patched by this project. Confidentiality between residents on a shared WPA2
+  passphrase is effectively nil. **Treat the link as open Wi-Fi.** No port is forwarded to the node
+  — proved by SSH host-key comparison — and no auto-forwarding protocol is available.
 - No encryption at rest (ADR-015), which compounds with the cleartext Wi-Fi passphrase (ADR-016).
   Phase 13 should treat these together.
 - **Phase 10 must not silently inherit ADR-015.** Once the node stores significant sensitive or
@@ -442,7 +453,7 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Restart limit | **`StartLimitIntervalUSec=5min`** on the running unit — was silently 10s until Phase 09 fixed it |
 | Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |
 | Service hardening | `systemd-analyze security` → **1.3 OK** |
-| Listening | **6 sockets; `:22` only off-box.** Everything else on loopback or the tailnet. Docker, the AI CLIs and the bot published nothing — the bot long-polls outbound. **Unchanged by Phase 09: the model helper uses a UNIX socket, which is a file, not a port** |
+| Listening | **6 sockets, unchanged — but `:22` is now FILTERED on the shared Wi-Fi.** `ufw` is active and enabled at boot: default deny inbound, allow on `tailscale0`, plus UDP 41641 on `wlp1s0` for Tailscale direct connections. sshd still *binds* `0.0.0.0:22`; ufw drops the packets before they reach it. **Proved 2026-09-10** — LAN SSH times out while ICMP to the same address succeeds |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | **24.4s** cold, headless, to reachable |
 | **Console** | **Unplugged, not absent.** DRM connectors all `disconnected` and the cable is removed, but six video outputs are present, `getty@tty1` is enabled **and active**, `usbhid` is loaded, and the machine is in the owner's room with a monitor and keyboard available. **Corrected 2026-09-10** — earlier text said `None`, which overstated it and made lockout look unrecoverable |
