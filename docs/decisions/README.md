@@ -85,8 +85,19 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   whole system; a tool is what the runtime can refuse and a skill is what can only be followed;
   **privacy is per-artifact, not per-repository**, which supersedes the visibility tables in ADR-029
   §1 and ADR-030 §1 while leaving ADR-029 §2 intact; each public layer must be independently
-  adoptable, which none currently is; the private `brain` is renamed `aleix-brain` and becomes an
-  archive while its ~32 method files are extracted into a **new public `brain`**, accepting that
-  content written there afterwards has no version history; Factory is rewritten in a dedicated phase
-  and cannot start until homelab publishes its tool vocabulary. Records that ADR-029's own revisit
-  trigger fired.
+  adoptable, which none currently is; the private `brain` is eventually renamed `aleix-brain` and
+  becomes an archive while its ~32 method files are extracted into a **new public `brain`**,
+  accepting that content written there afterwards has no version history; Factory is rewritten in a
+  dedicated phase and cannot start until homelab publishes its tool vocabulary. Records that
+  ADR-029's own revisit trigger fired.
+
+  **Amended 2026-09-10**, the same day and before merge, with four further decisions recorded in
+  place rather than in a successor: the brain rename and extraction is **deferred as a whole
+  operation** and coupled to the new ingestion pipeline and RAG system, leaving the existing private
+  `brain` as it is under its current name (§6); the four restored knowledge-base skill files are
+  **superseded legacy, not method**, and stay private (§6.1); **agent manifests are JSON**, since
+  ADR-027 §2 decided five fields and not a serialisation (§11); and **one plan and one progress
+  record, both in homelab** — replacing §9's "each repository's own build plan stays in that
+  repository" and superseding Factory's `roadmap.md` and its Locked Decisions, while §4's standalone
+  adoptability is preserved because what a public repository ships is the method and the contracts,
+  never the owner's roadmap (§4, §9).

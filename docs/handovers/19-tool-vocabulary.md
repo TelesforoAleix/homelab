@@ -11,7 +11,7 @@
 
 ### 0.1 Why this phase exists at all, stated plainly
 
-Factory ships **zero agent manifests**. It cannot write the `tools:` line of one, because the thing
+Factory ships **zero agent manifests**. It cannot write the `tools` line of one, because the thing
 that line names does not exist. ADR-027 §3 puts the vocabulary in homelab — *"because homelab is what
 enforces them"* — and ADR-031 §7 makes publishing it the stated prerequisite of the Factory rewrite.
 
@@ -252,6 +252,8 @@ Not reopened by this phase.
 - **ADR-006** — simplest thing that works. This phase must not acquire a framework, a schema
   validator, a plugin system or a dependency.
 - **ADR-021** — the repository is public. The vocabulary is published the moment it is committed.
+- **ADR-031 §11** — **agent manifests are JSON.** Settled on 2026-09-10, after this brief was first
+  written; §6.5 below carries the reasoning and is no longer an open question.
 
 ### 5.1 What this phase explicitly does not open
 
@@ -275,6 +277,9 @@ publishes a vocabulary is the phase most likely to be misread as having opened i
 ## 6. Decisions still open
 
 Resolvable locally unless marked. Cross-phase outcomes become ADRs and are carried forward (ADR-017).
+
+**§6.5 is no longer one of them** — the manifest format was decided on 2026-09-10 in ADR-031 §11,
+after this brief was committed. It is kept in place, marked decided, rather than deleted.
 
 ### 6.1 Where the vocabulary lives as an artifact
 
@@ -343,24 +348,34 @@ the node decides the objects); or let a manifest declare a scoped form and inter
 arrangement fails closed — a manifest cannot widen a target set it cannot name. Revisit when a real
 agent needs a narrower grant than the node's own allowlist gives.
 
-### 6.5 Manifest format — and the zero-dependency constraint
+### 6.5 Manifest format — **decided: JSON** (ADR-031 §11, 2026-09-10)
 
-**This is the sharpest open question in the phase.**
+**This was the sharpest open question in the phase. It is no longer open.** It is kept here rather
+than moved, so the reasoning stays next to the phase that consumes it; the decision itself is
+recorded in **ADR-031 §11**.
 
-ADR-027 §2 illustrates a manifest in YAML. The bot's second design constraint (`bot.py:21-26`) is
-**no third-party dependencies**, and Python's standard library has `json` but no YAML parser.
+**Agent manifests are JSON.** ADR-027 §2 illustrates a manifest in YAML, but it decided *five
+fields*, not a serialisation — so this is a decision the ADR left to be made, not a contradiction of
+it. ADR-027 itself is **not edited**: it is accepted and merged, and `docs/decisions/README.md`
+forbids rewriting an accepted ADR.
+
+The options as they were weighed:
 
 | Option | Cost |
 |---|---|
-| Manifests are JSON | Contradicts the ADR's illustration but not its decision — §2 decides *five fields*, not a serialisation. Zero new dependency |
+| **Manifests are JSON** — **chosen** | Contradicts the ADR's illustration but not its decision. Zero new dependency, and JSON is what the models handle natively — the owner's stated reason and the deciding one |
 | Take a YAML dependency | Breaks a constraint held since Phase 07, for a format preference. A supply-chain risk and an upgrade obligation in the one service that talks to the internet |
 | Write a bounded YAML subset parser | A hand-rolled parser for untrusted-ish input, in the process that enforces authorisation. Worse than either |
 
-**Recommendation: JSON**, with the reason recorded so it is not rediscovered as a defect. If YAML is
-required for Factory-side ergonomics, the conversion belongs on the Factory side, where the
-dependency is cheap and enforces nothing.
+The bot's second design constraint (`bot.py:21-26`) is **no third-party dependencies**, and Python's
+standard library ships `json` and no YAML parser — so JSON is also the only option that keeps the
+constraint without hand-rolling a parser into the process that enforces authorisation.
 
-**This may need an ADR** if it changes what ADR-027 §2 is understood to have decided.
+If YAML is ever required for Factory-side ergonomics, the conversion belongs on the **Factory** side,
+where the dependency is cheap and enforces nothing.
+
+**Consequence for this phase:** §8.1's fixtures are JSON files, and §16 item 2 hands Phase 20 a
+working JSON example and a failing one.
 
 ### 6.6 What a caller is, when the caller is not a Telegram user
 
@@ -456,7 +471,7 @@ observation:
 
 | | Fixture | Must show |
 |---|---|---|
-| **Negative** | A manifest whose `tools:` list is `[read_repo, definitely_not_a_tool]` | **Load fails**, on the reason, **naming the offending token**. The agent is **absent** from the registry afterwards |
+| **Negative** | A JSON manifest whose `tools` array is `["read_repo", "definitely_not_a_tool"]` | **Load fails**, on the reason, **naming the offending token**. The agent is **absent** from the registry afterwards |
 | **Positive control** | The **byte-identical** manifest with only the unknown token removed | **Loads.** All five ADR-027 §2 fields present |
 
 The two fixtures must differ in exactly one token. Without the positive control, a load failure caused
@@ -472,9 +487,9 @@ Three planted variants, each cheap and each closing a real hole:
 
 | Variant | Must show |
 |---|---|
-| `Read_Repo` (case changed) | **Load fails.** Tool names are exact-match; `parse()` and `register()` lowercase *commands* (`router.py:99,129`) and tool names must not inherit that |
+| `"Read_Repo"` (case changed) | **Load fails.** Tool names are exact-match; `parse()` and `register()` lowercase *commands* (`router.py:99,129`) and tool names must not inherit that |
 | `" read_repo "` (whitespace) | **Load fails.** No trimming. A normaliser is a second place that decides what a name means |
-| `tools: []` | **Loads, with no tools.** The default is "no tools", never "all tools" |
+| `"tools": []` | **Loads, with no tools.** The default is "no tools", never "all tools" |
 
 ### 8.2 The full list
 
@@ -486,7 +501,7 @@ Three planted variants, each cheap and each closing a real hole:
 | 4 | Agent declaring `[read_host_status]` invokes `restart_service` | **Refused**, on the reason: outside the declared set (ADR-027 validation 2) |
 | 5 | Agent declaring `[restart_service]`, caller **not** in the privileged allowlist | **Refused**, and the refusal names *caller authorisation*, not the declaration (ADR-027 validation 3) |
 | 6 | Same agent, same declaration, caller **in** the privileged allowlist | **Permitted** — the positive control for 5 |
-| 7 | Agent with `tools: []` | The Phase 09 canary check still passes; default remains "no tools" (ADR-027 validation 4) |
+| 7 | Agent with `"tools": []` | The Phase 09 canary check still passes; default remains "no tools" (ADR-027 validation 4) |
 | 8 | Agent with `[read_host_status]` | Gets **exactly** that one, and not the other four |
 | 9 | `read_repo` dispatched | **Refused as not wired**, distinguishably from "unknown command" and from "not authorised" |
 | 10 | Vocabulary entry with no bound executor, and executor with no bound tool | Both detected at load, neither silently tolerated |
@@ -577,8 +592,8 @@ makes it evidence; and what it costs to publish a name that another repository w
 
 - **Likely required:** the level/status split of §6.2. It changes the meaning of a published field
   and it supersedes part of ADR-024's capability model.
-- **Possible:** the manifest serialisation of §6.5, if JSON is read as changing what ADR-027 §2
-  decided.
+- **No longer needed:** the manifest serialisation of §6.5. Decided in **ADR-031 §11** on
+  2026-09-10 — JSON — so this phase inherits it rather than producing it.
 - **Possible:** the caller/agent identity relationship of §6.6, if it turns out to need more than an
   extra journal field.
 - **Not expected:** anything reopening ADR-025 §4, §8 or §10. If this phase finds itself drafting one,
@@ -621,8 +636,8 @@ Addressed to **Phase 20 — Factory Rewrite**, which cannot start without this. 
 1. **The exact vocabulary**, name by name, with level, status and permitted action — in the form a
    manifest author copies. This is the deliverable Phase 20 consumes; if it is not written here it is
    lost (ADR-017).
-2. **The exact manifest format**, resolved per §6.5, with a working example that loads and one that
-   does not — because Phase 20's first act is writing a `tools:` line.
+2. **The exact manifest format — JSON** (ADR-031 §11), with a working example that loads and one that
+   does not — because Phase 20's first act is writing a `tools` line.
 3. **How the refusal was proved, including the fixtures**, so the next phase can extend rather than
    re-derive them.
 4. **Which of ADR-027's four validation items are satisfied and which are not**, item by item. An
