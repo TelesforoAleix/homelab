@@ -66,15 +66,62 @@ tailscale status >/dev/null 2>&1 \
 # If this very session came in over the LAN, applying the rules drops it. That
 # is survivable -- the revert fires and the console exists -- but it is better
 # to refuse and let the operator reconnect over the tailnet first.
-client_ip="${SSH_CLIENT%% *}"
-case "$client_ip" in
-  100.6[4-9].*|100.[7-9][0-9].*|100.1[01][0-9].*|100.12[0-7].*|"")
-    say "this session is on the tailnet (or local). Good." ;;
+#
+# SSH_CLIENT CANNOT BE READ DIRECTLY HERE, and the first version of this script
+# died trying. sudo resets the environment, so under `sudo bash script.sh` the
+# variable is simply absent -- and with `set -u` that is a hard abort, not a
+# graceful skip. The failure was safe, because this block runs before the
+# self-revert is armed and before any rule is applied, so nothing had changed.
+# It was still a check that could not run.
+#
+# `who am i` is no help either: it reads utmp, and these sessions leave no utmp
+# entry -- it returns empty.
+#
+# What does work: this script runs as root, so it can read the environment of
+# its own ancestors. The user's login shell still has SSH_CLIENT.
+detect_client_ip() {
+  local pid val
+  pid="${PPID:-0}"
+  for _ in 1 2 3 4 5 6 7 8; do
+    [ -n "$pid" ] && [ "$pid" != "0" ] && [ -r "/proc/$pid/environ" ] || return 1
+    val="$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null \
+           | sed -n 's/^SSH_CLIENT=//p' | head -1)"
+    if [ -n "$val" ]; then printf '%s' "${val%% *}"; return 0; fi
+    # /proc/PID/status, not /proc/PID/stat: the latter's second field is the
+    # process name in parentheses, and a name containing a space shifts every
+    # field after it. status is key/value and cannot be miscounted.
+    pid="$(awk '/^PPid:/{print $2}' "/proc/$pid/status" 2>/dev/null)"
+  done
+  return 1
+}
+
+client_ip="$(detect_client_ip || true)"
+
+case "${client_ip:-}" in
+  100.6[4-9].*|100.[7-9][0-9].*|100.1[01][0-9].*|100.12[0-7].*)
+    say "this session is on the tailnet ($client_ip). Good." ;;
+  "")
+    # Report what is true rather than assuming the safe answer. Proceeding is
+    # justified by the self-revert, not by a guess about the connection.
+    say "connection source: UNKNOWN -- could not read SSH_CLIENT from any"
+    say "  ancestor process. Proceeding anyway, because the self-revert below"
+    say "  is what protects this change. If this session drops, wait"
+    say "  ${REVERT_MIN} minutes and it will come back." ;;
   *)
     die "this session came from $client_ip, which is not the tailnet.
        Reconnect with 'ssh homelab' over Tailscale and re-run, or the
        rules below will drop the connection applying them." ;;
 esac
+
+# Cross-check, and a genuine warning rather than a refusal: other sessions may
+# be on the LAN even when ours is not. They will be dropped.
+lan_sessions="$(ss -tn state established '( sport = :22 )' 2>/dev/null \
+  | awk 'NR>1{split($4,a,":"); print a[1]}' \
+  | grep -vcE '^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.' || true)"
+if [ "${lan_sessions:-0}" -gt 0 ]; then
+  say "NOTE: ${lan_sessions} other SSH session(s) are on non-tailnet addresses"
+  say "  and will be disconnected. They can reconnect over Tailscale."
+fi
 
 # --- Arm the self-revert BEFORE touching anything. -------------------------
 
