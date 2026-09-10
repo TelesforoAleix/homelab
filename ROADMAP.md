@@ -508,3 +508,62 @@ public `brain` holds the knowledge-base method** — that work is Phase 21.
 work in Phase 10 rather than being near-term. `brain` keeps its current name and stays private and in
 active use until then, so the table above is still an accurate description of the repositories that
 exist today — it is the *target* it no longer describes.
+
+## Sequencing note — 2026-09-10
+
+**Added 2026-09-10, after the architecture alignment session that produced ADR-031.** This section
+is an assessment of *running order*, not a decision about scope. It states what was true on the day
+it was written and it is expected to be superseded — a later phase that changes the dependency graph
+should replace this section rather than edit around it, and say which phase superseded it.
+
+### Two tracks, running in parallel
+
+The pending work splits along a line that is not about subject matter but about **who can do it**.
+
+| Track | Phases | Constraint |
+|---|---|---|
+| **Node** | 18, 13, 14 | Requires the owner at the keyboard: privileged commands on a machine where no assistant holds the sudo password. Gates everything physical — no repository has been cloned onto the node. |
+| **Architecture** | 19, 15.0, 20, 10+21, 22 | Repository work. Needs no node access and can proceed while the node track is idle. |
+
+Making either wait on the other idles the one that is free. They are not sequential.
+
+### Recommended order
+
+1. **Phase 18 — start whenever the node is to hand.** First by priority because it is the only
+   pending item where *delay itself carries risk*: the node has no backup of any kind and an
+   unencrypted root filesystem. It also gates Phase 10, which cannot store real knowledge until the
+   ADR-015 decision is made.
+2. **Phase 19 — tool vocabulary.** The single item on the architecture critical path. Its brief is
+   written and committed; it needs implementing.
+3. **Phase 15.0 — model registry.** Brought forward on a dependency the Phase 19 brief surfaced:
+   `model_policy` is a declared *need* that must reach the model helper, which requires a
+   wire-protocol field that does not exist. Without 15.0 that manifest field is decorative.
+4. **Phase 20 — Factory rewrite.** Needs 19; wants 15.0.
+5. **Phases 10 and 21 together.** Knowledge design, ingestion and retrieval, and the new public
+   `brain` repository built once around them rather than lifted from the old layout. Needs the
+   ADR-015 decision from Phase 18 before it stores anything real.
+6. **Phase 22 — dashboard / control plane.** Needs the schema Phase 20 defines. Building it against
+   the pre-rewrite schema would be waste.
+
+Then 13, 17, 12, 11, 14, 16 on their own merits.
+
+### The two bottlenecks, stated plainly
+
+**Phase 18 is the only pending item that requires the owner specifically.** Everything else can be
+executed by an assistant. While it is unstarted the node stays frozen, and no amount of architecture
+work moves it.
+
+**Phase 20 is where the effort actually is.** Rewriting roughly 10,000 lines of prose into a
+loadable operating model is larger than 19, 15.0 and 22 combined. It is also the phase that makes
+the system stop being documentation and start executing.
+
+### What the first ten phases did and did not buy
+
+Phases 00–09 are complete and they built a genuine substrate: a headless node reachable over
+Tailscale, key-only SSH, Docker, and a read-only Telegram bot running unprivileged behind a
+two-allowlist authorisation boundary with a model executor behind that.
+
+They did **not** build the AI system. As of this note the node runs one read-only status bot, holds
+zero repositories, and no agent has ever executed anything. Phases 19–22 did not exist before
+2026-09-10. Recording this distinction matters more than it looks: ten complete phases can read as
+"most of the way there", and the phases that carry the system's actual purpose are all still ahead.

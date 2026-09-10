@@ -2,11 +2,18 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 09 — Model Executor, subscription-backed (**complete**, 2026-09-09). Next:
-  **Phase 18 — Foundations** (backup plus the ADR-015 encryption decision plus an SSH recovery
-  path), then Phase 15.0 (generalise the model router), the repository split, and Phase 10
-  (Knowledge). Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap
-  records the reason rather than being quietly rewritten.
+- **Current phase:** 09 — Model Executor, subscription-backed (**complete**, 2026-09-09). **Next,
+  restated 2026-09-10 after ADR-031 added Phases 19-22:** the pending work runs on two parallel
+  tracks. The **node track** needs the owner at the keyboard and opens with **Phase 18 —
+  Foundations** (backup, the ADR-015 encryption decision, an SSH recovery path); nothing reaches the
+  node until it lands. The **architecture track** needs no node access and runs **Phase 19** (tool
+  vocabulary — brief committed, the critical path), then **15.0** (model registry), then **20**
+  (Factory rewrite), then **10 + 21 together** (knowledge, retrieval, and the new public `brain`
+  built around them), then **22** (dashboard). The repository split is **done on the development
+  machine**; its node half is gated by Phase 18 and its brain half is deferred into Phase 21. See
+  the Sequencing note at the end of `ROADMAP.md`, which supersedes this summary if they disagree.
+  Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap records the
+  reason rather than being quietly rewritten.
 - **Architecture decisions taken 2026-09-10**, ahead of Phase 18 and carried into its brief per
   ADR-017: ADR-026 (multi-provider model access), ADR-027 (the agent contract), ADR-028 (the project
   contract) and ADR-029 (repository topology). These define how this repository — the **AI OS** —
