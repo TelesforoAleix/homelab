@@ -52,7 +52,7 @@ It should follow Phase 18, because Phase 18 is the phase that gives the node a b
 changes the one service that holds a live credential path. It has no dependency on Phase 18's outcome
 and does not need to wait on the ADR-015 decision.
 
-**It has a soft dependency on Phase 15.0** — see §6.5. `ask_model` cannot carry ADR-027 §2's
+**It has a soft dependency on Phase 15.0** — see §6.3. `ask_model` cannot carry ADR-027 §2's
 `model_policy` until the helper's wire protocol has a task class. That is a reason to sequence 15.0
 first, not a reason to build it here.
 
