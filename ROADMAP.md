@@ -231,9 +231,14 @@ First slice is expected to be retrieval **with no model call at all**, so nothin
 machine and ADR-025 §8 is untouched; widening `/ask` with retrieved context is a separate decision
 with its own ADR.
 
-**ADR-030 — the Knowledge Contract** is written in this phase, not before it: specifying how an
-agent queries the knowledge base before retrieval exists would be guessing. It implements ADR-010 as
-a queryable interface returning provenance, never raw filesystem access.
+**The Knowledge Contract ADR** is written in this phase, not before it: specifying how an agent
+queries the knowledge base before retrieval exists would be guessing. It implements ADR-010 as a
+queryable interface returning provenance, never raw filesystem access.
+
+**Corrected 2026-09-10 (ADR-031).** This paragraph previously reserved the number ADR-030 for that
+contract. ADR-030 was subsequently used for the four-layer workspace, so the reservation was wrong.
+No number is reserved here: the Knowledge Contract takes the next free number on the day it is
+written.
 
 **Inherited from Phase 01 — must be addressed, not inherited silently:**
 
@@ -345,6 +350,71 @@ Scope:
 Phase 13 remains the dedicated hardening phase — firewall, `fail2ban`, Tailscale ACLs, node-key
 expiry, rootless Docker. Phase 18 is narrower: it is about **recoverability**, not defence.
 
+## Phase 19 — Tool Vocabulary & Capability Levels
+
+Publish homelab's **named tool vocabulary and its capability levels** as a stable public interface,
+so a Factory manifest has something real to compose against.
+
+**Added 2026-09-10 (ADR-031).** New numbers rather than a renumbering, per the roadmap rule above and
+the Phase 18 precedent.
+
+ADR-027 §3 already places the vocabulary in homelab, because homelab is what enforces it, and ADR-027
+§5 makes an unknown tool name a **hard load failure** rather than a warning. Together those make this
+phase the prerequisite for Phase 20 and Phase 22: a manifest written before the vocabulary exists
+either names tools that cannot load, or invents a vocabulary in the wrong repository.
+
+ADR-027's own validation list applies here — each item proved against a positive control, not
+observed to pass. **An authorisation check that has only ever permitted is unvalidated.**
+
+**Prerequisite for:** Phase 20, and through it Phase 22.
+
+## Phase 20 — Factory Rewrite
+
+Rewrite The Factory: **keep the content, discard the markdown-heavy format** (ADR-031 §7). The format
+was designed for a different environment than the one Factory now has to run in.
+
+**Nothing is to be written into the current format** in the meantime.
+
+**Depends on Phase 19.** The rewrite composes against homelab's published tool vocabulary; starting
+before it exists is the failure ADR-031 §7 names.
+
+Factory's own `roadmap.md` V0–V4 series stays in Factory and remains Factory's plan (ADR-031 §9).
+This phase is homelab's record that the rewrite is sequenced work with a prerequisite, not a
+statement about how Factory plans it.
+
+## Phase 21 — Brain Rename & Method Extraction
+
+Rename the private `brain` repository to **`aleix-brain`**, where it becomes an archive, and extract
+its ~32 method files with `git-filter-repo` into a **new public `brain`** (ADR-031 §5, §6).
+
+`aleix-brain`'s history is **not** rewritten and its visibility does **not** change. Extraction is
+done with git operations, never by copying — the ADR-029 and ADR-030 §5 precedent.
+
+**Accepted, not overlooked:** content written into the new `brain` after the switch has no version
+history, mitigated only by `aleix-brain` retaining everything up to the switch. **When content
+migrates is deliberately deferred** and is not decided by this phase's existence.
+
+Independent of Phases 19, 20 and 22 — it can run in any order relative to them.
+
+**Gated the same way as the rest of the split:** the ADR-029 §5 boundary gate must be validated
+against planted content before the new public repository is pushed, and nothing is cloned onto the
+node until Phase 18 has decided ADR-015.
+
+## Phase 22 — Dashboard / Control Plane Move
+
+Move the dashboard and control plane from Factory to homelab, on the ADR-031 §1 boundary: Factory
+declares, homelab enforces and executes, so a control plane that acts belongs in homelab.
+
+**This move was agreed but has never had an ADR.** Writing one is part of this phase, not a
+precondition assumed to exist. Until it is written there is no accepted decision to point at.
+
+**Depends on Phase 20**, because the control plane reads Factory's operating objects and their schema
+is what the rewrite changes. Building against the pre-rewrite schema would be work done twice.
+
+Factory's `roadmap.md` currently plans this itself as V1.5 (read-only dashboard) and V3 (control
+plane). Reconciling those with this phase is part of the unresolved governance overlap ADR-031 §9
+records and does not resolve.
+
 ## Repository split (not a numbered phase)
 
 Per ADR-029, the knowledge base splits into `factory` (public), a product repository (private) and `brain`
@@ -373,3 +443,11 @@ ADR-030 adds the `projects/` layer and closes ADR-029 §6 — every project carr
 **Nothing was cloned onto the node.** That half is still gated by Phase 18, for the reason the
 migration plan gave: cloning private repositories onto an unencrypted root filesystem with no
 backup is exactly the event ADR-015 exists to be revisited before.
+
+### Not finished by that split — ADR-031, 2026-09-10
+
+The table above records what was true on the day of the split and is left as written. It is no longer
+the target topology. ADR-031 found that the split drew visibility per *repository* where ADR-029 §2
+had specified it per *artifact*, which left the knowledge base's method private by adjacency rather
+than by decision. **`brain` as named above becomes the private archive `aleix-brain`, and a new
+public `brain` holds the knowledge-base method** — that work is Phase 21.
