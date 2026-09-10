@@ -110,7 +110,40 @@ Verified on the node 2026-09-10 by direct read-only inspection, not copied from 
 | Listeners | **6**, unchanged | `ss -tln` |
 | `eno1` | Present, state **DOWN**, `NO-CARRIER` — no cable attached | `ip -br link show eno1` |
 
-### 2.1 The finding that reshapes this phase: the TPM is version 1.2
+### 2.1 RESOLVED 2026-09-10 — the TPM is now 2.0, with two prerequisites
+
+**This section originally reported TPM 1.2 and concluded that an encrypted root filesystem with
+unattended boot was unavailable. That is no longer true.**
+
+The firmware offers `Security → TCG Feature Setup → TCG Security Device`, with two values:
+`Discrete TPM` and **`Firmware TPM`** — Intel PTT. It was switched to Firmware TPM.
+
+| Evidence | Before | After |
+|---|---|---|
+| `tpm_version_major` | 1 | **2** |
+| `/dev/tpmrm0` (2.0-only resource manager) | absent | **present** |
+| 1.2-only attrs `pubek`, `owned`, `temp_deactivated` | present | **all gone** |
+| `ppi` (2.0 physical presence interface) | absent | **present** |
+
+**Cost, measured rather than assumed:** firmware POST rose from 10.972s to 13.805s, total boot from
+24.440s to 27.910s. About 2.8 seconds, spent in firmware initialising the fTPM. Everything else
+matched baseline exactly — `ufw` active, zero failed units, six listeners.
+
+**Option C is therefore live**, but two things must be fixed before it works:
+
+1. **`libtss2-rc.so.0` is missing.** systemd is built `+TPM2` and every other library it dlopens is
+   present (`libtss2-esys`, `libtss2-mu`, `libtss2-tcti-device`). Only the return-code library is
+   absent, which is why `systemd-cryptenroll --tpm2-device=list` still says *"TPM2 support is not
+   installed"* — **a tooling message, not a hardware one**. Package: `libtss2-rc0`.
+2. **Only the SHA-1 PCR bank is allocated.** `/sys/class/tpm/tpm0/` exposes `pcr-sha1` and no
+   `pcr-sha256`. `systemd-cryptenroll` seals against PCRs — typically PCR 7, the Secure Boot state —
+   and expects SHA-256. Allocating it needs `tpm2_pcrallocate` from `tpm2-tools`, **and a reboot**,
+   because bank allocation takes effect at TPM reset.
+
+**Neither is a blocker; both are unfinished work this phase owns.** Do not record Option C as
+available until `systemd-cryptenroll --tpm2-device=list` actually lists a device.
+
+### 2.1.1 What the original finding said, kept for the record
 
 `/dev/tpm0` exists, which initially looks like good news for encrypted-but-unattended boot. It is
 not. The device is **TPM 1.2**:

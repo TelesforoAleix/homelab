@@ -455,8 +455,9 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Service hardening | `systemd-analyze security` → **1.3 OK** |
 | Listening | **6 sockets, unchanged — but `:22` is now FILTERED on the shared Wi-Fi.** `ufw` is active and enabled at boot: default deny inbound, allow on `tailscale0`, plus UDP 41641 on `wlp1s0` for Tailscale direct connections. sshd still *binds* `0.0.0.0:22`; ufw drops the packets before they reach it. **Proved 2026-09-10** — LAN SSH times out while ICMP to the same address succeeds |
 | Swappiness | `vm.swappiness = 10` |
-| Boot | **24.4s** cold, headless, to reachable |
+| Boot | **27.9s** (was 24.4s). Firmware POST rose 10.97s → 13.81s when the fTPM was enabled |
 | **Console** | **Unplugged, not absent.** DRM connectors all `disconnected` and the cable is removed, but six video outputs are present, `getty@tty1` is enabled **and active**, `usbhid` is loaded, and the machine is in the owner's room with a monitor and keyboard available. **Corrected 2026-09-10** — earlier text said `None`, which overstated it and made lockout look unrecoverable |
+| **TPM** | **2.0** since 2026-09-10 (Intel PTT / Firmware TPM; was discrete 1.2). `/dev/tpmrm0` present. Two prerequisites before it can unlock LUKS: `libtss2-rc0` missing, and only the SHA-1 PCR bank is allocated |
 
 Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and
 `scripts/server/verify-remote-access.sh` (Phase 03 posture; run under `sudo` for a complete report).

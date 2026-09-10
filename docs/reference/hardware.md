@@ -20,7 +20,7 @@ Verified in **Phase 01 Part A** on 2026-09-08 from Windows Task Manager, before 
 | Wireless interface name | `wlp1s0` | Confirmed from installed system |
 | Ethernet interface | `eno1` — present, DOWN (unused, ADR-016) | Confirmed from installed system |
 | BIOS/firmware | LENOVO **FWKT63A**, release date **2016-12-08** | Confirmed from installer probe |
-| TPM | **Version 1.2** at `/dev/tpm0` | **Confirmed 2026-09-10** — `tpm_version_major` = 1; only the `pcr-sha1` bank present; TPM 1.2-only attributes `pubek`, `owned`, `temp_deactivated` present. **Not 2.0**, so `systemd-cryptenroll --tpm2-device=` cannot be used to auto-unlock a LUKS volume. Whether Intel PTT (fTPM 2.0) is available in firmware is **unknown** — answering it requires a console, which the node no longer has |
+| TPM | **Version 2.0** at `/dev/tpm0` + `/dev/tpmrm0` | **Changed 2026-09-10.** Was a discrete TPM **1.2**; the firmware offers `TCG Security Device: Firmware TPM` (Intel PTT) and it was switched. Confirmed by `tpm_version_major` = 2, the appearance of `/dev/tpmrm0` (a 2.0-only device), the disappearance of the 1.2-only attributes `pubek`/`owned`/`temp_deactivated`, and `ppi` becoming present. **Cost: firmware POST rose 10.97s → 13.81s** (+2.8s), which is the fTPM initialising. **Two prerequisites remain before it can unlock a LUKS volume** — see the Phase 18 brief §2.1 |
 | Secure Boot | **Enabled** | Confirmed 2026-09-10 — `mokutil --sb-state` |
 | Purchase price | 700 DKK | Confirmed |
 | Target OS | Ubuntu Server 26.04.1 LTS | **Planned — not installed** |
