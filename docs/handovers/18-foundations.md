@@ -53,6 +53,32 @@ At the same time, Phase 10 will put a private knowledge base on this node, which
 ADR-015 was accepted on. That decision cannot be deferred past Phase 10 because converting an
 unencrypted root filesystem afterwards generally means a reinstall.
 
+### 1.0 Correction, 2026-09-10: the node has a console after all
+
+**The premise this brief was written on was wrong, and the correction improves every option below.**
+
+Phase 03 recorded the console as *removed* and `project-state.md` says `Console: None`. Verified on
+the node today:
+
+```text
+card0-DP-1..3, card0-HDMI-A-1..3   present, status: disconnected
+getty@tty1                         enabled AND active
+usbhid                             present
+```
+
+The machine is in the owner's room and a monitor and keyboard are available. **The console is
+unplugged, not absent** — a login prompt is already running and a USB keyboard is picked up on
+plug-in. Attaching one is a walk across a room, not a rebuild.
+
+**What this changes:**
+
+1. **Lockout stops being unrecoverable.** ADR-020's checklist is still correct practice, but its
+   stated consequence — that a mistake strands a machine nobody can reach — does not hold. The
+   phrase "the reference node has no console" should read "has no *attached* console".
+2. **The second SSH recovery path (§4.1) drops in priority.** The console *is* a recovery path, and
+   a better one than a second key: it survives network, firewall, SSH and Tailscale failure alike.
+3. **Two encryption options come back**, and §6.1 is amended accordingly.
+
 ### 1.1 This phase is lockout-class throughout
 
 Almost everything in scope is on the ADR-020 list: bootloader, disk layout, authentication, and the
@@ -163,8 +189,8 @@ Options, with their actual constraints on **this** hardware:
 | # | Option | Unattended boot survives? | Verdict going in |
 |---|---|---|---|
 | A | Stay unencrypted; constrain what the node stores | Yes | Honest fallback. Requires saying what the node may not hold |
-| B | Full-disk LUKS, passphrase typed at boot | **No** | Rejected on arrival — needs a console the node does not have |
-| C | Full-disk LUKS, TPM-released key | Yes, **but** | **Blocked by §2.1.** Needs TPM 2.0; this is 1.2 |
+| B | Full-disk LUKS, passphrase typed at boot | No, but | **Viable** (§1.0). Cost: a power cut leaves the node down until someone types the passphrase. The machine is in the owner's room, so that is minutes, not days |
+| C | Full-disk LUKS, TPM-released key | Yes, **but** | Needs TPM 2.0; this is 1.2. Reaching 2.0 means a firmware visit — **which is now cheap** (§1.0). Check whether the M700 offers Intel PTT |
 | D | Network-bound unlock (Clevis/Tang) | Yes, **but** | Needs a second always-on machine that does not exist, and its failure mode is an unbootable node |
 | E | **Encrypt a separate data volume, unlocked after boot** | Yes | Strongest fit — see below |
 | F | Filesystem-level encryption (`fscrypt`) on chosen directories | Yes | Same key-bootstrap problem as C/D, weaker protection, more moving parts |
@@ -189,11 +215,12 @@ Two obstacles must be faced honestly if E is chosen:
    reintroduces a boot-order problem for `homelab-model-helper` — or the decision explicitly accepts
    that they remain unencrypted, and says so.
 
-**Option C is not dead, but its price is physical.** Reaching TPM 2.0 would mean either enabling
-Intel PTT in firmware or applying a Lenovo TPM firmware update — both requiring a monitor and
-keyboard to be **reattached to a machine from which they were deliberately removed**. That is a
-legitimate choice, but it is a day of physical work and a lockout-class change, and it should be
-chosen deliberately rather than drifted into.
+**Option C's price was overstated and is now corrected.** Reaching TPM 2.0 means enabling Intel PTT
+in firmware, or a Lenovo TPM firmware update. This brief originally called that "a day of physical
+work" on the premise that the console was gone. Per §1.0 it is a firmware visit to a machine in the
+owner's room. **The first thing this phase should do is look in the BIOS and find out whether PTT is
+offered**, because if it is, Option C — encrypted root with unattended boot — becomes available and
+is strictly better than B.
 
 **This phase must produce an ADR either way**, superseding or explicitly reaffirming ADR-015.
 Reaffirming is a valid outcome; silently leaving it is not.

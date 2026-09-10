@@ -149,9 +149,63 @@ in particular would have been reported as "protection is not working" had it not
 
 Both canary branches were deleted afterwards and the remote's branch list was confirmed unchanged.
 
+## 8. Reassessment — the LAN is not a home network
+
+**Added after the review's central assumption was checked with the owner and found false.**
+
+Everything above assumed a private home LAN with a handful of trusted devices. The actual situation:
+
+| Fact | Established by |
+|---|---|
+| The Wi-Fi is shared across **40–50 rooms** | The owner |
+| The router is **not under the owner's control** | The owner |
+| The router's management interface **is reachable from the internet** | The owner loaded its login page from cellular, off-Wi-Fi |
+| The router is an EOL business gateway answering SSH with **OpenSSH 7.0** (2015) on its public address | Banner comparison |
+| The subnet is **`192.168.0.0/21` — 2046 usable addresses**, one flat network | `ip -4 addr` on the node |
+
+**No port is forwarded to the node** — that part of §2 stands, and was proved by host-key
+comparison: the public address answers with a different SSH implementation, version and key from the
+node's. Nothing can be auto-forwarded either; `tailscale netcheck` reports no UPnP, NAT-PMP or PCP.
+
+**But the LAN itself must now be treated as hostile**, and three deferred decisions were reasoned on
+a premise that no longer holds:
+
+| Deferred as | Actual situation |
+|---|---|
+| No firewall — *"Phase 13"* | The single control that matters on an untrusted flat /21 |
+| No encryption at rest — *"the node holds nothing sensitive"* | Physical-access risk in a shared building is materially higher than in a private home |
+| LAN SSH as a *"fallback access path"* | The fallback is two thousand strangers' network |
+
+**`0.0.0.0:22` is the finding.** SSH is reachable by every host on that /21. Authentication is
+public-key only (ADR-018), so this is exposure rather than vulnerability — but it is an exposed
+service on a network the owner does not control, in front of a router they cannot patch.
+
+**Wi-Fi confidentiality between residents is effectively nil.** On a shared WPA2 passphrase, anyone
+holding it can decrypt another station's traffic given a captured handshake. SSH, Tailscale and
+HTTPS are unaffected, being encrypted end to end. The correct mental model for the link is **open
+Wi-Fi**.
+
+**This validates ADR-005 and ADR-019 emphatically** — Tailscale was the right choice. It is simply
+not finishing the job while SSH also listens on the shared interface.
+
+## 9. Correction — the node has a console
+
+Phase 03 recorded the console as removed and `project-state.md` said `Console: None`. Verified today:
+six video outputs present, `getty@tty1` **enabled and active**, `usbhid` loaded, and the machine is
+in the owner's room with a monitor and keyboard available.
+
+**The console is unplugged, not absent.** ADR-020's checklist remains good practice, but its stated
+consequence — that a mistake strands an unreachable machine — does not hold. Lockout costs a walk
+across a room.
+
+This lowers the risk of the firewall change below, lowers the priority of Phase 18's second SSH
+recovery path, and reopens two encryption options that the Phase 18 brief had ruled out. Corrected
+in that brief and in `project-state.md`.
+
 ## 7. Recommended, not applied
 
-- **Verify the router forwards no port to the node** (§2). Highest-value unverified item.
+- ~~Verify the router forwards no port to the node.~~ **Done — none is** (§8).
+- **Restrict SSH to the tailnet** (§8). Now the highest-value outstanding control.
 - **Commit signing.** The correct mitigation for §1's attack, because it lets the owner confirm a
   script came from them before running it with `sudo`. Requires a signing key registered with
   GitHub, which needs a token scope this session does not have.

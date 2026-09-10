@@ -445,7 +445,7 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Listening | **6 sockets; `:22` only off-box.** Everything else on loopback or the tailnet. Docker, the AI CLIs and the bot published nothing — the bot long-polls outbound. **Unchanged by Phase 09: the model helper uses a UNIX socket, which is a file, not a port** |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | **24.4s** cold, headless, to reachable |
-| **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |
+| **Console** | **Unplugged, not absent.** DRM connectors all `disconnected` and the cable is removed, but six video outputs are present, `getty@tty1` is enabled **and active**, `usbhid` is loaded, and the machine is in the owner's room with a monitor and keyboard available. **Corrected 2026-09-10** — earlier text said `None`, which overstated it and made lockout look unrecoverable |
 
 Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and
 `scripts/server/verify-remote-access.sh` (Phase 03 posture; run under `sudo` for a complete report).
