@@ -6,6 +6,30 @@ This project uses this file for meaningful repository-level milestones rather th
 
 ### Added
 
+- **Workspace reorganisation (2026-09-10, ADR-030).** The repository split ADR-029 described was
+  carried out on the development machine and on GitHub. The node was deliberately left untouched:
+  cloning private repositories onto an unencrypted, unbacked-up root filesystem is the event ADR-015
+  exists to be revisited before, and that is Phase 18's decision.
+  - **Four layers**, each with one home: infrastructure (`homelab`), execution (`factory`), projects
+    (`projects/<name>`, one private repository each) and knowledge (`brain`).
+  - **ADR-030** adds the `projects/` layer and closes the question ADR-029 §6 left open — **every
+    project carries its own `ops/`** beside the product rather than inside it, which makes the
+    Factory's own self-hosting records just another project's ops.
+  - **The method layer existed twice** and was diverging: Factory was published on 2026-09-10 but
+    never removed from the knowledge base, leaving 90 files in both places, every one already
+    differing because Factory's copies were anonymised. Removed from the knowledge base, gated on a
+    counterpart existing at the mapped path rather than on content equality — equality would have
+    been the wrong test and blocked every deletion. The check was validated in both directions
+    against planted controls before it was trusted.
+  - **Two new private repositories**, both extracted with `git-filter-repo` and verified
+    byte-identical against the source before anything was deleted: `oncla` (159 files, 89 commits)
+    and `factory-ops` (156 ops records, 26 commits).
+  - The knowledge base went from **896 tracked files to 497** and now holds knowledge and its own
+    operating layer, nothing else. Its two branches were merged and `project/ONCLA` retired.
+  - **Links in records were left broken on purpose.** 50 links in live documents were rewritten;
+    ~300 in session notes and the append-only log still point at old paths, with a translation table
+    added instead. Records say what was true when written (`PROJECT.md` §11).
+
 - **Security reassessment and firewall (2026-09-10, out of phase).** Answering whether publishing
   the repository was safe uncovered that the premise every earlier security decision rested on was
   false. The node is not on a home LAN: it sits on a shared building network, a flat
