@@ -6,6 +6,51 @@ This project uses this file for meaningful repository-level milestones rather th
 
 ### Added
 
+- **Security reassessment and firewall (2026-09-10, out of phase).** Answering whether publishing
+  the repository was safe uncovered that the premise every earlier security decision rested on was
+  false. The node is not on a home LAN: it sits on a shared building network, a flat
+  `192.168.0.0/21` with 2046 usable addresses, whose edge is administered by a third party and can
+  be neither audited nor reconfigured by this project.
+  - **`ufw` applied**, closing SSH to the shared network while keeping the tailnet path. Proved in
+    three directions: tailnet SSH works, LAN SSH times out, and ICMP to the same address succeeds —
+    the last proving the host is up and the port filtered rather than the machine unreachable.
+  - **Branch protection on `main`** — force pushes and deletion blocked, enforced on admins. Proved
+    by attempting a violation, which took four attempts; the first three were invalid and each
+    looked like a pass.
+  - **No port is forwarded to the node**, proved by SSH host-key comparison rather than assumed.
+  - `scripts/server/apply-firewall.sh` arms a timed self-revert *before* applying anything.
+  - New guide: `guide/security-shared-network/`.
+  - Corrected: **the node has a console** — unplugged, not absent — which reopens two encryption
+    options Phase 18 had ruled out, and the TPM is **1.2, not 2.0**.
+  - `scan-history.sh` gained a Telegram bot token class; the scanner predated that secret by three
+    phases. A systemd template instance name had also been tripping the email class, leaving the
+    gate permanently red since Phase 09.
+
+- **Architecture contracts (2026-09-10).** Four ADRs written ahead of Phase 18 and carried into its
+  brief per ADR-017, defining how this repository relates to a separate public `factory` repository
+  and to private knowledge/product repositories:
+  - **ADR-026** — multi-provider model access. Metered providers become the target substrate with
+    the vendor deliberately unnamed; models become configuration rather than code; every provider
+    entry carries an `unattended` eligibility field the router enforces structurally. Subscription
+    providers may serve unattended calls **as an owner-accepted risk**, recorded as a disagreement
+    with both positions written down. Supersedes ADR-025 §9; discharges ADR-008's "later
+    experiments" clause.
+  - **ADR-027** — the agent contract. System agents (homelab) versus work agents (Factory), decided
+    by whether a component survives The Factory being swapped out. An agent declares context,
+    skills, tools, model policy and unattended eligibility, and **never names a model**. Factory
+    declares, homelab enforces. Declared tools are intersected with caller authorisation, so an
+    agent is never a privilege escalation path.
+  - **ADR-028** — the project contract. The Factory is stateless method; each project carries its
+    own coordination layer and **references** Factory definitions rather than copying them, because
+    a copy forks silently while a reference breaks loudly. Answers the question left open in the
+    Factory workspace `FIRST-USE.md`.
+  - **ADR-029** — repository topology. Four repositories split on **method public, output private**,
+    enforced by a check validated against planted content rather than by care.
+
+  No implementation has been done against any of them. ADR-025's other properties — the credential
+  boundary and the bounded outbound context — are untouched.
+
+
 - Initial Home Lab repository bootstrap structure.
 - Project governance and contributor rules.
 - Initial ADR set based on pre-development planning.

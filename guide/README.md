@@ -33,6 +33,16 @@ Current bootstrap topics:
 - [`00-reference-build`](00-reference-build/README.md)
 - [`00-budget-and-costs`](00-budget-and-costs/README.md)
 
+## Out-of-phase guides
+
+Work that did not belong to a numbered phase but changed the reference build.
+
+- [`security-shared-network`](security-shared-network/README.md) — securing a node on a network you
+  do not control. Why the "home LAN" premise every earlier security decision rested on was wrong,
+  how to prove whether a port is forwarded to you (the answer is a host key), applying a firewall
+  over the connection it might break, and why verifying it needs three tests rather than one.
+  *(2026-09-10. Closes the "no firewall" risk carried since Phase 01; Phase 13 still owns the rest.)*
+
 ## Implementation-phase guides
 
 These mirror the numbered project roadmap.

@@ -25,7 +25,11 @@ Grouped by the question being asked, like
 
 Docker publishes with a DNAT rule in `nat/PREROUTING`, evaluated **before**
 `filter/INPUT`. A published port is reachable even when a host firewall denies
-it. There is no firewall on this node yet; when Phase 13 adds one, this stays
+it. **A firewall now exists** (added 2026-09-10 out of phase — `ufw`, default deny
+inbound, allow on `tailscale0`). It does **not** change this: Docker's DNAT still
+runs before `INPUT`, so a published port is reachable regardless of `ufw`. On a
+network shared with ~2000 hosts that matters more than it used to — bind
+containers to `127.0.0.1` or the tailnet, never `-p 8080:80`. This stays
 true.
 
 ---

@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-09
 - **Supersedes:** none
-- **Superseded by:** none
+- **Superseded by:** ADR-026 (§9 only — see the note at §9; the rest of this ADR stands)
 
 ## Context
 
@@ -152,6 +152,13 @@ numeric fields cannot carry an instruction.
 **Widening this requires its own ADR.**
 
 ### 9. Owner-initiated only
+
+> **Superseded by ADR-026 on 2026-09-10.** The owner has decided that subscription providers may
+> serve unattended calls in the interim, as an accepted risk, and eligibility became a per-provider
+> field rather than a global rule. The reasoning below is retained because it explains why the
+> constraint existed and what accepting the risk actually costs. **Nothing else in this ADR is
+> affected** — the credential boundary (§1) and the bounded context (§8) stand.
+
 
 Every model call is traceable to a message the owner has just sent. No scheduled
 calls, no background calls, no autonomous calls.

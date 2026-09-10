@@ -219,6 +219,22 @@ Phase 02.
 
 Introduce file ingestion/indexing/retrieval while keeping source storage separate from agent intelligence. Begin with a simple RAG-style architecture before comparing more complex retrieval systems.
 
+**Amended 2026-09-10.** The knowledge base has already recorded its own retrieval architecture
+decision, independently of this project, and this phase should **adopt it rather than re-derive
+it**: Markdown stays the source of truth, every graph, vector index or summary is a rebuildable
+derived view, and the progression runs structured index → hybrid retrieval → lightweight graph →
+selective community summaries → full GraphRAG. That last step is gated by the knowledge base's own
+rule — **only once a known-answer eval set exists** and simpler retrieval has repeatedly failed on
+real questions.
+
+First slice is expected to be retrieval **with no model call at all**, so nothing new leaves the
+machine and ADR-025 §8 is untouched; widening `/ask` with retrieved context is a separate decision
+with its own ADR.
+
+**ADR-030 — the Knowledge Contract** is written in this phase, not before it: specifying how an
+agent queries the knowledge base before retrieval exists would be guessing. It implements ADR-010 as
+a queryable interface returning provenance, never raw filesystem access.
+
 **Inherited from Phase 01 — must be addressed, not inherited silently:**
 
 **ADR-015 must be explicitly revisited before this phase stores real data.** The reference node has
@@ -260,6 +276,20 @@ Move toward rebuilding/replacing the M700 with minimal manual configuration usin
 
 Experiment intentionally with direct APIs, multiple hosted providers, unified gateways, cost/latency/quality routing, fallbacks, and observability.
 
+**Amended 2026-09-10 — promoted, and it has already accidentally started.**
+`services/model-helper/providers.py` is already a two-provider router with independent per-provider
+limits and fallback proved against a genuinely exhausted provider. What does not exist is models as
+*configuration* rather than two entries hardcoded in Python.
+
+ADR-026 makes this phase load-bearing rather than exploratory: it is where the model registry, the
+`unattended` eligibility field, and task-class routing are built. **A sub-phase 15.0 can run before
+a metered provider is chosen**, generalising the existing router with the two subscription CLIs as
+its first two entries. That proves the structure at no cost and makes adding a paid provider a
+configuration change rather than a rewrite.
+
+The refusal path must be proved with a fixture provider set to `unattended: false`, against a
+positive control. An eligibility check that has only ever permitted is unvalidated.
+
 ## Phase 16 — Local AI / CUDA Node
 
 If justified, add a separate NVIDIA/CUDA-capable node and experiment with local inference, quantization, serving, and potentially fine-tuning without forcing the orchestration node to become a GPU workstation.
@@ -289,3 +319,38 @@ top of the interface, not the interface itself: it becomes worth having once the
 executor to talk to. Running order is expected to be after the foundations work (backup and the
 ADR-015 encryption decision), because voice notes and transcripts are the first data on this node
 that would be painful to lose or to have read.
+
+## Phase 18 — Foundations
+
+Give the node a recovery story before it holds anything expensive to lose.
+
+**Added 2026-09-10.** A new number rather than a renumbering, per the roadmap rule above. It carries
+the work the Phase 09 handover addressed to "the foundations phase", plus the debts Phase 03
+created and Phase 13 inherited but which cannot wait for a full hardening phase.
+
+Scope:
+
+- **A backup of the node.** It currently has none of any kind. Phase 04 gave the *repository* an
+  offsite copy; it did nothing for the machine. Verified by **restoring**, not by a backup job
+  reporting success.
+- **The ADR-015 encryption decision**, made deliberately and made *now*. The root filesystem is
+  unencrypted, accepted on the premise that the node held nothing sensitive. Phase 10 ends that
+  premise, and converting an unencrypted root filesystem afterwards generally means a reinstall.
+  This is the phase that decides, whichever way it decides.
+- **A second SSH recovery path.** Phase 03 removed the console and left a single Ed25519 key as the
+  only way into the machine. Losing it means losing a computer with no monitor attached.
+- **`eno1` is present and unused.** Wi-Fi is a single point of failure for *both* access routes, and
+  the node has demonstrated it can go dark. Worth resolving here rather than at Phase 13.
+
+Phase 13 remains the dedicated hardening phase — firewall, `fail2ban`, Tailscale ACLs, node-key
+expiry, rootless Docker. Phase 18 is narrower: it is about **recoverability**, not defence.
+
+## Repository split (not a numbered phase)
+
+Per ADR-029, the knowledge base splits into `factory` (public), a product repository (private) and `brain`
+(private). This is repository work rather than node work, so it carries no phase number and can run
+alongside Phase 18. It should not begin until ADR-027, ADR-028 and ADR-029 are settled, so each
+piece lands in its permanent home with its contract already defined.
+
+The split must be done with git operations, never by copying directories: the working tree holds
+several gigabytes of gitignored video and `node_modules`, against roughly 20 MB of tracked content.

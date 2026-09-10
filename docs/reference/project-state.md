@@ -3,9 +3,16 @@
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
 - **Current phase:** 09 — Model Executor, subscription-backed (**complete**, 2026-09-09). Next:
-  the **foundations** phase — backup plus the ADR-015 encryption decision — then Phase 17 (Voice),
-  10 (Knowledge), 11 (Frameworks), 12 (Automation). Voice was **moved out of Phase 09 to Phase 17**
-  at the owner's request; the roadmap records the reason rather than being quietly rewritten.
+  **Phase 18 — Foundations** (backup plus the ADR-015 encryption decision plus an SSH recovery
+  path), then Phase 15.0 (generalise the model router), the repository split, and Phase 10
+  (Knowledge). Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap
+  records the reason rather than being quietly rewritten.
+- **Architecture decisions taken 2026-09-10**, ahead of Phase 18 and carried into its brief per
+  ADR-017: ADR-026 (multi-provider model access), ADR-027 (the agent contract), ADR-028 (the project
+  contract) and ADR-029 (repository topology). These define how this repository — the **AI OS** —
+  relates to a separate public `factory` repository holding agent, skill and workflow definitions,
+  and to private repositories holding knowledge and products. No implementation has been done
+  against them yet.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -70,7 +77,16 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - progressive automation;
 - Docker as the container runtime baseline, rootful with non-root containers and explicit-interface
   port publishing (ADR-022);
-- known-working `main` branch.
+- known-working `main` branch;
+- **metered multi-provider model access as the target substrate**, vendor deliberately unnamed, with
+  models as configuration and per-provider unattended eligibility enforced by the router (ADR-026);
+- **agents declare a need, never a model**; Factory declares and homelab enforces; declared tools
+  are intersected with caller authorisation so an agent is never a privilege escalation path
+  (ADR-027);
+- **The Factory is stateless method; each project carries its own state** and references Factory
+  definitions rather than copying them (ADR-028);
+- **four repositories, split on method versus output** — `homelab` and `factory` public, `brain` and
+  the product repository private (ADR-029).
 
 ## Recently resolved (Phase 01 Part A, 2026-09-08)
 
@@ -214,6 +230,11 @@ every install.
 - **Rootful Docker without user-namespace remapping.** Container root maps to host root; mitigated by
   non-root container defaults and Compose hardening. Phase 13 should revisit rootless Docker or
   userns-remap on its merits.
+- ~~No firewall.~~ **Closed 2026-09-10, out of phase**, because the shared-network finding made it
+  the highest-value control available. `ufw` denies inbound by default and permits only `tailscale0`
+  plus Tailscale's UDP port. Applied with a timed self-revert and verified in both directions.
+  **Phase 13 still owns the rest** — `fail2ban` is deliberately absent (this server accepts no
+  passwords), node key expiry, Tailscale ACLs and rootless Docker are untouched.
 - **Docker and Tailscale now both own packet-filtering chains.** Docker publishes with DNAT before
   host firewall `INPUT` rules, so Phase 13 must design firewalling around Docker rather than
   assuming `ufw deny` controls published container ports.
@@ -228,11 +249,15 @@ every install.
   without revisiting. Phases 08 and 10.
 - **One thing can now change the system.** `/restart chrony`, scoped two ways and proved. Phase 07's
   property that a compromise could leak information but not act **no longer holds** (ADR-024).
-- **The licensing question is STILL OPEN, and Phase 09 did not resolve it.** ADR-008 covers
-  interactive use only. Phase 09 connected the model under a **constraint instead of an answer**:
-  every call is owner-initiated, in response to a message just sent (ADR-025 §9). It did **not**
-  copy an OAuth file to a service account — the credential never moved. **Phase 12 must not make
-  unattended model calls without a new ADR that addresses licensing directly.**
+- **The licensing question is still unresolved, and is now an *accepted risk* rather than an avoided
+  one.** ADR-008 covers interactive use only, and nothing since has established whether automating a
+  personal subscription falls within either provider's terms. Phase 09 avoided the question with a
+  constraint — owner-initiated calls only (ADR-025 §9). **On 2026-09-10 the owner decided to accept
+  the risk for the interim** and ADR-026 superseded §9: subscription providers may serve unattended
+  calls, with eligibility now a per-provider field the router enforces. The disagreement is recorded
+  in ADR-026 §5 rather than smoothed over — rate limiting bounds *capacity*, not terms, and the
+  residual exposure is account action or throttling. **The control that makes this reversible is the
+  `unattended` field, which must not be removed** just because every current entry is `true`.
 - **Data now leaves the machine on every `/ask`** — the owner's question plus the five `/status`
   figures, to Anthropic or OpenAI. Bounded deliberately: no logs, no file contents, no journal.
   Widening that context needs its own ADR, because anything able to write a log line could
@@ -248,6 +273,12 @@ every install.
 - **No alerting on the bot.** If it dies at 3am, nothing says so — and bounded logging means a quiet
   journal does not mean a healthy service.
 - Wi-Fi is a single point of failure for *both* access routes. `eno1` is present and unused.
+- **The LAN is not a home network, and must be treated as hostile.** Corrected 2026-09-10: the
+  node sits on a shared building network — a flat `192.168.0.0/21`, 2046 usable addresses, occupied
+  by many other tenants' devices — whose edge is administered by a third party and can be neither
+  audited nor reconfigured by this project. Confidentiality between residents on a shared WPA2
+  passphrase is effectively nil. **Treat the link as open Wi-Fi.** No port is forwarded to the node
+  — proved by SSH host-key comparison — and no auto-forwarding protocol is available.
 - No encryption at rest (ADR-015), which compounds with the cleartext Wi-Fi passphrase (ADR-016).
   Phase 13 should treat these together.
 - **Phase 10 must not silently inherit ADR-015.** Once the node stores significant sensitive or
@@ -422,10 +453,10 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Restart limit | **`StartLimitIntervalUSec=5min`** on the running unit — was silently 10s until Phase 09 fixed it |
 | Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |
 | Service hardening | `systemd-analyze security` → **1.3 OK** |
-| Listening | **6 sockets; `:22` only off-box.** Everything else on loopback or the tailnet. Docker, the AI CLIs and the bot published nothing — the bot long-polls outbound. **Unchanged by Phase 09: the model helper uses a UNIX socket, which is a file, not a port** |
+| Listening | **6 sockets, unchanged — but `:22` is now FILTERED on the shared Wi-Fi.** `ufw` is active and enabled at boot: default deny inbound, allow on `tailscale0`, plus UDP 41641 on `wlp1s0` for Tailscale direct connections. sshd still *binds* `0.0.0.0:22`; ufw drops the packets before they reach it. **Proved 2026-09-10** — LAN SSH times out while ICMP to the same address succeeds |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | **24.4s** cold, headless, to reachable |
-| **Console** | **None.** Monitor, keyboard and DP→HDMI cable removed; all DRM connectors `disconnected` |
+| **Console** | **Unplugged, not absent.** DRM connectors all `disconnected` and the cable is removed, but six video outputs are present, `getty@tty1` is enabled **and active**, `usbhid` is loaded, and the machine is in the owner's room with a monitor and keyboard available. **Corrected 2026-09-10** — earlier text said `None`, which overstated it and made lockout look unrecoverable |
 
 Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and
 `scripts/server/verify-remote-access.sh` (Phase 03 posture; run under `sudo` for a complete report).
