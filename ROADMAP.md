@@ -354,3 +354,22 @@ piece lands in its permanent home with its contract already defined.
 
 The split must be done with git operations, never by copying directories: the working tree holds
 several gigabytes of gitignored video and `node_modules`, against roughly 20 MB of tracked content.
+
+### Done on the laptop, 2026-09-10 (ADR-030)
+
+**The split is complete on the development machine and on GitHub.** It was done with
+`git-filter-repo`, not by copying, and each extraction was verified byte-identical against the
+source before anything was deleted.
+
+| Layer | Repository | State |
+|---|---|---|
+| Infrastructure | `homelab` | public, unchanged |
+| Execution | `factory` | public; the duplicate copy in the knowledge base is gone |
+| Projects | `projects/oncla`, `projects/factory` | **new**, both private |
+| Knowledge | `brain` | private; 896 tracked files → 497 |
+
+ADR-030 adds the `projects/` layer and closes ADR-029 §6 — every project carries its own `ops/`.
+
+**Nothing was cloned onto the node.** That half is still gated by Phase 18, for the reason the
+migration plan gave: cloning private repositories onto an unencrypted root filesystem with no
+backup is exactly the event ADR-015 exists to be revisited before.

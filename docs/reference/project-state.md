@@ -11,8 +11,9 @@
   ADR-017: ADR-026 (multi-provider model access), ADR-027 (the agent contract), ADR-028 (the project
   contract) and ADR-029 (repository topology). These define how this repository — the **AI OS** —
   relates to a separate public `factory` repository holding agent, skill and workflow definitions,
-  and to private repositories holding knowledge and products. No implementation has been done
-  against them yet.
+  and to private repositories holding knowledge and products. **ADR-030 (2026-09-10) implemented
+  the split on the development machine and added a fourth layer, `projects/`** — see below. The node
+  is untouched: no repository has been cloned onto it, because that is gated by Phase 18.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -54,6 +55,41 @@ The agreed closure condition was that the Part A checklist be recorded in
 layout, storage, wireless adapter and CPU; physical validation confirmed USB ports, video output and
 acceptable fan noise. **Phase 00 is finished** — see `ROADMAP.md`.
 
+## Workspace reorganisation, 2026-09-10 (ADR-030)
+
+**Done on the development machine and on GitHub. The node was deliberately not touched.**
+
+| Layer | Repository | Visibility | Change |
+|---|---|---|---|
+| Infrastructure | `homelab` | public | unchanged |
+| Execution | `factory` | public | unchanged; its duplicate copy inside the knowledge base was deleted |
+| Projects | `projects/oncla` | **new**, private | 159 files, 89 commits, extracted from the knowledge base with history |
+| Projects | `projects/factory` (`factory-ops`) | **new**, private | 156 ops records, 26 commits, extracted with history |
+| Knowledge | `brain` | private | 896 tracked files → 497; holds knowledge and its own operating layer, nothing else |
+
+What was resolved:
+
+- **The method layer existed twice.** Factory was extracted and published on 2026-09-10 but never
+  removed from its source, leaving 90 files in both places — every one already differing, because
+  Factory's copies were anonymised. Deleted from the knowledge base, gated on a counterpart existing
+  at the mapped path (90/90 matched), with the check validated in both directions against planted
+  controls first.
+- **The knowledge base held a product and an ops record.** Both are now their own private
+  repositories under `projects/`.
+- **`brain` had two branches.** `project/ONCLA` was 10 commits ahead of `main` and 97 behind;
+  merged and retired, so the knowledge base has one history.
+- **A stash from 2026-06-02** was found and checked rather than discarded: 87 of its 90 added lines
+  were already on `main`, and the remaining two were a date string and a rewritten log heading. Fully
+  superseded. It survives in the backup bundle.
+
+What was deliberately **not** done: no repository was cloned onto the reference node. The node still
+has an unencrypted root filesystem and no backup, and putting private repositories on it is the
+event ADR-015 exists to be revisited before. Phase 18 owns that decision.
+
+Links: 50 in live documents were rewritten; ~300 in session notes and the append-only log were left
+pointing at old paths, with a translation table in the knowledge base's `05-logs/README.md`. Records
+say what was true when written (`PROJECT.md` §11).
+
 ## Accepted high-level decisions
 
 See `docs/decisions/` for full ADRs. Current direction includes:
@@ -86,7 +122,11 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - **The Factory is stateless method; each project carries its own state** and references Factory
   definitions rather than copying them (ADR-028);
 - **four repositories, split on method versus output** — `homelab` and `factory` public, `brain` and
-  the product repository private (ADR-029).
+  the product repository private (ADR-029);
+- **four workspace layers** — infrastructure, execution, projects and knowledge — with `projects/` a
+  plain directory holding one private repository per project, and **every project carrying its own
+  `ops/`** beside the product rather than inside it. Closes the question ADR-029 §6 left open, by
+  making the Factory's own self-hosting records just another project's ops (ADR-030).
 
 ## Recently resolved (Phase 01 Part A, 2026-09-08)
 

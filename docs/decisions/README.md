@@ -67,3 +67,14 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   useful to someone with none of the owner's knowledge or history; public repositories ship
   synthetic examples, never samples of real notes; the boundary is enforced by a check validated
   against planted content rather than by care.
+
+- [`ADR-030-workspace-layers-and-project-ops.md`](ADR-030-workspace-layers-and-project-ops.md) — the
+  four-layer workspace and where project ops records live: infrastructure, execution, projects and
+  knowledge, with `projects/` a plain directory holding one private repository per project; **every
+  project carries its own `ops/`** beside the product rather than inside it, which closes the
+  question ADR-029 §6 left open by making the Factory's self-hosting records just another project's
+  ops; the knowledge base holds knowledge and its own operating layer, nothing else; where a file
+  existed in both the knowledge base and Factory the public copy wins, and deletion is gated on a
+  counterpart existing rather than on content equality, because anonymisation guarantees the
+  contents differ; and links in records are left broken with a translation table rather than
+  rewritten, applying `PROJECT.md` §11 to link maintenance.
