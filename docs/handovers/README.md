@@ -51,3 +51,5 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 | `06-ai-cli-access-handover.md` | Phase 06 completion handover | **Written** 2026-09-09 — addressed to Phase 07; outcome Complete |
 | `09-model-executor.md` | Phase 09 brief | **Accepted** 2026-09-09, self-ratified under ADR-017; committed before implementation as `351f825`. Carries the roadmap amendment (Voice → Phase 17) in its §0.1 |
 | `09-model-executor-handover.md` | Phase 09 completion handover | **Written** 2026-09-09 — addressed to the **foundations** phase (backup + ADR-015 encryption); outcome Complete. Records three deviations |
+| `18-foundations.md` | Phase 18 brief | **Accepted** 2026-09-10, self-ratified under ADR-017; committed before implementation. Carries ADR-026..029 forward per §0.2, and records the **TPM 1.2** finding that reshapes the ADR-015 decision |
+| `15.0-model-registry.md` | Phase 15.0 brief | **Accepted** 2026-09-10, self-ratified under ADR-017; committed before implementation. Implements ADR-026 §2/§3/§4/§6. Sequenced **after** Phase 18, since the node still has no backup |

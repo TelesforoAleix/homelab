@@ -6,6 +6,31 @@ This project uses this file for meaningful repository-level milestones rather th
 
 ### Added
 
+- **Architecture contracts (2026-09-10).** Four ADRs written ahead of Phase 18 and carried into its
+  brief per ADR-017, defining how this repository relates to a separate public `factory` repository
+  and to private knowledge/product repositories:
+  - **ADR-026** — multi-provider model access. Metered providers become the target substrate with
+    the vendor deliberately unnamed; models become configuration rather than code; every provider
+    entry carries an `unattended` eligibility field the router enforces structurally. Subscription
+    providers may serve unattended calls **as an owner-accepted risk**, recorded as a disagreement
+    with both positions written down. Supersedes ADR-025 §9; discharges ADR-008's "later
+    experiments" clause.
+  - **ADR-027** — the agent contract. System agents (homelab) versus work agents (Factory), decided
+    by whether a component survives The Factory being swapped out. An agent declares context,
+    skills, tools, model policy and unattended eligibility, and **never names a model**. Factory
+    declares, homelab enforces. Declared tools are intersected with caller authorisation, so an
+    agent is never a privilege escalation path.
+  - **ADR-028** — the project contract. The Factory is stateless method; each project carries its
+    own coordination layer and **references** Factory definitions rather than copying them, because
+    a copy forks silently while a reference breaks loudly. Answers the question left open in the
+    Factory workspace `FIRST-USE.md`.
+  - **ADR-029** — repository topology. Four repositories split on **method public, output private**,
+    enforced by a check validated against planted content rather than by care.
+
+  No implementation has been done against any of them. ADR-025's other properties — the credential
+  boundary and the bounded outbound context — are untouched.
+
+
 - Initial Home Lab repository bootstrap structure.
 - Project governance and contributor rules.
 - Initial ADR set based on pre-development planning.

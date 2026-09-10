@@ -282,6 +282,33 @@ check FAIL "AWS access key ids" \
 check FAIL "Slack tokens" \
   'xox[baprs]-[A-Za-z0-9-]{10,}'
 
+# Added 2026-09-10, and the reason it was missing is worth keeping: this
+# scanner was written in Phase 04. The Telegram bot token arrived in Phase 07.
+# THE SCANNER PREDATED THE SECRET, and nothing prompted a re-check when the
+# secret was introduced -- so for three phases the repository's own gate was
+# blind to the single credential this project handles most often.
+#
+# This file's catch-all high-entropy class does not cover it: that requires a
+# 48-character run of [A-Za-z0-9+/], and a Telegram token's longest such run
+# is 34.
+#
+# gitleaks DOES detect these, and an earlier version of this comment wrongly
+# said it did not. The test token used to establish that had a 34-character
+# auth segment instead of 35, so gitleaks correctly declined to match a
+# malformed token and the malformed token was read as a scanner defect. The
+# error surfaced because the check below also failed its positive control on
+# the same bad fixture -- two failing checks agreeing looked like confirmation
+# until the fixture itself was measured. A positive control validates the
+# detector; nothing was validating the fixture.
+#
+# Format: <bot id>:<auth token>, where the id is 8-10 digits and the auth
+# token is exactly 35 characters of [A-Za-z0-9_-]. The real ones observed in
+# the wild begin "AA", but that is not matched on -- an undocumented prefix is
+# a bad thing to make a security control depend on.
+check FAIL "Telegram bot tokens" \
+  '\b[0-9]{8,10}:[A-Za-z0-9_-]{35}\b' \
+  "$EVIDENCE"
+
 # A wifi passphrase in netplan appears as a bare `password:` under the SSID.
 # The repository's example files use an obvious placeholder, which is allowed.
 check FAIL "wifi passphrase / psk" \
@@ -304,9 +331,21 @@ check FAIL "MAC addresses" \
 # Added after `fixture@invalid.example` -- a doubly-reserved documentation
 # address -- was flagged CRITICAL in a guide. Note the gate worked: it caught
 # it in the working tree, before the commit.
+# systemd TEMPLATE INSTANCE NAMES are not email addresses, but they are
+# shaped like them: homelab-model-helper@probe.service matches user@host.tld
+# because ".service" satisfies \.[A-Za-z]{2,}. This project uses templated
+# units (ADR-025 runs the model helper with Accept=yes, one instance per
+# connection), so this recurs and is not a one-off.
+#
+# Excluded by unit-type suffix rather than by naming each instance, because a
+# per-instance allowlist would need editing every time a template is added --
+# and by this script's own reasoning, a gate that is permanently red is a gate
+# people wave through. The suffixes below are systemd unit types. None of them
+# is a real TLD, so this cannot hide a genuine address. Note ".services" IS a
+# gTLD, and \b after "service" means it is still caught.
 check FAIL "email addresses" \
   '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b' \
-  "users\.noreply\.github\.com|noreply@anthropic\.com|@[A-Za-z0-9.-]*\.(example|invalid|test|localhost)\b|@example\.(com|net|org)\b|$EVIDENCE"
+  "users\.noreply\.github\.com|noreply@anthropic\.com|@[A-Za-z0-9.-]*\.(example|invalid|test|localhost)\b|@example\.(com|net|org)\b|@[A-Za-z0-9_.-]+\.(service|socket|timer|target|mount|path|slice)\b|$EVIDENCE"
 
 # A real tailnet is a name plus .ts.net. The repo's placeholders are excluded;
 # anything else reaching this line is a real tailnet name and must not ship.

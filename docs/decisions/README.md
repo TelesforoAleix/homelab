@@ -38,3 +38,32 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   automatic fallback, caps enforced before the call, only the question and `/status` leave the
   machine, and **owner-initiated only** — the constraint that stands in for the unresolved
   licensing question.
+
+- [`ADR-026-multi-provider-model-access.md`](ADR-026-multi-provider-model-access.md) —
+  multi-provider model access and routing: metered providers become the target substrate with the
+  vendor deliberately unnamed, models become configuration rather than code, every provider entry
+  carries an `unattended` eligibility field the router enforces structurally, callers declare a need
+  rather than a model, and subscription providers may serve unattended calls **as an owner-accepted
+  risk** — recorded as a disagreement, with the mechanism keeping it reversible one provider at a
+  time. Supersedes ADR-025 §9; discharges ADR-008's "later experiments".
+
+- [`ADR-027-agent-contract.md`](ADR-027-agent-contract.md) — the agent contract: system agents
+  (homelab) are distinguished from work agents (Factory) by whether they survive The Factory being
+  swapped out; an agent declares context, skills, tools, model policy and unattended eligibility but
+  **never names a model**; Factory declares and homelab enforces, because enforcement belongs where
+  it is enforced; declared tools are intersected with caller authorisation so an agent is never a
+  privilege escalation path; an unknown tool name is a load failure rather than a warning.
+
+- [`ADR-028-project-contract.md`](ADR-028-project-contract.md) — the project contract: The Factory
+  is stateless method and the project carries all state; every Factory-managed project holds its own
+  coordination layer in its own repository; project-local `agents/` **references** Factory rather
+  than copying it, because a copy forks silently while a reference breaks loudly; a project may
+  narrow an agent but never widen it; each project records the Factory version it ran under.
+  Answers the question left open in the Factory workspace `FIRST-USE.md`.
+
+- [`ADR-029-repository-topology.md`](ADR-029-repository-topology.md) — repository topology and the
+  method/output boundary: four repositories, with `homelab` and `factory` public and `brain` and
+  the product repository private; **method is public, output is private**, tested by asking whether a file would be
+  useful to someone with none of the owner's knowledge or history; public repositories ship
+  synthetic examples, never samples of real notes; the boundary is enforced by a check validated
+  against planted content rather than by care.

@@ -3,9 +3,16 @@
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
 - **Current phase:** 09 — Model Executor, subscription-backed (**complete**, 2026-09-09). Next:
-  the **foundations** phase — backup plus the ADR-015 encryption decision — then Phase 17 (Voice),
-  10 (Knowledge), 11 (Frameworks), 12 (Automation). Voice was **moved out of Phase 09 to Phase 17**
-  at the owner's request; the roadmap records the reason rather than being quietly rewritten.
+  **Phase 18 — Foundations** (backup plus the ADR-015 encryption decision plus an SSH recovery
+  path), then Phase 15.0 (generalise the model router), the repository split, and Phase 10
+  (Knowledge). Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap
+  records the reason rather than being quietly rewritten.
+- **Architecture decisions taken 2026-09-10**, ahead of Phase 18 and carried into its brief per
+  ADR-017: ADR-026 (multi-provider model access), ADR-027 (the agent contract), ADR-028 (the project
+  contract) and ADR-029 (repository topology). These define how this repository — the **AI OS** —
+  relates to a separate public `factory` repository holding agent, skill and workflow definitions,
+  and to private repositories holding knowledge and products. No implementation has been done
+  against them yet.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -70,7 +77,16 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - progressive automation;
 - Docker as the container runtime baseline, rootful with non-root containers and explicit-interface
   port publishing (ADR-022);
-- known-working `main` branch.
+- known-working `main` branch;
+- **metered multi-provider model access as the target substrate**, vendor deliberately unnamed, with
+  models as configuration and per-provider unattended eligibility enforced by the router (ADR-026);
+- **agents declare a need, never a model**; Factory declares and homelab enforces; declared tools
+  are intersected with caller authorisation so an agent is never a privilege escalation path
+  (ADR-027);
+- **The Factory is stateless method; each project carries its own state** and references Factory
+  definitions rather than copying them (ADR-028);
+- **four repositories, split on method versus output** — `homelab` and `factory` public, `brain` and
+  the product repository private (ADR-029).
 
 ## Recently resolved (Phase 01 Part A, 2026-09-08)
 
@@ -228,11 +244,15 @@ every install.
   without revisiting. Phases 08 and 10.
 - **One thing can now change the system.** `/restart chrony`, scoped two ways and proved. Phase 07's
   property that a compromise could leak information but not act **no longer holds** (ADR-024).
-- **The licensing question is STILL OPEN, and Phase 09 did not resolve it.** ADR-008 covers
-  interactive use only. Phase 09 connected the model under a **constraint instead of an answer**:
-  every call is owner-initiated, in response to a message just sent (ADR-025 §9). It did **not**
-  copy an OAuth file to a service account — the credential never moved. **Phase 12 must not make
-  unattended model calls without a new ADR that addresses licensing directly.**
+- **The licensing question is still unresolved, and is now an *accepted risk* rather than an avoided
+  one.** ADR-008 covers interactive use only, and nothing since has established whether automating a
+  personal subscription falls within either provider's terms. Phase 09 avoided the question with a
+  constraint — owner-initiated calls only (ADR-025 §9). **On 2026-09-10 the owner decided to accept
+  the risk for the interim** and ADR-026 superseded §9: subscription providers may serve unattended
+  calls, with eligibility now a per-provider field the router enforces. The disagreement is recorded
+  in ADR-026 §5 rather than smoothed over — rate limiting bounds *capacity*, not terms, and the
+  residual exposure is account action or throttling. **The control that makes this reversible is the
+  `unattended` field, which must not be removed** just because every current entry is `true`.
 - **Data now leaves the machine on every `/ask`** — the owner's question plus the five `/status`
   figures, to Anthropic or OpenAI. Bounded deliberately: no logs, no file contents, no journal.
   Widening that context needs its own ADR, because anything able to write a log line could
