@@ -368,6 +368,11 @@ observed to pass. **An authorisation check that has only ever permitted is unval
 
 **Prerequisite for:** Phase 20, and through it Phase 22.
 
+- Brief: [`docs/handovers/19-tool-vocabulary.md`](docs/handovers/19-tool-vocabulary.md) — committed
+  before implementation per ADR-017. Proposes a **five-name** vocabulary (`read_host_status`,
+  `ask_model`, `restart_service`, `read_repo`, `post_review`), keeps ADR-025's two locks shut, and
+  specifies the planted positive control that proves the refusal actually fires.
+
 ## Phase 20 — Factory Rewrite
 
 Rewrite The Factory: **keep the content, discard the markdown-heavy format** (ADR-031 §7). The format
