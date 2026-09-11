@@ -253,6 +253,20 @@ is designed and built **together with** the ingestion pipeline and the RAG syste
 before them, so that content migrates into a structure that has actually been designed. Until then
 the existing private `brain` stays as it is, under its current name.
 
+**Sub-phases, made real 2026-09-11 (ADR-045 §8).** They were sketched in this roadmap's own sub-phase
+example and never filled in:
+
+| | Scope |
+|---|---|
+| **10.1** | Ingestion — what enters the knowledge base, how, and what stays canonical |
+| **10.2** | Vector retrieval — the first rebuildable derived view |
+| **10.3** | Hybrid search — structured plus semantic, before anything graph-shaped |
+
+**Phase 21**'s `brain` repository split runs with them (ADR-031 §6, as amended) rather than before.
+
+**All of it depends on 18.1 and 18.2**, not on ADR-032's gate being lifted — the gate is discharged
+for the encrypted volume, and that volume is where knowledge lives.
+
 **Inherited from Phase 01 — must be addressed, not inherited silently:**
 
 ~~**ADR-015 must be explicitly revisited before this phase stores real data.**~~ **Done.** ADR-032
@@ -264,9 +278,35 @@ real data **in that volume**, and root stays unencrypted and may not hold it.
 
 Introduce one or more agent frameworks only after the manually built architecture is understood. Compare what abstractions they replace, what they solve, and what complexity they add.
 
-## Phase 12 — Automation
+**Superseded 2026-09-11 (ADR-045 §7).** The question was *what would a framework replace* — and it has
+been answered by building the thing instead. **ADR-034** settled the agent contract and **Phase 20.0**
+settled execution. The phase is marked rather than deleted: if a framework is wanted later, the
+question becomes *"does it replace what we built, and at what cost"*, which is a better question and
+needs its own brief.
 
-Add scheduled or event-driven workflows where concrete use cases justify them.
+## Phase 12 — Scheduling, monitoring and notifications
+
+The always-running plumbing: the **scheduler** as a trigger source, a **watchdog** that observes, and
+a **notifier** that reports.
+
+**Repurposed 2026-09-11 (ADR-045 §3), correcting an earlier assessment.** The target architecture
+first recorded this phase as *absorbed*, on the grounds that the scheduler is a client at layer 1
+rather than a phase of its own. That was half right and it dropped something real — the monitoring
+and notification half has no other home.
+
+- **Recovery-oriented, not real-time.** If the whole node is down, nothing on it can tell you.
+  Reporting on recovery needs no external watcher, and the node can work out how long it was gone
+  from its own logs.
+- **The watchdog must not share a process with what it watches**, or a crash is silent.
+- **It lives on unencrypted root**, so it works the moment the node boots — which is what lets it
+  send *"back up, down 14 minutes, data volume still locked"* after a power cut (ADR-037 §4).
+- Telegram is the channel in both directions: instructions in, notifications out, and **no listening
+  socket** either way.
+
+Scheduled triggers are ordinary requests with no human waiting (**ADR-040**); the control is budget,
+not attribution.
+
+**Useful early — right after 18.1** — because the unlock reminder is the notification that matters most.
 
 ## Phase 13 — Security Hardening
 
@@ -307,6 +347,18 @@ configuration change rather than a rewrite.
 
 The refusal path must be proved with a fixture provider set to `unattended: false`, against a
 positive control. An eligibility check that has only ever permitted is unvalidated.
+
+**Layer 7 belongs to this phase (ADR-045 §4).** Phase 23 consumes it and does not rebuild it. Three
+pieces, in running order:
+
+| | Scope |
+|---|---|
+| **15.0** | Model registry as configuration; `unattended` eligibility enforced structurally. **Briefed.** Costs nothing — it uses the two subscription CLIs that already exist |
+| **15.1** | Metered provider integration **and the spend governor, together** — ADR-033 §5 says they ship together or not at all. No metered call is possible before it |
+| **15** | Routing proper: deterministic first, deterministic retained as the fallback, AI-assisted as the target rather than this phase's completion criterion |
+
+**Cloud inference** is a provider question and belongs here rather than in Phase 16, which is about
+local GPU hardware.
 
 **Amended 2026-09-11, on ADR-034 §5.** The registry, the `unattended` field, the caps, the fallback
 and *"callers never name a model"* are all retained. What changes is the **router's input**, because
@@ -399,6 +451,48 @@ Scope:
 
 Phase 13 remains the dedicated hardening phase — firewall, `fail2ban`, Tailscale ACLs, node-key
 expiry, rootless Docker. Phase 18 is narrower: it is about **recoverability**, not defence.
+
+## Phase 18.1 — Encryption execution
+
+Execute **ADR-037**: shrink the root LV, create the LUKS volume in the freed extents, establish the
+SSH unlock path, and make *degraded-until-unlocked* a tested state rather than an assumed one.
+
+**Added 2026-09-11 (ADR-045).** A sub-phase of Phase 18 because it executes a decision Phase 18
+deferred — not a new concern.
+
+**This is first, and it is the only pending item that needs the owner physically present.**
+Everything that puts knowledge or project content on the node waits on it.
+
+Scope:
+
+- **Re-verify the backup by restoring**, immediately before — not trusted from Phase 18's earlier test.
+- **Shrink the root LV offline.** `findmnt` confirmed **ext4**, so the path exists. The filesystem is
+  reduced *before* the logical volume; an `lvreduce` below the filesystem size destroys it, and no
+  console recovers from that. This is the most dangerous operation the project has attempted.
+- **Create and open the LUKS volume**, and prove it **fails to open on a wrong passphrase**.
+- **The unlock path** over SSH via Tailscale, and a full **power-cut test**: node returns unattended,
+  reachable, bot working, AI system not running, volume unlocks afterwards.
+- **Services that depend on the volume refuse legibly while it is locked** and do not half-start.
+
+**The open decision this phase must not skip.** ADR-037 §6 records a gap it does not close: two OAuth
+credentials, the Telegram bot token and the Wi-Fi passphrase sit on **root**, which stays unencrypted.
+Encrypting the data volume leaves them exactly where they are. Root encryption, moving them into the
+volume, or a BIOS password — **none is decided**, and this phase is where it should be.
+
+## Phase 18.2 — Migration to the server
+
+Move `brain`, the projects, Factory and Workbench onto the node, into the encrypted volume
+(**ADR-038**). The MacBook becomes a client and a terminal.
+
+**Added 2026-09-11 (ADR-045).** Separate from 18.1 because the risk profiles differ: one is an offline
+filesystem operation that can destroy data, the other moves repositories that already have remotes.
+
+Scope: clone into the volume, not copy; Workbench runs on the node binding **loopback**, reached by
+an SSH tunnel with a `LocalForward` entry; the harness endpoint binds loopback only; `ss -tlnp`
+accounts for every listening socket. **Phase 13 becomes more urgent here** — the node starts running
+a web service.
+
+**Depends on 18.1.** Nothing moves before the volume exists.
 
 ## Phase 19 — Tool Vocabulary & Capability Levels
 
@@ -703,8 +797,23 @@ stands as written and the Phase 09 canary check still applies. **It is the singl
 change on this roadmap** and its validation list is ADR-034's, each item proved against a planted
 positive control.
 
-**Depends on Phase 20.0**, which is **complete** and produces the first real consumer. **Feeds
-Phase 19**, whose concrete tools should follow the capability gaps this phase actually observes.
+**Split into four sub-phases, 2026-09-11 (ADR-045 §5).** It spanned five layers plus the spend
+governor, which is not a phase — it cannot write one brief, hold one Definition of Done, or hand over.
+Split by layer, because that is where the research boundaries fall:
+
+| | Layers | Scope |
+|---|---|---|
+| **23.0** | 1, 2, 9 | The always-running endpoint; entry from every client; request classification; result handling. **Includes the Workbench→homelab adapter**, which finally tests the adapter interface Phase 20.0 left unproved |
+| **23.1** | 3, 4 | Decomposition and service routing, with **ADR-044**'s client exposure policy — a declared capability grants nothing |
+| **23.2** | 6 | Context assembly and the stable-prefix discipline, under **ADR-039**'s egress policy |
+| **23.3** | governance | Identity, budgets, approvals and audit as harness machinery, and the **ADR-034 §13 transition** — the largest security change on this roadmap |
+
+**Layer 7 is not here** — it is Phase 15's (ADR-045 §4). **Layer 5 is not here** — knowledge is
+Phase 10's and web research is Phase 24.
+
+**Depends on Phase 20.0**, which is **complete** and produces the first real consumer, and on
+**Phase 18.2** for a Workbench that runs where the harness does. **Feeds Phase 19**, whose concrete
+tools should follow the capability gaps these sub-phases actually observe.
 
 - Brief: [`docs/handovers/23-homelab-ai-foundation.md`](docs/handovers/23-homelab-ai-foundation.md)
   — committed before implementation per ADR-017, 2026-09-11.
@@ -723,6 +832,27 @@ The statement they replace is preserved rather than deleted:
 > leave. Neither blocks the phase; both shape it.~~
 
 **The spend governor comes first** (ADR-033 §5) — no metered call is possible before it exists.
+
+## Phase 24 — Web Research Service
+
+A service that searches the web, fetches pages, and returns extracted content **with provenance**.
+
+**Added 2026-09-11 (ADR-045 §6). A new number, because this had no phase anywhere on the roadmap** —
+the gap was found by mapping the layers, and it is a layer 5 source the architecture names explicitly.
+
+Scope:
+
+- Search through a configured provider; fetch and extract; bound the result size.
+- **Provenance is a first-class output** — where, when, and what revision — because layer 6's trust
+  state and layer 9's citations both depend on it existing from the start. It cannot be reconstructed.
+- **A fetched page is unbounded, attacker-influenced text.** It is untrusted data (ADR-034 §11), it
+  arms the action gate (target architecture, layer 6), and URL safety, size limits and explicit
+  degraded responses are part of the service rather than of its callers.
+- Reached through layer 4, so **ADR-044**'s client exposure applies: which clients may run research at
+  all is a policy decision, not an agent capability.
+
+**Depends on 23.1** for service routing. Independent of the knowledge work — this is the *other*
+information source.
 
 ## Repository split (not a numbered phase)
 
@@ -767,102 +897,95 @@ work in Phase 10 rather than being near-term. `brain` keeps its current name and
 active use until then, so the table above is still an accurate description of the repositories that
 exist today — it is the *target* it no longer describes.
 
-## Sequencing note — 2026-09-11
+## Sequencing note — 2026-09-11 (reshape)
 
-**This section supersedes the Sequencing note of 2026-09-10 in full**, as that note required of
-whatever replaced it: *"a later phase that changes the dependency graph should replace this section
-rather than edit around it, and say which phase superseded it."* It was superseded by the Phase 19
-design review and the ADRs that followed it — **ADR-034** and **ADR-035**, both accepted 2026-09-11.
-The superseded note is preserved in git history; what it got wrong is stated below rather than
-quietly dropped.
+**This supersedes the Sequencing note written earlier the same day**, which it replaces rather than
+edits — the rule that note set for itself. It is superseded by **ADR-045**, which reshaped the roadmap
+around the [target architecture](docs/architecture/target-architecture.md)'s nine layers.
 
-Like its predecessor, this is an assessment of **running order**, not a decision about scope. It
-states what is true today and it is expected to be superseded the same way.
+Like its predecessors, this is an assessment of **running order**, not a decision about scope.
 
-### What the previous note got wrong
+### What changed
 
-1. **It put Phase 19 on the architecture critical path** as the single blocking item. Phase 19 was
-   superseded before implementation, and the dependency runs the other way: concrete tools follow
-   observed capability gaps.
-2. **It had Phase 20 depending on Phase 19 and wanting Phase 15.0.** It needs neither.
-3. **It had no entry for the homelab AI foundation**, which is now Phase 23 and is where most of the
-   remaining engineering actually lives.
+The earlier note ordered five items. The layer map found **five layers with no phase**, **three
+claimed by more than one**, and Phase 23 spanning five layers plus the spend governor. ADR-045 fixed
+the ownership; this fixes the order.
 
-Its two-track observation was right and is kept.
-
-### Two tracks, running in parallel
-
-The pending work still splits on **who can do it**, not on subject matter.
+### Every pending item, by track
 
 | Track | Phases | Constraint |
 |---|---|---|
-| **Node** | 13, 14 | Requires the owner at the keyboard: privileged commands on a machine where no assistant holds the sudo password. Phase 18 is **complete**, so the worst of this is discharged — the node has a console, a verified backup and ADR-032 |
-| **Architecture** | 20.0, 23, 20, 19, 22, 10+21, 15/15.0 | Repository work. Needs no node access and can proceed while the node track is idle |
+| **Node** | **18.1**, 18.2, 13, 14 | 18.1 needs the owner physically present. Nothing else does |
+| **Model access** | 15.0, 15.1, 15 | Owns layer 7. No metered call before 15.1's governor |
+| **Harness** | 23.0, 23.1, 23.2, 23.3 | Consumes layer 7; does not rebuild it |
+| **Knowledge** | 10.1, 10.2, 10.3, 21 | Lives in the encrypted volume; waits on 18.1/18.2 |
+| **Services & clients** | 12, 24, 17, 19 | 19 follows observed capability gaps, not the reverse |
+| **Surfaces & later** | 22, 20, 16 | 22 needs runtime state; 20 needs the harness |
+| **Superseded** | 11 | ADR-034 and Phase 20.0 answered it |
 
-Making either wait on the other idles the one that is free.
+### Running order
 
-### The dependency shape
+**1. Phase 18.1 — Encryption execution.** First, and not negotiable as an ordering: it is the only
+item needing the owner at the machine, it gates all knowledge and project work, and *delay itself
+carries risk* while credentials sit on an unencrypted disk. It also carries an open decision — the
+credential gap ADR-037 §6 records and does not close.
 
-Taken from the design review's outline and reconciled against the roadmap's stable numbers:
+**2. Phase 12 — Scheduling, monitoring, notifications.** Straight after, because the unlock reminder
+is the notification that matters most, and the watchdog lives on root where it works before the
+volume is open. Small, and it makes every later phase easier to operate.
 
-```text
-ADR-034 + ADR-035                                    ← done, 2026-09-11
-    ↓
-Phase 20.0 — minimal Factory Workbench + synthetic vertical slice
-    ↓
-Phase 23 — homelab AI foundation
-    (provider/gateway · deterministic then AI routing · task decomposition ·
-     context assembly and caching · budgets, audit, approvals · retrieval contract)
-    ↓
-real capability gaps observed
-    ↓
-Phase 19 — concrete homelab tools and mappings
-    ↓
-Phase 20 — intensive Workbench and catalogue migration
-```
+**3. Phase 18.2 — Migration to the server.** Everything moves into the volume. Phase 13 gets more
+urgent the moment this lands.
 
-Phase 22 hangs off Phase 23 for runtime state and Phase 20.0 for record schema. Phases 15 and 15.0
-feed Phase 23 and can run ahead of it. Phases 10 and 21 run together, and now depend on the
-encrypted volume existing (ADR-037) rather than on ADR-032's gate being lifted.
+**4. Phase 15.0 — Model registry.** Can run at any point from here; costs nothing and is already
+briefed. Do it while the node work settles.
 
-### Recommended order
+**5. Phase 23.0 — The endpoint.** The first harness sub-phase, and the one that makes the system
+reachable as a system. **It also resolves Phase 20.0's unproved adapter interface** by building the
+second implementation.
 
-1. **Phase 20.0 — minimal Factory Workbench.** Unblocked today, and the only pending item whose
-   prerequisites are all satisfied. It is also what discharges ADR-031 §4's outstanding criterion,
-   which has been outstanding since the layers were named.
-2. **Phase 23 — homelab AI foundation.** The largest remaining block, and the one that makes the
-   system stop being documentation.
-3. **Phase 19 — concrete tools**, once Phase 23 has produced real gaps to fill.
-4. **Phase 20 — intensive Workbench and catalogue migration.**
-5. **Phases 10 and 21 together**, after the encrypted volume exists (ADR-037).
-6. **Phase 22 — administration dashboard**, once there is runtime state to show.
+**6. Phase 15.1 — Gateway and spend governor.** Together, per ADR-033 §5. The first real money.
 
-**Phases 15 and 15.0 can run at any point before Phase 23** and are the cheapest useful work
-available: 15.0 is already briefed, costs nothing because it uses the two subscription CLIs that
-already exist, and makes adding a metered provider a configuration change.
+**7. Phase 23.1 — Decomposition and service routing.** Where ADR-044's client exposure becomes code.
 
-Then 13, 17, 12, 11, 14, 16 on their own merits.
+**8. Phase 23.2 — Context assembly.** Under ADR-039's egress policy. Needs real content, so it wants
+10.1 ahead of it or alongside.
 
-### The bottleneck, stated plainly
+**9. Phases 10.1 → 10.2 → 10.3, with 21.** The knowledge layer, finally unblocked.
 
-**Phase 23 is where the effort is**, and it has moved. The previous note said Phase 20 was the
-largest item, on the assumption that the work was converting ten thousand lines of prose. The review
-split that phase: the executable slice is now Phase 20.0 and is small, while the conversion is
-Phase 20 and runs late. What sits between them — building the harness that decides what to read, how
-to decompose a request, and which model serves each step — is larger than 20.0, 19 and 22 combined.
+**10. Phase 23.3 — Runtime governance and the ADR-034 §13 transition.** The largest security change
+here. Last of the harness sub-phases because it hardens what the others built.
 
-**The owner is no longer the bottleneck they were.** Phase 18 is complete, so the node track is down
-to 13 and 14 and nothing on the architecture track waits on the keyboard.
+**11. Phase 24 — Web research.** The other information source.
 
-### What the first ten phases did and did not buy
+**12. Phase 19 — Concrete tools**, once the gaps are observed rather than guessed.
 
-Phases 00–09 are complete and they built a genuine substrate: a headless node reachable over
-Tailscale, key-only SSH, Docker, and a read-only Telegram bot running unprivileged behind a
-two-allowlist authorisation boundary with a model executor behind that. Phase 18 then gave it a
-console, a verified backup and an explicit content gate.
+**13. Phase 22 — Administration dashboard**, once there is runtime state worth showing.
 
-They did **not** build the AI system. As of this note the node runs one read-only status bot, holds
-zero repositories, and **no agent has ever executed anything**. Recording this distinction matters
-more than it looks: eleven complete phases can read as "most of the way there", and the phases that
-carry the system's actual purpose — 20.0, 23, 19, 20 — are all still ahead, with not one line of
-Workbench or harness code written.
+**14. Phase 20 — Factory rewrite**, the intensive half.
+
+Then 13, 14, 17, 16 on their own merits — with **13 promoted the moment 18.2 lands**, because the node
+starts running a web service.
+
+### The bottlenecks, stated plainly
+
+**Phase 18.1 is the gate.** It is physical, it is dangerous, and it needs a person. Everything
+knowledge-shaped queues behind it.
+
+**The harness is where the effort is.** 23.0–23.3 plus 15.x is the bulk of the remaining engineering,
+and it is the part that makes the system stop being documentation.
+
+**Phase 19 is deliberately late.** Publishing a tool vocabulary before its consumers existed is the
+mistake this roadmap already made once.
+
+### What the completed phases did and did not buy
+
+Phases 00–09, 18 and 20.0 are complete. They built a real substrate — a headless node on Tailscale
+with key-only SSH and Docker, a read-only Telegram bot behind a two-allowlist boundary with a model
+executor behind that, a console and a verified backup, and Factory Workbench running a fourteen-step
+project loop from a clean clone.
+
+They did **not** build the AI system. The node runs one read-only status bot, holds zero repositories,
+and **no agent has ever executed anything through the harness, because there is no harness**. Twelve
+complete phases can read as most of the way there; the phases carrying the system's purpose — 18.1,
+23.0–23.3, 15.x, 10.x — are all still ahead.

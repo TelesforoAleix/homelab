@@ -234,3 +234,15 @@ were decided as one, and several only make sense together.
   about trust in Factory, but that a client orchestrating autonomous agents is the wrong place to
   accept an instruction that can take the system offline. Fixes the service/capability/tool
   distinction before layer 4 is built.
+
+- **[ADR-045](ADR-045-roadmap-reshape.md) — Reshaping the roadmap around the layer model**
+  (2026-09-11). No phase is renumbered; insertions are sub-phases. **Phase 18.1 executes the
+  encryption and comes first** — the only pending item needing the owner physically present — with
+  **18.2** migrating everything onto the server behind it. **Phase 12 is repurposed, not absorbed**,
+  correcting an earlier assessment: the scheduler is a client, but the watchdog and notifier had no
+  other home, and they live on unencrypted root so they work before the volume is unlocked.
+  **Layer 7 belongs to Phase 15** (15.0 registry, 15.1 gateway *and* governor together per ADR-033 §5,
+  15 routing); Phase 23 consumes it. **Phase 23 splits into 23.0–23.3** by layer, because a phase
+  spanning five layers cannot write one brief or hand over. Five gaps get homes, including
+  **Phase 24 — Web Research**, which had no phase anywhere. **Phase 11 is superseded** — ADR-034 and
+  Phase 20.0 answered its question by building the thing.
