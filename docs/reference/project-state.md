@@ -15,12 +15,15 @@
   node until it lands. The **architecture track** needs no node access. **Restated 2026-09-11:** Phase 19 was
   **superseded before implementation** and is on no critical path — see
   `docs/handovers/19-tool-vocabulary-design-review-outcome.md`. **Restated 2026-09-11:** the
-  successor ADRs are now **written and accepted** — **ADR-034** replaces ADR-027 in full and
-  **ADR-035** refines ADR-031. What remains of the reconciliation is roadmap work: rewriting
-  Phase 20's scope around the minimal Factory Workbench, rewriting Phase 22 as the homelab
-  administration dashboard, amending Phase 15.0, replacing the Sequencing note, and committing a
-  Workbench brief before any implementation. **Sub-phase numbering and running order are still
-  deliberately not guessed.** **ADR-033** settled the metered
+  successor ADRs are **written and accepted** — **ADR-034** replaces ADR-027 in full and **ADR-035**
+  refines ADR-031 — and **the roadmap reconciliation they required is done**. Phase 20 split into
+  **Phase 20.0** (minimal Factory Workbench, unblocked today) and Phase 20 (intensive development and
+  catalogue migration, now late); **Phase 22** became the homelab administration dashboard rather
+  than a move; **Phase 19** inverted to follow observed capability gaps; **Phase 15** was amended off
+  `model_policy`; and **Phase 23 — Homelab AI Foundation** was added, the one new structural entry,
+  for harness work that had no home. The Sequencing note of 2026-09-11 supersedes its predecessor in
+  full. **Next: the Phase 20.0 brief, which must be committed before implementation (ADR-017) and
+  does not exist yet.** **ADR-033** settled the metered
   provider (Vercel AI Gateway), and its spend governor is a precondition for any paid call. The repository split is **done on the development
   machine**; its node half is gated by Phase 18 and its brain half is deferred into Phase 21. See
   the Sequencing note at the end of `ROADMAP.md`, which supersedes this summary if they disagree.
