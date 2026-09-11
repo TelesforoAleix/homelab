@@ -2,10 +2,16 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 09 — Model Executor, subscription-backed (**complete**, 2026-09-09). **Next,
+- **Current phase:** 18 — Foundations (**complete**, 2026-09-11). The node now has a tested
+  console as its recovery path, a verified backup, and **ADR-032**, which reaffirms ADR-015 and
+  turns its "no sensitive data at rest" premise into an explicit gate: **no knowledge base, no
+  project content and no private repository on the node** until encryption is revisited and
+  executed. Phase 21 and Phase 10 inherit that as a hard precondition. One Definition of Done
+  item is outstanding and recorded as such: no `guide/18-foundations/` material exists.
+- **Previously:** 09 — Model Executor, subscription-backed (complete, 2026-09-09). **Next,
   restated 2026-09-10 after ADR-031 added Phases 19-22:** the pending work runs on two parallel
-  tracks. The **node track** needs the owner at the keyboard and opens with **Phase 18 —
-  Foundations** (backup, the ADR-015 encryption decision, an SSH recovery path); nothing reaches the
+  tracks. The **node track** needs the owner at the keyboard; **Phase 18 is complete**, leaving Phase 13
+  and Phase 14 (backup, the ADR-015 encryption decision, an SSH recovery path); nothing reaches the
   node until it lands. The **architecture track** needs no node access and runs **Phase 19** (tool
   vocabulary — brief committed, the critical path), then **15.0** (model registry), then **20**
   (Factory rewrite), then **10 + 21 together** (knowledge, retrieval, and the new public `brain`
@@ -540,7 +546,7 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Listening | **6 sockets, unchanged — but `:22` is now FILTERED on the shared Wi-Fi.** `ufw` is active and enabled at boot: default deny inbound, allow on `tailscale0`, plus UDP 41641 on `wlp1s0` for Tailscale direct connections. sshd still *binds* `0.0.0.0:22`; ufw drops the packets before they reach it. **Proved 2026-09-10** — LAN SSH times out while ICMP to the same address succeeds |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | **27.9s** (was 24.4s). Firmware POST rose 10.97s → 13.81s when the fTPM was enabled |
-| **Console** | **Unplugged, not absent.** DRM connectors all `disconnected` and the cable is removed, but six video outputs are present, `getty@tty1` is enabled **and active**, `usbhid` is loaded, and the machine is in the owner's room with a monitor and keyboard available. **Corrected 2026-09-10** — earlier text said `None`, which overstated it and made lockout look unrecoverable |
+| **Console** | **Attached and login-tested 2026-09-11 (Phase 18).** A display is connected on `card1-DP-1`, `getty@tty1` is active, and a console session was authenticated at `seat0`/`tty1` — the login, not the prompt, was the test, since key-only SSH meant the account password had never been exercised. **It is Phase 18's chosen "second way in"**, over a second SSH key, because it survives network, firewall, SSH and Tailscale failure alike. Earlier text said `None`; that was wrong, and the monitor had only ever been unplugged |
 | **TPM** | **2.0** since 2026-09-10 (Intel PTT / Firmware TPM; was discrete 1.2). `/dev/tpmrm0` present. Two prerequisites before it can unlock LUKS: `libtss2-rc0` missing, and only the SHA-1 PCR bank is allocated |
 
 Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and

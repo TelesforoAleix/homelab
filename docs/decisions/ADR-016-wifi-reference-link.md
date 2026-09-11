@@ -6,6 +6,13 @@
   (clarify as the *initial* connection; state the Ethernet preference; add an installer fallback path)
 - **Supersedes:** none
 - **Superseded by:** none
+- **Resolved 2026-09-11 (Phase 18):** the owner confirmed that wired Ethernet **is not
+  available at the node's location and will not become available**. Wi-Fi is therefore the
+  node's *permanent* link, not its *initial* one, and `eno1` stays down by circumstance
+  rather than by oversight. Consequence: Wi-Fi is a single point of failure for SSH and
+  Tailscale simultaneously, with no wired path to fall back to — which is why Phase 18 chose
+  the physical console as its recovery path. **Do not propose attaching a cable in later
+  phases.** See `docs/handovers/18-foundations-handover.md`.
 
 ## Context
 
