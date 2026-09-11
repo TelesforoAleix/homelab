@@ -300,6 +300,26 @@ configuration change rather than a rewrite.
 The refusal path must be proved with a fixture provider set to `unattended: false`, against a
 positive control. An eligibility check that has only ever permitted is unvalidated.
 
+**Amended 2026-09-11, on ADR-034 §5.** The registry, the `unattended` field, the caps, the fallback
+and *"callers never name a model"* are all retained. What changes is the **router's input**, because
+ADR-034 removed `model_policy` from agents entirely. The statement this replaces is preserved:
+
+> ~~it is where the model registry, the `unattended` eligibility field, and **task-class routing**
+> are built.~~
+
+The router instead receives the **agent role**, a **bounded task summary** rather than the full
+private task, **validated task metadata**, and capability/context characteristics. The role *is* the
+declaration of need, so **ADR-026 §4 is unchanged** — only its form is.
+
+**Priority, severity and complexity are hints, never selectors.** They cannot reach a model tier on
+their own and cannot bypass the pre-call budget check (ADR-033). An agent's claim about its own work
+is data, not an instruction; without this rule an agent routes itself to an expensive model by
+asserting that its task is hard.
+
+**Routing starts deterministic and keeps deterministic routing as the fallback.** The AI-assisted
+router is the *target*, and Phase 15.0 must not pretend to complete it. The
+[Phase 15.0 brief](docs/handovers/15.0-model-registry.md) predates this amendment and inherits it.
+
 ## Phase 16 — Local AI / CUDA Node
 
 If justified, add a separate NVIDIA/CUDA-capable node and experiment with local inference, quantization, serving, and potentially fine-tuning without forcing the orchestration node to become a GPU workstation.
@@ -397,6 +417,23 @@ here as history rather than deleted (`PROJECT.md` §11):
 real Factory workflows and the Homelab foundations produce those needs, and a **fresh brief must be
 written and committed first**.
 
+**Restated 2026-09-11, after ADR-034 and ADR-035.** The successor ADRs are now written and accepted,
+and they settle what this phase becomes. **ADR-034 §2** replaces the premise: Factory declares
+portable capabilities, homelab owns concrete tools and the approved capability-to-tool mappings, and
+homelab **publishes no concrete tool until it implements one for a real need**. **ADR-035 §8** voids
+ADR-031 §7's prerequisite outright.
+
+**The dependency inverts.** This phase no longer precedes Phase 20 — it follows the capability gaps
+that Phase 20.0 and Phase 23 actually observe. Publishing a vocabulary before a consumer existed to
+shape it is the failure this phase already demonstrated once, and the two tool names that could not
+run on the node (`read_repo`, `post_review`) came from ADR-027's own *example* manifest rather than
+from any workflow.
+
+When it resumes, its fresh brief defines concrete homelab tools and their mappings under ADR-034 §7's
+independent **effect / minimum approval / availability / target scope** properties — not the scalar
+`READ`/`PRIVILEGED` level — plus capability advertisement, the pre-activation compatibility check
+(ADR-034 §6), and planted refusal controls against **real** consumers.
+
 - Brief: [`docs/handovers/19-tool-vocabulary.md`](docs/handovers/19-tool-vocabulary.md) — committed
   before implementation per ADR-017. Proposes a **five-name** vocabulary (`read_host_status`,
   `ask_model`, `restart_service`, `read_repo`, `post_review`), keeps ADR-025's two locks shut, and
@@ -415,9 +452,26 @@ and publishes no tool vocabulary. The statement this replaces is preserved as hi
 > ~~**Depends on Phase 19.** The rewrite composes against homelab's published tool vocabulary;
 > starting before it exists is the failure ADR-031 §7 names.~~
 
-**Scope is being rewritten** around the minimal Factory Workbench and a synthetic, resettable
-end-to-end acceptance project, rather than the wholesale conversion of all Factory content. The
-successor ADRs are not yet written, so this entry is provisional.
+**Scope rewritten 2026-09-11, on ADR-035.** The successor ADRs are now written, so the provisional
+note this replaces is discharged. It is preserved as history rather than deleted:
+
+> ~~**Scope is being rewritten** around the minimal Factory Workbench and a synthetic, resettable
+> end-to-end acceptance project, rather than the wholesale conversion of all Factory content. The
+> successor ADRs are not yet written, so this entry is provisional.~~
+
+**The work splits in two**, because the review found that a minimal executable slice and a wholesale
+content conversion are different jobs with different prerequisites. Per the roadmap's sub-phase rule,
+the first half becomes **Phase 20.0** below rather than a renumbering.
+
+| | Phase 20.0 | Phase 20 |
+|---|---|---|
+| Deliverable | Minimal Factory Workbench + the synthetic acceptance project | Intensive Workbench development + full catalogue/content migration |
+| Prerequisite | ADR-034, ADR-035 — **both accepted, so this is unblocked now** | Phase 23, the homelab AI foundation |
+| Proves | That Factory stands alone (ADR-031 §4) | That Factory's content survives the format change (ADR-031 §7) |
+
+**Phase 20 proper is the larger half and it now runs late**, after the homelab AI foundation exists.
+Converting ten thousand lines of prose into a loadable operating model before the harness that
+consumes it is built would shape the conversion around a guess.
 
 **Also in scope: retiring Factory's parallel plan.** Everything is managed through one internal
 system — homelab. One `ROADMAP.md`, one progress record. Factory's own `roadmap.md` V0–V4 series and
@@ -432,6 +486,40 @@ plan; the amendment to §9 replaced it. The earlier statement is recorded here r
 
 What Factory still ships is the **method, the contracts and the definitions** — never this project's
 roadmap. An adopter takes those and writes their own plan (ADR-031 §4).
+
+## Phase 20.0 — Minimal Factory Workbench
+
+Build the **minimum Factory Workbench** and the **public synthetic acceptance project** that proves
+it, per ADR-035. A sub-phase under the roadmap's rule above, not a renumbering.
+
+**Added 2026-09-11.** Unblocked now: its only prerequisites are ADR-034 and ADR-035, both accepted.
+
+Workbench opens a project by being pointed at its root or `ops/`, creates a new project and its
+minimum valid `ops/` structure, manages tasks, inbox, team, reviews, workflow state and approvals,
+validates and writes the project's records, and invokes AI through a configured adapter. It holds
+**no homelab credential, no model registry and no tool implementation** (ADR-035 §2) — that line is
+where ADR-031 §1's reason survives, and it is the one thing this phase may not compromise on.
+
+**The synthetic project is one artifact doing five jobs**: the standalone quickstart, the end-to-end
+acceptance test, the development fixture, the learning example, and the environment where refusals
+are planted and proved. Its fourteen accepted steps are specified in the design review and belong in
+this phase's brief.
+
+**Only the deterministic fake adapter is fixed.** Which real adapter ships first is deliberately open
+(ADR-035 §4). The fake comes first regardless, because an acceptance test that needs a live model is
+not repeatable.
+
+**This is the phase that discharges ADR-031 §4's outstanding criterion** — *"each public repository
+needs a standalone quickstart. None currently has one."* The proof is the synthetic project running
+end to end **with no homelab installed**.
+
+Refusals to plant and prove, each against a positive control: an unapproved agent addition, an
+unsupported backend capability, an approval-gated action waiting in the inbox, exhausted review
+rounds, an exhausted budget, and an agent exceeding project or context scope. Plus the two structural
+ones: **no direct agent write to `main`**, and **no merge whose human approval is not bound to the
+exact reviewed revision**.
+
+**A brief must be written and committed before implementation** (ADR-017). It does not exist yet.
 
 ## Phase 21 — Brain Rename & Method Extraction
 
@@ -480,16 +568,38 @@ predate the new design and are replaced by it, so they are superseded legacy rat
 they stay private, and whether they are discarded or reprocessed is this phase's design work to
 decide (ADR-031 §6.1).
 
-## Phase 22 — Dashboard / Control Plane Move
+## Phase 22 — Homelab Administration Dashboard
 
-Move the dashboard and control plane from Factory to homelab, on the ADR-031 §1 boundary: Factory
-declares, homelab enforces and executes, so a control plane that acts belongs in homelab.
+Build the **homelab administration dashboard**: models, providers, costs, tools, runtime health, and
+the homelab-wide approval inbox.
 
-**This move was agreed but has never had an ADR.** Writing one is part of this phase, not a
-precondition assumed to exist. Until it is written there is no accepted decision to point at.
+**Rewritten 2026-09-11, on ADR-035 §6.** This phase used to be a *move*. It is not one. The statement
+it replaces is preserved rather than deleted:
 
-**Depends on Phase 20**, because the control plane reads Factory's operating objects and their schema
-is what the rewrite changes. Building against the pre-rewrite schema would be work done twice.
+> ~~**Move the dashboard and control plane from Factory to homelab**, on the ADR-031 §1 boundary:
+> Factory declares, homelab enforces and executes, so a control plane that acts belongs in homelab.~~
+>
+> ~~**This move was agreed but has never had an ADR.** Writing one is part of this phase, not a
+> precondition assumed to exist. Until it is written there is no accepted decision to point at.~~
+
+**There are two dashboards, not one that moved** (ADR-035 §6). The review found that this entry
+conflated two products with different scopes and different owners:
+
+| Factory Workbench — stays in `factory` | Homelab administration dashboard — this phase |
+|---|---|
+| One project at a time | The whole AI system |
+| Project `ops/` and the project inbox | The homelab-wide approval inbox |
+| Tasks, team, reviews, workflow | Models, providers, costs, tools, runtime health |
+| Portable execution adapters | Authoritative homelab execution and configuration |
+
+Moving Workbench into homelab would make it unavailable to exactly the standalone adopters ADR-031 §4
+requires it to serve. **The ADR this phase was waiting for now exists** — ADR-035 §6 — so the
+"no accepted decision to point at" gap is closed. What may still need its own decision is the hosted
+deployment: Tailscale-only, with application authentication and secure sessions, and **public
+exposure is out of scope** (ADR-035 §7).
+
+**Depends on Phase 23** for the runtime state it displays, and on **Phase 20.0** for the project
+record schema. Building against the pre-rewrite schema would be work done twice.
 
 **Factory's `roadmap.md` plans the same deliverable itself** — V1.5, *"Read-Only Local Management
 Dashboard"*, and V3, *"Local Dashboard Control Plane"*. **Both are superseded by this phase**
@@ -497,6 +607,60 @@ Dashboard"*, and V3, *"Local Dashboard Control Plane"*. **Both are superseded by
 conflict when this phase was added earlier the same day, and it is closed the way the overlap itself
 was closed: there is one plan, and it is homelab's. Retiring the V-series entries is Phase 20's work
 (see above); this phase is where the deliverable actually lands.
+
+## Phase 23 — Homelab AI Foundation
+
+Build the **AI execution harness** — the thing that makes homelab more than a gateway with a router
+in front of it.
+
+**Added 2026-09-11. A new number rather than a renumbering**, per the roadmap rule above and the
+Phase 18 precedent. **This is the one genuinely new structural entry in the post-ADR-034/035
+reconciliation**; everything else was a rewrite of an existing phase. It exists because the design
+review's dependency outline contains a block of work with no home on this roadmap, and leaving it
+unplaced would leave Phase 20 and Phase 22 depending on something unnamed.
+
+The owner's defining sentence for homelab's scope, recorded in the design review:
+
+> **Homelab is an AI execution harness.** It performs the context selection, task decomposition,
+> retrieval decisions, per-call model selection and controlled execution that a tool such as Codex or
+> Claude Code normally performs *internally*.
+
+That is the measure of what belongs here. When Claude Code decides which files to read, whether to
+search the repository for a sub-question, how to break a request into steps, and which model serves
+each one — those decisions are homelab's.
+
+Scope, and **where each piece already has a home**, so this phase adds rather than duplicates:
+
+| Piece | Home |
+|---|---|
+| Provider/gateway integration and the spend governor | **ADR-033**; Phase 15 |
+| Model registry, eligibility, caps, fallback | **Phase 15.0** — already briefed |
+| Deterministic routing, then AI-assisted, deterministic retained as fallback | **Phase 15** (amended above) |
+| Retrieval and the Brain specialist's project-facing contract | **Phase 10**, whose ADR-032 gate still binds |
+| **Task decomposition** | **here** — no existing phase |
+| **Context assembly and cache-prefix discipline** | **here** — no existing phase |
+| **Budgets, audit, approvals as runtime machinery** | **here** — no existing phase |
+
+**The cache economics are engineered, not inherited.** The favourable numbers observed in the owner's
+measured week are a property of *those harnesses'* stable-prefix discipline, not of the models they
+call. A homelab harness earns them only by designing for them deliberately — recorded here because it
+is the assumption most likely to be made silently and found false late.
+
+**Budgets are two limits, not one** (design review): a monetary limit for metered providers and a
+model-call limit for subscriptions and unknown-cost providers. The first limit reached stops
+execution and raises a project-inbox request. Unknown cost stays `unknown` and is never replaced with
+a confident estimate.
+
+**This phase is where ADR-034 §13 takes effect** — a model's tool request becoming an untrusted
+request checked by the runtime rather than something architecturally inert. Until then ADR-025 §10
+stands as written and the Phase 09 canary check still applies. **It is the single largest security
+change on this roadmap** and its validation list is ADR-034's, each item proved against a planted
+positive control.
+
+**Depends on Phase 20.0**, which produces the first real consumer. **Feeds Phase 19**, whose concrete
+tools should follow the capability gaps this phase actually observes. **A brief must be written and
+committed before implementation** (ADR-017); it does not exist yet, and this entry is a placement
+decision rather than a design.
 
 ## Repository split (not a numbered phase)
 
@@ -540,68 +704,101 @@ work in Phase 10 rather than being near-term. `brain` keeps its current name and
 active use until then, so the table above is still an accurate description of the repositories that
 exist today — it is the *target* it no longer describes.
 
-## Sequencing note — 2026-09-10
+## Sequencing note — 2026-09-11
 
-**Added 2026-09-10, after the architecture alignment session that produced ADR-031.** This section
-is an assessment of *running order*, not a decision about scope. It states what was true on the day
-it was written and it is expected to be superseded — a later phase that changes the dependency graph
-should replace this section rather than edit around it, and say which phase superseded it.
+**This section supersedes the Sequencing note of 2026-09-10 in full**, as that note required of
+whatever replaced it: *"a later phase that changes the dependency graph should replace this section
+rather than edit around it, and say which phase superseded it."* It was superseded by the Phase 19
+design review and the ADRs that followed it — **ADR-034** and **ADR-035**, both accepted 2026-09-11.
+The superseded note is preserved in git history; what it got wrong is stated below rather than
+quietly dropped.
+
+Like its predecessor, this is an assessment of **running order**, not a decision about scope. It
+states what is true today and it is expected to be superseded the same way.
+
+### What the previous note got wrong
+
+1. **It put Phase 19 on the architecture critical path** as the single blocking item. Phase 19 was
+   superseded before implementation, and the dependency runs the other way: concrete tools follow
+   observed capability gaps.
+2. **It had Phase 20 depending on Phase 19 and wanting Phase 15.0.** It needs neither.
+3. **It had no entry for the homelab AI foundation**, which is now Phase 23 and is where most of the
+   remaining engineering actually lives.
+
+Its two-track observation was right and is kept.
 
 ### Two tracks, running in parallel
 
-The pending work splits along a line that is not about subject matter but about **who can do it**.
+The pending work still splits on **who can do it**, not on subject matter.
 
 | Track | Phases | Constraint |
 |---|---|---|
-| **Node** | 18, 13, 14 | Requires the owner at the keyboard: privileged commands on a machine where no assistant holds the sudo password. Gates everything physical — no repository has been cloned onto the node. |
-| **Architecture** | 19, 15.0, 20, 10+21, 22 | Repository work. Needs no node access and can proceed while the node track is idle. |
+| **Node** | 13, 14 | Requires the owner at the keyboard: privileged commands on a machine where no assistant holds the sudo password. Phase 18 is **complete**, so the worst of this is discharged — the node has a console, a verified backup and ADR-032 |
+| **Architecture** | 20.0, 23, 20, 19, 22, 10+21, 15/15.0 | Repository work. Needs no node access and can proceed while the node track is idle |
 
-Making either wait on the other idles the one that is free. They are not sequential.
+Making either wait on the other idles the one that is free.
+
+### The dependency shape
+
+Taken from the design review's outline and reconciled against the roadmap's stable numbers:
+
+```text
+ADR-034 + ADR-035                                    ← done, 2026-09-11
+    ↓
+Phase 20.0 — minimal Factory Workbench + synthetic vertical slice
+    ↓
+Phase 23 — homelab AI foundation
+    (provider/gateway · deterministic then AI routing · task decomposition ·
+     context assembly and caching · budgets, audit, approvals · retrieval contract)
+    ↓
+real capability gaps observed
+    ↓
+Phase 19 — concrete homelab tools and mappings
+    ↓
+Phase 20 — intensive Workbench and catalogue migration
+```
+
+Phase 22 hangs off Phase 23 for runtime state and Phase 20.0 for record schema. Phases 15 and 15.0
+feed Phase 23 and can run ahead of it. Phases 10 and 21 run together, still gated by ADR-032.
 
 ### Recommended order
 
-1. **Phase 18 — start whenever the node is to hand.** First by priority because it is the only
-   pending item where *delay itself carries risk*: the node has no backup of any kind and an
-   unencrypted root filesystem. It also gates Phase 10, which cannot store real knowledge until the
-   ADR-015 decision is made.
-2. ~~**Phase 19 — tool vocabulary.** The single item on the architecture critical path.~~
-   **Superseded 2026-09-11** before implementation; it is on no critical path and blocks nothing.
-   See the Phase 19 entry above. What replaces it in this position is not yet settled — the
-   successor ADRs are pending.
-3. **Phase 15.0 — model registry.** ~~Brought forward on a dependency the Phase 19 brief
-   surfaced:~~ **restated 2026-09-11** — the Phase 19 brief is superseded, and the review removed
-   `model_policy` from agents entirely. Phase 15.0 is amended accordingly. The original reason
-   is preserved below as history:
-   `model_policy` is a declared *need* that must reach the model helper, which requires a
-   wire-protocol field that does not exist. Without 15.0 that manifest field is decorative.
-4. **Phase 20 — Factory rewrite.** ~~Needs 19; wants 15.0.~~ **Restated 2026-09-11:** it needs
-   neither. Phase 19 is superseded, and Phase 20's scope is being rewritten around the minimal
-   Factory Workbench and a synthetic acceptance project. Provisional until the successor ADRs.
-5. **Phases 10 and 21 together.** Knowledge design, ingestion and retrieval, and the new public
-   `brain` repository built once around them rather than lifted from the old layout. Needs the
-   ADR-015 decision from Phase 18 before it stores anything real.
-6. **Phase 22 — dashboard / control plane.** Needs the schema Phase 20 defines. Building it against
-   the pre-rewrite schema would be waste.
+1. **Phase 20.0 — minimal Factory Workbench.** Unblocked today, and the only pending item whose
+   prerequisites are all satisfied. It is also what discharges ADR-031 §4's outstanding criterion,
+   which has been outstanding since the layers were named.
+2. **Phase 23 — homelab AI foundation.** The largest remaining block, and the one that makes the
+   system stop being documentation.
+3. **Phase 19 — concrete tools**, once Phase 23 has produced real gaps to fill.
+4. **Phase 20 — intensive Workbench and catalogue migration.**
+5. **Phases 10 and 21 together**, still gated by ADR-032's content gate.
+6. **Phase 22 — administration dashboard**, once there is runtime state to show.
+
+**Phases 15 and 15.0 can run at any point before Phase 23** and are the cheapest useful work
+available: 15.0 is already briefed, costs nothing because it uses the two subscription CLIs that
+already exist, and makes adding a metered provider a configuration change.
 
 Then 13, 17, 12, 11, 14, 16 on their own merits.
 
-### The two bottlenecks, stated plainly
+### The bottleneck, stated plainly
 
-**Phase 18 is the only pending item that requires the owner specifically.** Everything else can be
-executed by an assistant. While it is unstarted the node stays frozen, and no amount of architecture
-work moves it.
+**Phase 23 is where the effort is**, and it has moved. The previous note said Phase 20 was the
+largest item, on the assumption that the work was converting ten thousand lines of prose. The review
+split that phase: the executable slice is now Phase 20.0 and is small, while the conversion is
+Phase 20 and runs late. What sits between them — building the harness that decides what to read, how
+to decompose a request, and which model serves each step — is larger than 20.0, 19 and 22 combined.
 
-**Phase 20 is where the effort actually is.** Rewriting roughly 10,000 lines of prose into a
-loadable operating model is larger than 19, 15.0 and 22 combined. It is also the phase that makes
-the system stop being documentation and start executing.
+**The owner is no longer the bottleneck they were.** Phase 18 is complete, so the node track is down
+to 13 and 14 and nothing on the architecture track waits on the keyboard.
 
 ### What the first ten phases did and did not buy
 
 Phases 00–09 are complete and they built a genuine substrate: a headless node reachable over
 Tailscale, key-only SSH, Docker, and a read-only Telegram bot running unprivileged behind a
-two-allowlist authorisation boundary with a model executor behind that.
+two-allowlist authorisation boundary with a model executor behind that. Phase 18 then gave it a
+console, a verified backup and an explicit content gate.
 
 They did **not** build the AI system. As of this note the node runs one read-only status bot, holds
-zero repositories, and no agent has ever executed anything. Phases 19–22 did not exist before
-2026-09-10. Recording this distinction matters more than it looks: ten complete phases can read as
-"most of the way there", and the phases that carry the system's actual purpose are all still ahead.
+zero repositories, and **no agent has ever executed anything**. Recording this distinction matters
+more than it looks: eleven complete phases can read as "most of the way there", and the phases that
+carry the system's actual purpose — 20.0, 23, 19, 20 — are all still ahead, with not one line of
+Workbench or harness code written.
