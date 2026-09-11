@@ -7,6 +7,9 @@
   **ADR-034 §13 changes §10** — *"the model's output is never an instruction"* — but **only when
   tool-using agents are implemented**. Until then §10 stands exactly as written and the Phase 09
   canary check still applies. §1's credential boundary is untouched.
+  **ADR-039 supersedes §8** (2026-09-11) — what may leave becomes a policy classified by whose data it
+  is, keeping §8's reasoning that content chosen by whatever can write a log line never leaves.
+  **ADR-040 retires §9** in full. §1 stands.
 
 ## Context
 

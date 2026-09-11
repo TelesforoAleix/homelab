@@ -4,7 +4,10 @@
 - **Date:** 2026-09-11
 - **Supersedes:** none. This is the **revisit** ADR-015 required, performed in Phase 18. ADR-015
   stands, with its premise narrowed from implicit to explicit.
-- **Superseded by:** none
+- **Superseded by:** **ADR-037** (2026-09-11). §2's content gate is **discharged for an encrypted
+  volume only** — the unencrypted root still may not hold the knowledge base, project content or any
+  private repository. §1's reaffirmation of ADR-015 stands for root. The gate moved; it did not
+  disappear.
 
 ## Context
 

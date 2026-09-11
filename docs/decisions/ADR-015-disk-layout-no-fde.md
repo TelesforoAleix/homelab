@@ -5,7 +5,9 @@
 - **Amended:** 2026-09-08 — Project Planning ratification of the Phase 01 brief, amendment 3
   (frame as a reference-build trade-off; add a Second Brain revisit trigger)
 - **Supersedes:** none
-- **Superseded by:** none
+- **Superseded by:** **ADR-037** (2026-09-11) executes the encryption revisit this ADR deferred and
+  ADR-032 reaffirmed. §1's whole-disk LVM without full-disk encryption **stands for the root volume**;
+  a separate LUKS volume now holds knowledge and project content.
 - **Revisited by:** [ADR-032](ADR-032-encryption-at-rest-reaffirmed-with-a-content-gate.md)
   (2026-09-11, Phase 18) — this decision is **reaffirmed**, its "no sensitive data at rest"
   premise made an explicit content gate, and its trigger 1 restated as the arrival of private

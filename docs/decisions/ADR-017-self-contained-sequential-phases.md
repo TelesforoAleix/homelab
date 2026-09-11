@@ -3,7 +3,9 @@
 - **Status:** Accepted
 - **Date:** 2026-09-08
 - **Supersedes:** the governance model in `PROJECT.md` §13 (two-context model)
-- **Superseded by:** none
+- **Superseded by:** none. **Amended by ADR-043** (2026-09-11) in two narrow respects:
+  cross-cutting concerns are specified once as normative contracts and implemented per scope, and
+  living specifications are legitimate artifacts. Sequential self-contained phases are unchanged.
 
 ## Context
 

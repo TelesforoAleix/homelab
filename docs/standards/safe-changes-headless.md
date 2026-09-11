@@ -1,17 +1,26 @@
-# Making Changes on a Machine With No Console
+# Making Changes on a Headless Machine
 
-**Status:** Standard. Adopted by Phase 02, recorded as [ADR-020](../decisions/ADR-020-change-safety-headless.md).
+**Status:** Standard. Adopted by Phase 02 under ADR-020; **revised 2026-09-11** under
+[ADR-041](../decisions/ADR-041-change-safety-revised.md).
 **Applies to:** every phase from 02 onward, and to any change made to the reference node outside a phase.
 
-The reference node has no monitor, no keyboard, and no attached console. All six DRM connectors
-report `disconnected`. Phase 01 and Phase 03 both treated the console as the ultimate fallback and
-deliberately sequenced their riskiest steps around it being available. **That fallback no longer
-exists.**
+The reference node runs with no monitor and no keyboard attached, and all six DRM connectors report
+`disconnected` while they are detached. **A console is available on demand**: the connectors are
+present, `getty@tty1` is active, and console login has been tested as a recovery path (Phase 18).
 
-Recovery from a lockout now means finding a monitor, a keyboard and a DisplayPort→HDMI cable, all of
-which are in a drawer, and physically reattaching them. It is perfectly possible. It is just no
-longer free, and no longer instant — which is exactly the change that makes a written standard worth
-having.
+Recovery from a lockout means finding a monitor, a keyboard and a DisplayPort→HDMI cable, all of
+which are in a drawer, and physically reattaching them. It is perfectly possible. It is just not free
+and not instant — which is exactly the change that makes a written standard worth having.
+
+**What "lockout-class" means here** (ADR-041 §3): *recovery requires physical access to the machine.*
+That is a **cost, not a catastrophe** — a walk and a monitor. Plan such a change deliberately, know
+the recovery step in advance, and prefer a moment when the machine is reachable. It does not need the
+ceremony of an operation that cannot be undone.
+
+**The stricter bar is for something else**: an operation no physical access recovers from, such as
+destroying the only copy of data. There the control is a **verified restore immediately beforehand**,
+not classification. Keep the two apart — conflating them is what made the earlier version of this
+standard cost more than it protected.
 
 ## 1. Classify the change before typing it
 

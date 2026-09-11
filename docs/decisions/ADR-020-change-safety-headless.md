@@ -1,9 +1,13 @@
 # ADR-020: Change safety policy for a console-less node
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-09-09
 - **Supersedes:** none
-- **Superseded by:** none
+- **Superseded by:** **ADR-041** (2026-09-11), in full. **This ADR's premise is false**: Phase 18
+  found the node always had a console — `getty@tty1` active, login authenticated at `seat0/tty1`.
+  The classification habit survives in ADR-041; what changes is that "lockout-class" means *recovery
+  requires physical access* rather than *unrecoverable*. **Kept as written** — it records why the rule
+  existed and what it cost.
 
 ## Context
 
