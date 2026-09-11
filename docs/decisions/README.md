@@ -150,3 +150,19 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   capability gaps rather than precede them, which is exactly what Phase 19 demonstrated. Local
   Workbench binds `127.0.0.1` with no application login; a hosted one is Tailscale-only and public
   exposure is out of scope. The plan stays in homelab (§9) even though the code lives in Factory.
+
+- **[ADR-036](ADR-036-workbench-write-path-and-runtime.md) — Factory Workbench's write path: a local
+  server over a CLI engine** (2026-09-11, Phase 20.0). Resolves the Phase 20.0 brief's §6.1, which
+  turned out to be a question **Factory had already framed** — V1.5's exit criterion named "the
+  CLI/server/webview bridge decision" and `open-questions.md` asks whether the first bridge should be
+  CLI-first. **The CLI is the write engine; a `127.0.0.1` server is a surface in front of it**, so
+  adding or removing a surface changes no write semantics. The owner chose click-to-act over the
+  smaller CLI-only phase, **overruling the assistant's recommendation**, and the rejected options are
+  recorded because the engine boundary keeps them available as a fallback. **The server parses and
+  serves JSON so the browser stops parsing records**, which answers the finding that
+  `dashboard.js:223` is a hand-rolled YAML subset parser that silently drops nested structure —
+  harmless in a viewer, a correctness bug in a writable system. **Python**, on the stdlib where
+  possible, with a YAML library as the one accepted dependency; "one language everywhere" would have
+  favoured Node but stops being load-bearing once the browser no longer parses. ADR-035 §2's
+  boundary is untouched: no homelab credential, no model registry, no tool implementation, loopback
+  only, no public exposure.
