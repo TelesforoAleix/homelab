@@ -28,8 +28,12 @@
   than a move; **Phase 19** inverted to follow observed capability gaps; **Phase 15** was amended off
   `model_policy`; and **Phase 23 — Homelab AI Foundation** was added, the one new structural entry,
   for harness work that had no home. The Sequencing note of 2026-09-11 supersedes its predecessor in
-  full. **Phase 20.0 is complete** (2026-09-11); the next
-  item is **Phase 23 — Homelab AI Foundation**, whose brief does not exist yet. Its deliverable lands in `factory`, not
+  full. **Phase 20.0 is complete** (2026-09-11) and the
+  **Phase 23 brief is committed**, so Phase 23 is ready to start. Its §0.1 records that two accepted
+  gates constrain the harness's own core capability — **ADR-032 §2** keeps project content off the
+  node, and **ADR-025 §8** permits only the question to leave — making *where the harness runs and
+  what may leave* a checkpoint decision. **ADR-033 §5's spend governor does not exist and no metered
+  call is possible until it does.** Its deliverable lands in `factory`, not
   here. Reading Factory at `97ccb86` found the read half already built — an 864-line **read-only**
   `dashboard/` — and found that a browser page cannot create a worktree, commit, run tests or open a
   pull request, which is the brief's §6.1 decision. **ADR-033** settled the metered

@@ -684,10 +684,21 @@ stands as written and the Phase 09 canary check still applies. **It is the singl
 change on this roadmap** and its validation list is ADR-034's, each item proved against a planted
 positive control.
 
-**Depends on Phase 20.0**, which produces the first real consumer. **Feeds Phase 19**, whose concrete
-tools should follow the capability gaps this phase actually observes. **A brief must be written and
-committed before implementation** (ADR-017); it does not exist yet, and this entry is a placement
-decision rather than a design.
+**Depends on Phase 20.0**, which is **complete** and produces the first real consumer. **Feeds
+Phase 19**, whose concrete tools should follow the capability gaps this phase actually observes.
+
+- Brief: [`docs/handovers/23-homelab-ai-foundation.md`](docs/handovers/23-homelab-ai-foundation.md)
+  — committed before implementation per ADR-017, 2026-09-11.
+
+**Two accepted gates constrain this phase's own core capability**, and the brief's §0.1 states them
+rather than letting them be discovered mid-build: **ADR-032 §2** keeps project content off the node,
+so a harness running there has nothing to assemble context *from*; and **ADR-025 §8** permits only the
+question and the `/status` figures to leave, so assembled context leaving is the widening ADR-033 §6
+already named as *"the immediate next decision."* Neither blocks the phase; both shape it. **Where the
+harness runs and what may leave is a checkpoint decision** taken before implementation, on the
+Phase 20.0 precedent.
+
+**The spend governor comes first** (ADR-033 §5) — no metered call is possible before it exists.
 
 ## Repository split (not a numbered phase)
 
