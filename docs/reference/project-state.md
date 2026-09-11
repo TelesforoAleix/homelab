@@ -2,13 +2,26 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
+- **Architecture decisions, 2026-09-11 (ADR-037 – ADR-044, all Accepted).** Eight decisions taken as
+  one set after the constraint review. **Encryption is executed, not deferred** — root stays
+  unencrypted and a LUKS volume holds knowledge and projects, unlocked over SSH via Tailscale, which
+  removes the TPM and its SHA-1 weakness from the design; root is **ext4**, verified on the node, so
+  the shrink path exists. **Everything runs on the server**; the MacBook is a client, and the harness
+  binds loopback only because every client is local. **Egress becomes a policy** classified by whose
+  data it is. **Autonomous calls are normal**, with budget replacing attribution and the licensing
+  position recorded as an accepted judgement. **The node has a console on demand** — ADR-020's premise
+  was false and `AGENTS.md` asserted it; both corrected. **`homelab` is readable, not packaged**, with
+  configuration as the seam and `brain` holding the knowledge. **Cross-cutting concerns are specified
+  once and implemented per scope**, and living specs are legitimate artifacts that decide nothing.
+  **A declared capability grants nothing** — which services a client may reach is checked first.
 - **Target architecture:** [`target-architecture.md`](target-architecture.md) (2026-09-11) — what the
   system is meant to **be** when finished: nine request layers, governance under all of them, clients
   (Telegram, scheduler, Factory, voice) that are **not** layers. Written because the roadmap answers
   *what next* and the ADRs answer *what was decided*, and neither answered *what is this*. It records
   **five gaps** — request understanding, service routing, **online research (in no phase anywhere)**,
   cloud inference, result handling — and **three collisions**, chiefly Phases 15/15.0/23 all claiming
-  model routing. **Reshaping the roadmap around it is a separate step and needs an ADR.**
+  model routing. **Reshaping the roadmap around it is a separate step, needs an ADR, and is
+  the next thing.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 – ADR-044.
 - **Current phase:** 20.0 — Minimal Factory Workbench (**complete**, 2026-09-11). **Factory
   Workbench executes.** The deliverable is in the public `factory` repository — the first phase whose
   code lands outside this one. A CLI write engine, a loopback-only server in front of it, and the
