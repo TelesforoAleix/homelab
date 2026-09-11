@@ -383,7 +383,19 @@ either names tools that cannot load, or invents a vocabulary in the wrong reposi
 ADR-027's own validation list applies here — each item proved against a positive control, not
 observed to pass. **An authorisation check that has only ever permitted is unvalidated.**
 
-**Prerequisite for:** Phase 20, and through it Phase 22.
+**Superseded and deferred, 2026-09-11.** The brief's design was rejected before implementation —
+see [`docs/handovers/19-tool-vocabulary-design-review-outcome.md`](docs/handovers/19-tool-vocabulary-design-review-outcome.md).
+Factory agents declare **portable capabilities**; Homelab maps them to concrete tools. A manifest
+naming Homelab tools could not load without Homelab, which contradicted ADR-031 §4.
+
+**This phase is no longer a prerequisite for anything.** The statement it replaces is preserved
+here as history rather than deleted (`PROJECT.md` §11):
+
+> ~~**Prerequisite for:** Phase 20, and through it Phase 22.~~
+
+**Tools are now designed only when concrete operational needs appear.** This phase resumes after
+real Factory workflows and the Homelab foundations produce those needs, and a **fresh brief must be
+written and committed first**.
 
 - Brief: [`docs/handovers/19-tool-vocabulary.md`](docs/handovers/19-tool-vocabulary.md) — committed
   before implementation per ADR-017. Proposes a **five-name** vocabulary (`read_host_status`,
@@ -397,8 +409,15 @@ was designed for a different environment than the one Factory now has to run in.
 
 **Nothing is to be written into the current format** in the meantime.
 
-**Depends on Phase 19.** The rewrite composes against homelab's published tool vocabulary; starting
-before it exists is the failure ADR-031 §7 names.
+**No longer depends on Phase 19, as of 2026-09-11.** Phase 19 was superseded before implementation
+and publishes no tool vocabulary. The statement this replaces is preserved as history:
+
+> ~~**Depends on Phase 19.** The rewrite composes against homelab's published tool vocabulary;
+> starting before it exists is the failure ADR-031 §7 names.~~
+
+**Scope is being rewritten** around the minimal Factory Workbench and a synthetic, resettable
+end-to-end acceptance project, rather than the wholesale conversion of all Factory content. The
+successor ADRs are not yet written, so this entry is provisional.
 
 **Also in scope: retiring Factory's parallel plan.** Everything is managed through one internal
 system — homelab. One `ROADMAP.md`, one progress record. Factory's own `roadmap.md` V0–V4 series and
@@ -545,8 +564,10 @@ Making either wait on the other idles the one that is free. They are not sequent
    pending item where *delay itself carries risk*: the node has no backup of any kind and an
    unencrypted root filesystem. It also gates Phase 10, which cannot store real knowledge until the
    ADR-015 decision is made.
-2. **Phase 19 — tool vocabulary.** The single item on the architecture critical path. Its brief is
-   written and committed; it needs implementing.
+2. ~~**Phase 19 — tool vocabulary.** The single item on the architecture critical path.~~
+   **Superseded 2026-09-11** before implementation; it is on no critical path and blocks nothing.
+   See the Phase 19 entry above. What replaces it in this position is not yet settled — the
+   successor ADRs are pending.
 3. **Phase 15.0 — model registry.** Brought forward on a dependency the Phase 19 brief surfaced:
    `model_policy` is a declared *need* that must reach the model helper, which requires a
    wire-protocol field that does not exist. Without 15.0 that manifest field is decorative.

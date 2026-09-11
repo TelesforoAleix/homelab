@@ -2,7 +2,29 @@
 
 - **Phase:** 19 — Tool Vocabulary & Capability Levels
 - **Written:** 2026-09-10
-- **Status:** Brief, committed before implementation per ADR-017
+- **Status:** **SUPERSEDED 2026-09-11, before implementation. Do not implement this brief.**
+  Its design was rejected by the review recorded in
+  [`19-tool-vocabulary-design-review-outcome.md`](19-tool-vocabulary-design-review-outcome.md).
+  **The text below is preserved unchanged** as the record of what was proposed — `PROJECT.md` §11.
+
+  **Why it was rejected**, in one paragraph: it had Factory agents name Homelab tools directly. But
+  ADR-031 §4 requires Factory to be independently adoptable and ADR-027 §5 makes an unknown tool
+  name a hard load failure, so a manifest naming Homelab tools cannot load without Homelab. The
+  design was internally contradictory. Factory agents now declare **portable capabilities**, and
+  each backend maps them to concrete tools.
+
+  **The five-name vocabulary is not published.** Three of its names were derived from the Telegram
+  executors, which the owner has since described as experiments rather than the foundation of a
+  permanent vocabulary. Tools are now designed only when a concrete operational need appears.
+
+  **What survives:** the two defects this brief found by reading the code — the `Capability` enum
+  conflating privilege-required with wiring-state, and the subset rule living in `bot.py:315` rather
+  than as a `Router` invariant — are real and are carried forward. The review's four-property tool
+  contract replaces the scalar model in response to the first.
+
+  A fresh brief must be written and committed before any implementation resumes.
+
+- **Original status:** Brief, committed before implementation per ADR-017
 - **Implements:** ADR-027 §3, §4, §5; ADR-031 §2, §7
 - **Predecessors read:** `08-router-executors-handover.md`, `09-model-executor-handover.md`
 - **Prerequisite for:** Phase 20 (Factory rewrite), and through it Phase 22
