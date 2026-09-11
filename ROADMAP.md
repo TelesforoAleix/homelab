@@ -524,9 +524,15 @@ exact reviewed revision**.
 
 **Its §6.1 is the decision that shapes the phase.** Reading Factory at `97ccb86` found the read half
 already built — an 864-line **read-only** `dashboard/` that loads a project's `ops/` folder — and
-found that a browser page cannot create a worktree, commit, run tests or open a pull request. A
-local process is the expected outcome, and the brief requires it be decided and justified rather
-than assumed.
+found that a browser page cannot create a worktree, commit, run tests or open a pull request.
+
+**Amended 2026-09-11**, the same day, on the owner's correction. Factory's own `roadmap.md` already
+specifies the writable control plane (**V3**) and the CLI bridge (**V2**), and its V1.5 exit
+criterion already named *"the CLI/server/webview bridge decision"*. The brief resolves that existing
+decision rather than posing a new one, and **CLI-first — keeping the dashboard as a file exactly as
+it is — is a first-class option** that the first draft underweighted. What exists in `factory` is an
+**MVP, not a constraint**: reuse what works, rethink what does not. ADR-031 §9 superseded the
+V-series as a *plan*; ADR-031 §7 keeps the design content, which is input here.
 
 ## Phase 21 — Brain Rename & Method Extraction
 
