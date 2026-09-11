@@ -2,6 +2,13 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
+- **Target architecture:** [`target-architecture.md`](target-architecture.md) (2026-09-11) — what the
+  system is meant to **be** when finished: nine request layers, governance under all of them, clients
+  (Telegram, scheduler, Factory, voice) that are **not** layers. Written because the roadmap answers
+  *what next* and the ADRs answer *what was decided*, and neither answered *what is this*. It records
+  **five gaps** — request understanding, service routing, **online research (in no phase anywhere)**,
+  cloud inference, result handling — and **three collisions**, chiefly Phases 15/15.0/23 all claiming
+  model routing. **Reshaping the roadmap around it is a separate step and needs an ADR.**
 - **Current phase:** 20.0 — Minimal Factory Workbench (**complete**, 2026-09-11). **Factory
   Workbench executes.** The deliverable is in the public `factory` repository — the first phase whose
   code lands outside this one. A CLI write engine, a loopback-only server in front of it, and the
