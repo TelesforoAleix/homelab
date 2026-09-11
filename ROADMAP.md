@@ -519,7 +519,14 @@ rounds, an exhausted budget, and an agent exceeding project or context scope. Pl
 ones: **no direct agent write to `main`**, and **no merge whose human approval is not bound to the
 exact reviewed revision**.
 
-**A brief must be written and committed before implementation** (ADR-017). It does not exist yet.
+- Brief: [`docs/handovers/20.0-minimal-factory-workbench.md`](docs/handovers/20.0-minimal-factory-workbench.md)
+  — committed before implementation per ADR-017, 2026-09-11.
+
+**Its §6.1 is the decision that shapes the phase.** Reading Factory at `97ccb86` found the read half
+already built — an 864-line **read-only** `dashboard/` that loads a project's `ops/` folder — and
+found that a browser page cannot create a worktree, commit, run tests or open a pull request. A
+local process is the expected outcome, and the brief requires it be decided and justified rather
+than assumed.
 
 ## Phase 21 — Brain Rename & Method Extraction
 
