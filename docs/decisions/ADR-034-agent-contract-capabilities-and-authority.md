@@ -3,7 +3,9 @@
 - **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** ADR-027 in full. Changes ADR-025 §10 (see §13).
-- **Superseded by:** none
+- **Superseded by:** none. **Extended by ADR-044** (2026-09-11) with a boundary this ADR does not
+  cover: a declared capability grants nothing, and which **services** a *client* may reach is checked
+  first and is the stronger boundary.
 
 ## Context
 

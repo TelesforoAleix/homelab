@@ -1,6 +1,6 @@
 # ADR-040: Autonomous operation is normal; budget replaces attribution
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** ADR-025 §9, fully. ADR-026 §5 lifted it per provider; this retires it.
 - **Superseded by:** none

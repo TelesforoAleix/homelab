@@ -1,6 +1,6 @@
 # ADR-037: Encryption at rest, executed — an encrypted data volume
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** ADR-032's content gate, which it discharges for the encrypted volume only. Revisits
   ADR-015, which ADR-032 reaffirmed.
@@ -27,7 +27,10 @@ This ADR executes the revisit ADR-032 deferred.
 findmnt -no FSTYPE /
 ```
 
-**If this returns `xfs`, this ADR is void and must be rewritten.** XFS cannot be shrunk by any tool;
+**Verified 2026-09-11 on the node: `ext4`.** The shrink path exists and this ADR stands.
+`/boot` is a second ext4 volume and the EFI partition is vfat — a normal Ubuntu layout.
+
+**If this had returned `xfs`, this ADR would be void and would need rewriting.** XFS cannot be shrunk by any tool;
 it is a permanent property of the filesystem. The shrink path below would not exist and the options
 would collapse to a second disk or a reinstall. The repository does not currently record which
 filesystem the root volume uses, and this decision must not be accepted on an assumption.

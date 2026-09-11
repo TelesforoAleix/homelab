@@ -1,6 +1,6 @@
 # ADR-043: Cross-cutting contracts and living specifications
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** none. **Amends** ADR-017 in two narrow respects. Applies ADR-031 §9.
 - **Superseded by:** none

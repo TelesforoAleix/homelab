@@ -1,6 +1,6 @@
 # ADR-041: Change safety — the node has a console on demand
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** ADR-020 in full
 - **Superseded by:** none

@@ -8,6 +8,9 @@
   the prerequisite in §7, and clarifications to §2, §4 and §9. **The rest of this ADR stands**, §3,
   §5, §6, §8, §10 and §11 included. ADR-035 §1 is the section-by-section record.
   Separately, §2's table cites ADR-027, which **ADR-034** replaces.
+  **ADR-042** (2026-09-11) narrows **§4 for `homelab` only** — public and readable, not packaged to run
+  standalone. §4 is unchanged for `factory`. **ADR-043** applies §9's contract rule to cross-cutting
+  concerns.
 - **Amended:** 2026-09-10, after the initial draft and before this ADR was merged — see below.
 
 ## Amendment, 2026-09-10

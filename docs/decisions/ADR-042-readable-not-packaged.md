@@ -1,6 +1,6 @@
 # ADR-042: Home Lab is public and readable, not packaged for adoption
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** ADR-031 §4, as it applies to `homelab`. Its application to `factory` is unchanged.
 - **Superseded by:** none

@@ -1,6 +1,6 @@
 # ADR-044: A declared capability is not a granted authorization
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** none. **Extends** ADR-034 with a boundary it does not cover.
 - **Superseded by:** none

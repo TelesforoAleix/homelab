@@ -1,6 +1,6 @@
 # ADR-039: What may leave the machine — a policy, not a list
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** ADR-025 §8. The rest of ADR-025 stands, including §1's credential boundary.
 - **Superseded by:** none

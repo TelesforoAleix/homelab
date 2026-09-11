@@ -3,7 +3,9 @@
 - **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** none. **Refines** ADR-031 §1, §4, §7 and §9 — see §1. ADR-031 stands otherwise.
-- **Superseded by:** none
+- **Superseded by:** **ADR-038** (2026-09-11) supersedes §7's *"The first real Workbench runs on the
+  MacBook"* — everything runs on the server, and Workbench binds loopback reached by SSH tunnel. The
+  rest of §7 and the rest of this ADR stand.
 
 ## Context
 

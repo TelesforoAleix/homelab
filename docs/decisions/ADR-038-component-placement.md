@@ -1,6 +1,6 @@
 # ADR-038: Everything runs on the server; the MacBook is a client
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-11
 - **Supersedes:** ADR-035 §7's *"The first real Workbench runs on the MacBook"*. The rest of ADR-035
   stands. Extends ADR-023's no-listening-socket property into a bind policy.
