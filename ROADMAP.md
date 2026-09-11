@@ -502,8 +502,7 @@ where ADR-031 §1's reason survives, and it is the one thing this phase may not 
 
 **The synthetic project is one artifact doing five jobs**: the standalone quickstart, the end-to-end
 acceptance test, the development fixture, the learning example, and the environment where refusals
-are planted and proved. Its fourteen accepted steps are specified in the design review and belong in
-this phase's brief.
+are planted and proved. Its fourteen accepted steps are enumerated in the brief's §4.1.
 
 **Only the deterministic fake adapter is fixed.** Which real adapter ships first is deliberately open
 (ADR-035 §4). The fake comes first regardless, because an acceptance test that needs a live model is
