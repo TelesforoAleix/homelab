@@ -6,6 +6,10 @@
   (frame as a reference-build trade-off; add a Second Brain revisit trigger)
 - **Supersedes:** none
 - **Superseded by:** none
+- **Revisited by:** [ADR-032](ADR-032-encryption-at-rest-reaffirmed-with-a-content-gate.md)
+  (2026-09-11, Phase 18) — this decision is **reaffirmed**, its "no sensitive data at rest"
+  premise made an explicit content gate, and its trigger 1 restated as the arrival of private
+  content rather than a phase number. Not superseded; the choice here still stands.
 
 ## Context
 

@@ -101,3 +101,12 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   repository" and superseding Factory's `roadmap.md` and its Locked Decisions, while §4's standalone
   adoptability is preserved because what a public repository ships is the method and the contracts,
   never the owner's roadmap (§4, §9).
+- **[ADR-032](ADR-032-encryption-at-rest-reaffirmed-with-a-content-gate.md) — Encryption at rest,
+  reaffirmed with a content gate** (2026-09-11, Phase 18). The revisit ADR-015 required. The node
+  **stays unencrypted**, and its previously implicit "no sensitive data at rest" premise becomes an
+  **explicit gate**: no knowledge base, no project content, no private repository until this is
+  revisited. Measured rather than assumed: the console exists after all, so passphrase-at-boot is
+  viable; the TPM is 2.0 and enrolment works, but only against the **SHA-1** bank, because
+  allocating SHA-256 needs platform authority that firmware deliberately discards before boot; and
+  the volume group has zero free extents, so a separate encrypted volume has nowhere to live.
+  Reaffirming is a decision; silence would not have been.

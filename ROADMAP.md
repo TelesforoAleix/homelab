@@ -334,6 +334,20 @@ that would be painful to lose or to have read.
 
 Give the node a recovery story before it holds anything expensive to lose.
 
+Status: **Complete** (2026-09-11). All five functional objectives met: a tested console as the
+second way in, a backup, a restore proved against a planted positive control, **ADR-032**
+reaffirming ADR-015 with an explicit content gate, and `eno1` resolved as permanently down.
+
+**One Definition of Done item is outstanding and recorded as such:** no `guide/18-foundations/`
+material was written.
+
+**Carried to Phase 21 and Phase 10 as a hard precondition:** until encryption is revisited and
+executed, the node may not hold the knowledge base, any project repository, or any private
+repository (ADR-032 §2).
+
+- Handover: [`docs/handovers/18-foundations-handover.md`](docs/handovers/18-foundations-handover.md)
+- Decisions: ADR-032 (new); ADR-015 reaffirmed; ADR-016 resolved
+
 **Added 2026-09-10.** A new number rather than a renumbering, per the roadmap rule above. It carries
 the work the Phase 09 handover addressed to "the foundations phase", plus the debts Phase 03
 created and Phase 13 inherited but which cannot wait for a full hardening phase.
