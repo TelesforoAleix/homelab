@@ -503,6 +503,12 @@ it had been outstanding since the layers were named.
 - Guide: [`guide/20.0-minimal-factory-workbench/`](guide/20.0-minimal-factory-workbench/README.md)
 - Decision: **ADR-036** (the write path and runtime), resolving the brief's §6.1 at a checkpoint
 
+**The output is explicitly provisional** (owner, 2026-09-11). It proves the loop works and that the
+records, the write engine and the writable dashboard hold together; it is **not** a design anyone is
+committed to. Phase 20 proper redesigns it once homelab is further developed, and the fact that
+something currently works is not a reason to keep its shape — the same standing the pre-Workbench
+dashboard had when this sub-phase started.
+
 **Carried forward, and not to be silently inherited:** the **adapter interface is unproved** — it has
 one implementation, the deterministic fake, so ADR-036's second-adapter equivalence check has not
 run. Phase 23 builds the first real backend and is where that is discovered.
