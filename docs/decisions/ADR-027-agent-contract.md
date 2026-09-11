@@ -1,9 +1,11 @@
 # ADR-027: The Agent Contract
 
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-09-10
 - **Supersedes:** none
-- **Superseded by:** none
+- **Superseded by:** **ADR-034**, in full (2026-09-11). Its §1, §6 and §7 survive in
+  substance there; §2, §3, §4 and §5 changed. ADR-034 §1 is the section-by-section record.
+  **This ADR is kept as written** — it is history, not current architecture.
 
 ## Context
 
