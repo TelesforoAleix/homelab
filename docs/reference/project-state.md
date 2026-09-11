@@ -20,8 +20,11 @@
   *what next* and the ADRs answer *what was decided*, and neither answered *what is this*. It records
   **five gaps** — request understanding, service routing, **online research (in no phase anywhere)**,
   cloud inference, result handling — and **three collisions**, chiefly Phases 15/15.0/23 all claiming
-  model routing. **Reshaping the roadmap around it is a separate step, needs an ADR, and is
-  the next thing.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 – ADR-044.
+  model routing. **Reshaped 2026-09-11 by ADR-045**: every layer now names exactly one owning phase,
+  the five gaps have homes — including **Phase 24, web research, which had no phase anywhere** —
+  Phase 23 is split into 23.0–23.3, Phase 12 is repurposed rather than absorbed, and Phase 11 is
+  superseded. **Phase 18.1 — encryption execution — is first and needs the owner at the machine.**
+  See [`constraint-review.md`](constraint-review.md), which produced ADR-037 – ADR-044.
 - **Current phase:** 20.0 — Minimal Factory Workbench (**complete**, 2026-09-11). **Factory
   Workbench executes.** The deliverable is in the public `factory` repository — the first phase whose
   code lands outside this one. A CLI write engine, a loopback-only server in front of it, and the
