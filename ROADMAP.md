@@ -231,9 +231,19 @@ First slice is expected to be retrieval **with no model call at all**, so nothin
 machine and ADR-025 §8 is untouched; widening `/ask` with retrieved context is a separate decision
 with its own ADR.
 
-**ADR-030 — the Knowledge Contract** is written in this phase, not before it: specifying how an
-agent queries the knowledge base before retrieval exists would be guessing. It implements ADR-010 as
-a queryable interface returning provenance, never raw filesystem access.
+**The Knowledge Contract ADR** is written in this phase, not before it: specifying how an agent
+queries the knowledge base before retrieval exists would be guessing. It implements ADR-010 as a
+queryable interface returning provenance, never raw filesystem access.
+
+**Corrected 2026-09-10 (ADR-031).** This paragraph previously reserved the number ADR-030 for that
+contract. ADR-030 was subsequently used for the four-layer workspace, so the reservation was wrong.
+No number is reserved here: the Knowledge Contract takes the next free number on the day it is
+written.
+
+**Phase 21 is now coupled to this phase (ADR-031 §6, as amended 2026-09-10).** The new public `brain`
+is designed and built **together with** the ingestion pipeline and the RAG system decided here, not
+before them, so that content migrates into a structure that has actually been designed. Until then
+the existing private `brain` stays as it is, under its current name.
 
 **Inherited from Phase 01 — must be addressed, not inherited silently:**
 
@@ -345,6 +355,118 @@ Scope:
 Phase 13 remains the dedicated hardening phase — firewall, `fail2ban`, Tailscale ACLs, node-key
 expiry, rootless Docker. Phase 18 is narrower: it is about **recoverability**, not defence.
 
+## Phase 19 — Tool Vocabulary & Capability Levels
+
+Publish homelab's **named tool vocabulary and its capability levels** as a stable public interface,
+so a Factory manifest has something real to compose against.
+
+**Added 2026-09-10 (ADR-031).** New numbers rather than a renumbering, per the roadmap rule above and
+the Phase 18 precedent.
+
+ADR-027 §3 already places the vocabulary in homelab, because homelab is what enforces it, and ADR-027
+§5 makes an unknown tool name a **hard load failure** rather than a warning. Together those make this
+phase the prerequisite for Phase 20 and Phase 22: a manifest written before the vocabulary exists
+either names tools that cannot load, or invents a vocabulary in the wrong repository.
+
+ADR-027's own validation list applies here — each item proved against a positive control, not
+observed to pass. **An authorisation check that has only ever permitted is unvalidated.**
+
+**Prerequisite for:** Phase 20, and through it Phase 22.
+
+- Brief: [`docs/handovers/19-tool-vocabulary.md`](docs/handovers/19-tool-vocabulary.md) — committed
+  before implementation per ADR-017. Proposes a **five-name** vocabulary (`read_host_status`,
+  `ask_model`, `restart_service`, `read_repo`, `post_review`), keeps ADR-025's two locks shut, and
+  specifies the planted positive control that proves the refusal actually fires.
+
+## Phase 20 — Factory Rewrite
+
+Rewrite The Factory: **keep the content, discard the markdown-heavy format** (ADR-031 §7). The format
+was designed for a different environment than the one Factory now has to run in.
+
+**Nothing is to be written into the current format** in the meantime.
+
+**Depends on Phase 19.** The rewrite composes against homelab's published tool vocabulary; starting
+before it exists is the failure ADR-031 §7 names.
+
+**Also in scope: retiring Factory's parallel plan.** Everything is managed through one internal
+system — homelab. One `ROADMAP.md`, one progress record. Factory's own `roadmap.md` V0–V4 series and
+the **Locked Decisions** in its `progress.md` are **superseded** (ADR-031 §9, as amended 2026-09-10),
+and folding them in belongs here: this is the phase already reading Factory's content end to end, so
+deciding per item what survives into homelab's plan and what was already dead costs one pass rather
+than two.
+
+**Amended 2026-09-10.** When this phase was added earlier the same day it said Factory's `roadmap.md`
+stayed in Factory as Factory's own plan, on the first draft of ADR-031 §9. That is no longer the
+plan; the amendment to §9 replaced it. The earlier statement is recorded here rather than removed.
+
+What Factory still ships is the **method, the contracts and the definitions** — never this project's
+roadmap. An adopter takes those and writes their own plan (ADR-031 §4).
+
+## Phase 21 — Brain Rename & Method Extraction
+
+Rename the private `brain` repository to **`aleix-brain`**, where it becomes an archive, and extract
+its ~32 method files with `git-filter-repo` into a **new public `brain`** (ADR-031 §5, §6).
+
+**Deferred as a whole operation on 2026-09-10 (ADR-031 §6, as amended), the same day this phase was
+added.** The number stays and the phase is not renumbered, per the roadmap rule above; what changed
+is its sequencing, and the earlier statement of it is left in place rather than rewritten:
+
+- When this phase was first written it was **independent of Phases 19, 20 and 22 and could run in any
+  order relative to them**, with only *when content migrates* deferred.
+- It is now **coupled to the knowledge work**: the new public `brain` is designed and built
+  **together with the new ingestion pipeline and the RAG system** — Phase 10 and its sub-phases —
+  not before them. The rename, the extraction and the content migration are one operation and it runs
+  at that point.
+- **The end state is unchanged** (ADR-031 §5). Only the timing changed. The reason: building the
+  public repository first shapes it around the current layout, and the ingestion design then either
+  accepts a structure chosen for it or reshapes a repository that already has history.
+
+**Until this phase runs, the private `brain` stays as it is, under its current name, in active use.**
+No rename, no extraction, no content migration in the meantime.
+
+`aleix-brain`'s history is **not** rewritten and its visibility does **not** change. Extraction is
+done with git operations, never by copying — the ADR-029 and ADR-030 §5 precedent.
+
+**Accepted, not overlooked:** content written into the new `brain` after the switch has no version
+history, mitigated only by `aleix-brain` retaining everything up to the switch.
+
+**The rename hazard this phase carries, stated here because a deferred plan is a plan nobody is
+reading.** Renaming leaves a GitHub redirect at the old name, and that redirect **dies the moment a
+new repository claims the old name under the same owner** — after which a stale clone whose `origin`
+still points at `.../brain.git` is aimed at the **public** repository, and one `git push` publishes
+the private notes, with no undo. The hazard is **dormant only while nothing claims the old name**,
+which is exactly what the deferral preserves and exactly what this phase ends. The preparation for
+it — the rename/extract procedure and its mitigations — is the extraction plan of 2026-09-10 in
+`projects/factory` (private), which remains valid and is where this phase starts.
+
+**Gated the same way as the rest of the split:** the ADR-029 §5 boundary gate must be validated
+against planted content before the new public repository is pushed, and nothing is cloned onto the
+node until Phase 18 has decided ADR-015.
+
+**Not part of the new public repository:** the restored `idea-logger`, `session-archiver`,
+`task-tracker` and orchestrator-README files in `brain/.github/skills/`. They describe processes that
+predate the new design and are replaced by it, so they are superseded legacy rather than method;
+they stay private, and whether they are discarded or reprocessed is this phase's design work to
+decide (ADR-031 §6.1).
+
+## Phase 22 — Dashboard / Control Plane Move
+
+Move the dashboard and control plane from Factory to homelab, on the ADR-031 §1 boundary: Factory
+declares, homelab enforces and executes, so a control plane that acts belongs in homelab.
+
+**This move was agreed but has never had an ADR.** Writing one is part of this phase, not a
+precondition assumed to exist. Until it is written there is no accepted decision to point at.
+
+**Depends on Phase 20**, because the control plane reads Factory's operating objects and their schema
+is what the rewrite changes. Building against the pre-rewrite schema would be work done twice.
+
+**Factory's `roadmap.md` plans the same deliverable itself** — V1.5, *"Read-Only Local Management
+Dashboard"*, and V3, *"Local Dashboard Control Plane"*. **Both are superseded by this phase**
+(ADR-031 §9, as amended 2026-09-10). Two live plans for one deliverable was flagged as an open
+conflict when this phase was added earlier the same day, and it is closed the way the overlap itself
+was closed: there is one plan, and it is homelab's. Retiring the V-series entries is Phase 20's work
+(see above); this phase is where the deliverable actually lands.
+
 ## Repository split (not a numbered phase)
 
 Per ADR-029, the knowledge base splits into `factory` (public), a product repository (private) and `brain`
@@ -373,3 +495,75 @@ ADR-030 adds the `projects/` layer and closes ADR-029 §6 — every project carr
 **Nothing was cloned onto the node.** That half is still gated by Phase 18, for the reason the
 migration plan gave: cloning private repositories onto an unencrypted root filesystem with no
 backup is exactly the event ADR-015 exists to be revisited before.
+
+### Not finished by that split — ADR-031, 2026-09-10
+
+The table above records what was true on the day of the split and is left as written. It is no longer
+the target topology. ADR-031 found that the split drew visibility per *repository* where ADR-029 §2
+had specified it per *artifact*, which left the knowledge base's method private by adjacency rather
+than by decision. **`brain` as named above becomes the private archive `aleix-brain`, and a new
+public `brain` holds the knowledge-base method** — that work is Phase 21.
+
+**Deferred later the same day (ADR-031 §6, as amended).** That change is now coupled to the knowledge
+work in Phase 10 rather than being near-term. `brain` keeps its current name and stays private and in
+active use until then, so the table above is still an accurate description of the repositories that
+exist today — it is the *target* it no longer describes.
+
+## Sequencing note — 2026-09-10
+
+**Added 2026-09-10, after the architecture alignment session that produced ADR-031.** This section
+is an assessment of *running order*, not a decision about scope. It states what was true on the day
+it was written and it is expected to be superseded — a later phase that changes the dependency graph
+should replace this section rather than edit around it, and say which phase superseded it.
+
+### Two tracks, running in parallel
+
+The pending work splits along a line that is not about subject matter but about **who can do it**.
+
+| Track | Phases | Constraint |
+|---|---|---|
+| **Node** | 18, 13, 14 | Requires the owner at the keyboard: privileged commands on a machine where no assistant holds the sudo password. Gates everything physical — no repository has been cloned onto the node. |
+| **Architecture** | 19, 15.0, 20, 10+21, 22 | Repository work. Needs no node access and can proceed while the node track is idle. |
+
+Making either wait on the other idles the one that is free. They are not sequential.
+
+### Recommended order
+
+1. **Phase 18 — start whenever the node is to hand.** First by priority because it is the only
+   pending item where *delay itself carries risk*: the node has no backup of any kind and an
+   unencrypted root filesystem. It also gates Phase 10, which cannot store real knowledge until the
+   ADR-015 decision is made.
+2. **Phase 19 — tool vocabulary.** The single item on the architecture critical path. Its brief is
+   written and committed; it needs implementing.
+3. **Phase 15.0 — model registry.** Brought forward on a dependency the Phase 19 brief surfaced:
+   `model_policy` is a declared *need* that must reach the model helper, which requires a
+   wire-protocol field that does not exist. Without 15.0 that manifest field is decorative.
+4. **Phase 20 — Factory rewrite.** Needs 19; wants 15.0.
+5. **Phases 10 and 21 together.** Knowledge design, ingestion and retrieval, and the new public
+   `brain` repository built once around them rather than lifted from the old layout. Needs the
+   ADR-015 decision from Phase 18 before it stores anything real.
+6. **Phase 22 — dashboard / control plane.** Needs the schema Phase 20 defines. Building it against
+   the pre-rewrite schema would be waste.
+
+Then 13, 17, 12, 11, 14, 16 on their own merits.
+
+### The two bottlenecks, stated plainly
+
+**Phase 18 is the only pending item that requires the owner specifically.** Everything else can be
+executed by an assistant. While it is unstarted the node stays frozen, and no amount of architecture
+work moves it.
+
+**Phase 20 is where the effort actually is.** Rewriting roughly 10,000 lines of prose into a
+loadable operating model is larger than 19, 15.0 and 22 combined. It is also the phase that makes
+the system stop being documentation and start executing.
+
+### What the first ten phases did and did not buy
+
+Phases 00–09 are complete and they built a genuine substrate: a headless node reachable over
+Tailscale, key-only SSH, Docker, and a read-only Telegram bot running unprivileged behind a
+two-allowlist authorisation boundary with a model executor behind that.
+
+They did **not** build the AI system. As of this note the node runs one read-only status bot, holds
+zero repositories, and no agent has ever executed anything. Phases 19–22 did not exist before
+2026-09-10. Recording this distinction matters more than it looks: ten complete phases can read as
+"most of the way there", and the phases that carry the system's actual purpose are all still ahead.

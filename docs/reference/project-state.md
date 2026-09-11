@@ -2,11 +2,18 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 09 — Model Executor, subscription-backed (**complete**, 2026-09-09). Next:
-  **Phase 18 — Foundations** (backup plus the ADR-015 encryption decision plus an SSH recovery
-  path), then Phase 15.0 (generalise the model router), the repository split, and Phase 10
-  (Knowledge). Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap
-  records the reason rather than being quietly rewritten.
+- **Current phase:** 09 — Model Executor, subscription-backed (**complete**, 2026-09-09). **Next,
+  restated 2026-09-10 after ADR-031 added Phases 19-22:** the pending work runs on two parallel
+  tracks. The **node track** needs the owner at the keyboard and opens with **Phase 18 —
+  Foundations** (backup, the ADR-015 encryption decision, an SSH recovery path); nothing reaches the
+  node until it lands. The **architecture track** needs no node access and runs **Phase 19** (tool
+  vocabulary — brief committed, the critical path), then **15.0** (model registry), then **20**
+  (Factory rewrite), then **10 + 21 together** (knowledge, retrieval, and the new public `brain`
+  built around them), then **22** (dashboard). The repository split is **done on the development
+  machine**; its node half is gated by Phase 18 and its brain half is deferred into Phase 21. See
+  the Sequencing note at the end of `ROADMAP.md`, which supersedes this summary if they disagree.
+  Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap records the
+  reason rather than being quietly rewritten.
 - **Architecture decisions taken 2026-09-10**, ahead of Phase 18 and carried into its brief per
   ADR-017: ADR-026 (multi-provider model access), ADR-027 (the agent contract), ADR-028 (the project
   contract) and ADR-029 (repository topology). These define how this repository — the **AI OS** —
@@ -14,6 +21,11 @@
   and to private repositories holding knowledge and products. **ADR-030 (2026-09-10) implemented
   the split on the development machine and added a fourth layer, `projects/`** — see below. The node
   is untouched: no repository has been cloned onto it, because that is gated by Phase 18.
+  **ADR-031 (2026-09-10, amended the same day)** then made privacy a per-artifact rather than a
+  per-repository decision, stated the layer boundary as *Factory declares, homelab enforces, projects
+  accumulate, brain supplies*, put **one plan and one progress record in homelab**, and fixed agent
+  manifests as **JSON**. Its repository change — a new public `brain` holding knowledge-base method —
+  is **deferred and coupled to Phase 10**, so the repositories that exist today are unchanged by it.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -90,6 +102,23 @@ Links: 50 in live documents were rewritten; ~300 in session notes and the append
 pointing at old paths, with a translation table in the knowledge base's `05-logs/README.md`. Records
 say what was true when written (`PROJECT.md` §11).
 
+### Superseded as a target later the same day (ADR-031)
+
+**The table above is a record of the operation and is left as written.** It still describes the
+repositories that exist today; what it no longer describes is the target.
+
+ADR-031 found that the split drew visibility **per repository** where ADR-029 §2 had specified it
+**per artifact**, which left the knowledge base's method private by adjacency rather than by
+decision. The target topology is therefore three public *method* repositories — `homelab`, `factory`
+and a **new public `brain`** that does not yet exist — plus N private *content* repositories, one of
+which is the existing knowledge base as an archive.
+
+**That change is deferred as a whole operation** (ADR-031 §6, as amended 2026-09-10) and coupled to
+the Phase 10 knowledge work: the new public `brain` is designed and built together with the ingestion
+pipeline and the RAG system, not before them. **Until then the existing private `brain` stays as it
+is, under its current name, in active use** — no rename, no method extraction, no content migration.
+That work is Phase 21.
+
 ## Accepted high-level decisions
 
 See `docs/decisions/` for full ADRs. Current direction includes:
@@ -121,8 +150,23 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   (ADR-027);
 - **The Factory is stateless method; each project carries its own state** and references Factory
   definitions rather than copying them (ADR-028);
-- **four repositories, split on method versus output** — `homelab` and `factory` public, `brain` and
-  the product repository private (ADR-029);
+- **method is public, output is private** (ADR-029 §2), with the unit of that decision the
+  **artifact, not the repository** — which supersedes ADR-029 §1's and ADR-030 §1's four-repository
+  visibility tables (ADR-031 §3). The target is three public *method* repositories — `homelab`,
+  `factory` and a **new public `brain`**, which does not exist yet — plus N private *content*
+  repositories: the existing knowledge base as an archive, and one per project. **Today `brain` is
+  still the single private knowledge base under its current name**; the change is deferred and
+  coupled to Phase 10 (ADR-031 §6, as amended);
+- **each public layer must be independently adoptable** — someone must be able to take `factory` plus
+  a knowledge base without `homelab`, or `homelab` alone, and each public repository needs a
+  standalone quickstart. **None currently has one** (ADR-031 §4);
+- **a tool is what the runtime can refuse; a skill is what can only be followed** (ADR-031 §2), and
+  **agent manifests are JSON** — ADR-027 §2 decided five fields, not a serialisation (ADR-031 §11);
+- **one internal system: homelab.** One `ROADMAP.md` and one progress record govern this project's
+  own development; Factory's `roadmap.md` and the Locked Decisions in its `progress.md` are
+  superseded, and retiring them is Phase 20's work (ADR-031 §9, as amended). This does not narrow
+  adoptability: what a public repository ships is the method, the contracts and the definitions —
+  never this project's roadmap. An adopter writes their own plan;
 - **four workspace layers** — infrastructure, execution, projects and knowledge — with `projects/` a
   plain directory holding one private repository per project, and **every project carrying its own
   `ops/`** beside the product rather than inside it. Closes the question ADR-029 §6 left open, by
