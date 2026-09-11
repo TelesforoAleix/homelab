@@ -6,6 +6,24 @@
 - **Implements:** ADR-034 §5, §11, §13; ADR-033 §5; ADR-035 §4 (the backend half)
 - **Inherits from:** [Phase 20.0 handover](20.0-minimal-factory-workbench-handover.md)
 
+> ## ⚠️ Superseded in part, 2026-09-11 — do not implement from §0 as written
+>
+> This brief was committed before **ADR-037 – ADR-044** were accepted, and its framing is now wrong in
+> two places:
+>
+> - **§0.1's two gates are resolved.** ADR-037 puts knowledge and project content in an encrypted
+>   volume on the server; ADR-038 places every component there and binds the harness to loopback;
+>   ADR-039 replaces ADR-025 §8's enumeration with a policy classified by whose data it is.
+> - **§0.2's checkpoint decision is already taken.** *Where the harness runs* is answered: on the
+>   server. The three options it tables are no longer open.
+>
+> **§0.3 (no paid call before the spend governor) and §0.4 (this phase changes ADR-025 §10) still
+> stand**, as do §4's objectives, §8's validation and §16's handover requirements.
+>
+> The brief is also **too large** — it spans five architecture layers plus the governor, and the
+> roadmap reshape is expected to split it. It is preserved as written rather than edited, per
+> ADR-017; a fresh brief is owed before implementation.
+
 ## 0. Governance note
 
 ### 0.1 Two accepted gates stand between this phase and its own core capability

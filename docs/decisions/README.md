@@ -171,7 +171,7 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
 
 Eight decisions taken together after [`constraint-review.md`](../reference/constraint-review.md)
 tested every accepted constraint against the
-[target architecture](../reference/target-architecture.md). They are listed as one group because they
+[target architecture](../architecture/target-architecture.md). They are listed as one group because they
 were decided as one, and several only make sense together.
 
 - **[ADR-037](ADR-037-encryption-at-rest-executed.md) — Encryption at rest, executed.** Discharges

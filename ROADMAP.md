@@ -54,7 +54,7 @@ numbers are stable by the rule below; that was a sequencing decision, not a renu
 - Guide: [`guide/02-linux-fundamentals/`](guide/02-linux-fundamentals/README.md)
 - Standard: [`docs/standards/safe-changes-headless.md`](docs/standards/safe-changes-headless.md)
 - Reference: [`docs/reference/linux-command-reference.md`](docs/reference/linux-command-reference.md)
-- Decision: ADR-020 (change safety on a console-less node) — Accepted
+- Decision: ADR-020 (change safety on a console-less node) — **Superseded by ADR-041** (2026-09-11); its premise was false
 
 **Delivered:** a guide taught from this machine's own files, an operator command reference, a
 change-safety standard binding on every later phase, `scripts/macos/preflight.sh`, and
@@ -63,7 +63,9 @@ units on disposable objects. Three diagnostic packages installed; nothing else o
 
 **Deliberately not taught** — later phases must not assume it: no networking changes were practised,
 no `sudoers` editing, no firewalling, no backup or restore, and no LVM growth. Those were classified
-read-only because the node has no console.
+read-only because the node was believed to have no console. **That premise was corrected on
+2026-09-11 (ADR-041)** — a console is available on demand. The caution was right; its severity was
+overstated.
 
 ## Phase 03 — Remote Access
 
@@ -200,10 +202,15 @@ reports six listeners — a UNIX socket is a file, not a port (ADR-025).
   never dispatched — proved by asking the model to emit `/restart ssh.service`, which it did, with
   no effect.
 - ✅ Only the question and the five `/status` figures leave the machine. Logs are excluded because
-  anything able to write a log line could otherwise choose what gets sent.
-- ⚠️ **The licensing question is still open.** ADR-008 covers interactive use only. Phase 09
+  anything able to write a log line could otherwise choose what gets sent. **ADR-039 has since
+  superseded that enumeration** with a policy classified by whose data it is — and it keeps this
+  reasoning exactly: content selected by whatever can write a log line still never leaves.
+- ⚠️ **The licensing question was left open.** ADR-008 covers interactive use only. Phase 09
   connected the model under a constraint rather than an answer: **owner-initiated calls only.**
-  **Phase 12 must not make unattended calls without a new ADR.**
+  **Superseded — do not carry this forward.** ADR-026 lifted it per provider (2026-09-10) and
+  **ADR-040 retired it in full** (2026-09-11). Autonomous calls are normal; **budget replaces
+  attribution**, and the spend governor is the control. The instruction this replaces is preserved:
+  > ~~**Phase 12 must not make unattended calls without a new ADR.**~~
 - ⚠️ Fixed a Phase 07 defect found here: `StartLimitIntervalSec` sat in `[Service]`, where systemd
   ignores it, leaving the bot's restart limit **unreachable** for two phases.
 
@@ -228,8 +235,9 @@ rule — **only once a known-answer eval set exists** and simpler retrieval has 
 real questions.
 
 First slice is expected to be retrieval **with no model call at all**, so nothing new leaves the
-machine and ADR-025 §8 is untouched; widening `/ask` with retrieved context is a separate decision
-with its own ADR.
+machine. **ADR-039 has since superseded ADR-025 §8** with a policy classified by whose data it is, so
+the separate decision this anticipated has been taken — what leaves is now a classification question,
+not a per-feature ADR.
 
 **The Knowledge Contract ADR** is written in this phase, not before it: specifying how an agent
 queries the knowledge base before retrieval exists would be guessing. It implements ADR-010 as a
@@ -361,6 +369,11 @@ reaffirming ADR-015 with an explicit content gate, and `eno1` resolved as perman
 **Carried to Phase 21 and Phase 10 as a hard precondition:** until encryption is revisited and
 executed, the node may not hold the knowledge base, any project repository, or any private
 repository (ADR-032 §2).
+
+**Resolved 2026-09-11 by ADR-037**, which executes that revisit: knowledge and project content live
+in an **encrypted volume** on the server, unlocked over SSH after boot. The gate is discharged for
+that volume only — the unencrypted root still may not hold them — so the precondition **moves** rather
+than disappearing. The shrink it requires needs the owner physically present.
 
 - Handover: [`docs/handovers/18-foundations-handover.md`](docs/handovers/18-foundations-handover.md)
 - Guide: [`guide/18-foundations/`](guide/18-foundations/README.md)
@@ -669,7 +682,7 @@ Scope, and **where each piece already has a home**, so this phase adds rather th
 | Provider/gateway integration and the spend governor | **ADR-033**; Phase 15 |
 | Model registry, eligibility, caps, fallback | **Phase 15.0** — already briefed |
 | Deterministic routing, then AI-assisted, deterministic retained as fallback | **Phase 15** (amended above) |
-| Retrieval and the Brain specialist's project-facing contract | **Phase 10**, whose ADR-032 gate still binds |
+| Retrieval and the Brain specialist's project-facing contract | **Phase 10**; content lives in the encrypted volume (ADR-037) |
 | **Task decomposition** | **here** — no existing phase |
 | **Context assembly and cache-prefix discipline** | **here** — no existing phase |
 | **Budgets, audit, approvals as runtime machinery** | **here** — no existing phase |
@@ -696,13 +709,18 @@ Phase 19**, whose concrete tools should follow the capability gaps this phase ac
 - Brief: [`docs/handovers/23-homelab-ai-foundation.md`](docs/handovers/23-homelab-ai-foundation.md)
   — committed before implementation per ADR-017, 2026-09-11.
 
-**Two accepted gates constrain this phase's own core capability**, and the brief's §0.1 states them
-rather than letting them be discovered mid-build: **ADR-032 §2** keeps project content off the node,
-so a harness running there has nothing to assemble context *from*; and **ADR-025 §8** permits only the
-question and the `/status` figures to leave, so assembled context leaving is the widening ADR-033 §6
-already named as *"the immediate next decision."* Neither blocks the phase; both shape it. **Where the
-harness runs and what may leave is a checkpoint decision** taken before implementation, on the
-Phase 20.0 precedent.
+**Both gates that constrained this phase are now resolved** (2026-09-11). ADR-037 puts knowledge and
+project content in an encrypted volume on the server, ADR-038 places every component there and binds
+the harness to loopback, and ADR-039 replaces ADR-025 §8's enumeration with a policy. The brief's
+§0.1 and §0.2 — which framed *where the harness runs and what may leave* as an open checkpoint — are
+**superseded in part**; the brief predates the ADRs and is due to be rewritten with this phase's
+split.
+
+The statement they replace is preserved rather than deleted:
+
+> ~~**Two accepted gates constrain this phase's own core capability**: **ADR-032 §2** keeps project
+> content off the node, and **ADR-025 §8** permits only the question and the `/status` figures to
+> leave. Neither blocks the phase; both shape it.~~
 
 **The spend governor comes first** (ADR-033 §5) — no metered call is possible before it exists.
 
@@ -803,7 +821,8 @@ Phase 20 — intensive Workbench and catalogue migration
 ```
 
 Phase 22 hangs off Phase 23 for runtime state and Phase 20.0 for record schema. Phases 15 and 15.0
-feed Phase 23 and can run ahead of it. Phases 10 and 21 run together, still gated by ADR-032.
+feed Phase 23 and can run ahead of it. Phases 10 and 21 run together, and now depend on the
+encrypted volume existing (ADR-037) rather than on ADR-032's gate being lifted.
 
 ### Recommended order
 
@@ -814,7 +833,7 @@ feed Phase 23 and can run ahead of it. Phases 10 and 21 run together, still gate
    system stop being documentation.
 3. **Phase 19 — concrete tools**, once Phase 23 has produced real gaps to fill.
 4. **Phase 20 — intensive Workbench and catalogue migration.**
-5. **Phases 10 and 21 together**, still gated by ADR-032's content gate.
+5. **Phases 10 and 21 together**, after the encrypted volume exists (ADR-037).
 6. **Phase 22 — administration dashboard**, once there is runtime state to show.
 
 **Phases 15 and 15.0 can run at any point before Phase 23** and are the cheapest useful work

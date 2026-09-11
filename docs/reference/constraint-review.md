@@ -1,9 +1,25 @@
 # Constraint Review — do our accepted decisions still serve the target architecture?
 
 - **Written:** 2026-09-11
-- **Status:** Analysis. **Decides nothing.** Every accepted ADR below remains in force until a
-  successor ADR changes it.
-- **Companion to:** [`target-architecture.md`](target-architecture.md)
+- **Status:** **Resolved 2026-09-11.** This review produced **ADR-037 – ADR-044**, all Accepted. It is
+  kept as the reasoning behind them, not as live analysis — the verdicts below are what was argued,
+  and the ADRs are what was decided. Where the two differ, the ADR is authoritative.
+
+| Reviewed | Outcome |
+|---|---|
+| A — ADR-032 content gate | **ADR-037** — encryption executed; gate discharged for an encrypted volume only |
+| B — ADR-025 §8 egress | **ADR-039** — a policy classified by whose data it is |
+| C — ADR-025 §9 owner-initiated | **ADR-040** — retired; budget replaces attribution |
+| D — ADR-020 console-less | **ADR-041** — premise corrected, rule kept, lockout-class redefined |
+| E — ADR-023 listening socket | **ADR-038 §5** — a bind policy; the bot's property survives |
+| F — ADR-031 §4 adoptability | **ADR-042** — readable, not packaged; configuration is the seam |
+| G — ADR-017 sequential phases | **ADR-043** — cross-cutting contracts and living specs |
+| H — ADR-033 §5 governor | Stands. Nested per-run envelopes at implementation |
+| I — ADR-034 services gap | **ADR-044** — capability grants nothing; client exposure checked first |
+
+The seven questions at the end were answered by the owner, and those answers are recorded in the
+ADRs' Decision and Alternatives sections rather than here.
+- **Companion to:** [`target-architecture.md`](../architecture/target-architecture.md)
 
 ## Why this review exists
 
@@ -242,7 +258,9 @@ is a tool registry quietly becoming a service registry.
 **Unchanged and not challenged:** ADR-011 (privilege separation), ADR-025 §1 (credential boundary),
 ADR-026 §4 (the agent declares a need), ADR-013, ADR-021, ADR-029 §2, ADR-030.
 
-## Questions this review cannot answer
+## Questions this review could not answer — all since answered
+
+Kept as written. The answers are in ADR-037 – ADR-044.
 
 1. **Encryption.** Reinstall with full-disk encryption, add storage for an encrypted volume, or accept
    that knowledge lives off the node permanently? The third is a different architecture.

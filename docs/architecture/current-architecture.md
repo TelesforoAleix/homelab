@@ -2,7 +2,8 @@
 
 **State:** Phases 01–09 complete — the reference node runs Ubuntu Server, is administered remotely
 over Tailscale with key-only SSH, and has Docker Engine/Compose plus two subscription-authenticated
-AI operator CLIs. **The console has been physically removed**; the node is genuinely headless.
+AI operator CLIs. **The monitor and keyboard are detached**; the node runs headless, with a console available on
+demand — the connectors are present and console login is tested (Phase 18, ADR-041).
 
 **`Interface → Router → Executor → Model` now exists as code**, not as a diagram. Phase 07 built the
 Interface; Phase 08 built the Router and the Executors; Phase 09 connected the model.
@@ -11,7 +12,9 @@ The way it was connected is the architectural point. `homelab-bot` provably cann
 credential and **still cannot** — so the model call happens in a separate service running as
 `aleix`, which the bot asks over a UNIX socket. The credential never moves. The bot gained no group,
 no sudoers entry and no read access to `/home/aleix`, and the machine gained no listening socket
-(ADR-025).
+(ADR-025). **That last property changes under ADR-038**, which adds loopback-bound endpoints for the
+harness and Workbench; the rule becomes *every listening socket is accounted for and bound to a stated
+interface*, and the bot remains outbound-only.
 
 The node performs exactly one privileged action, and the account that performs it gained nothing:
 `id homelab-bot` is byte-identical to Phase 07 and there are zero sudoers entries.
@@ -19,7 +22,8 @@ The node performs exactly one privileged action, and the account that performs i
 Phase 02 changed nothing here, which its brief predicted: it taught the architecture rather than
 altering it. Its only lasting change to the node is three diagnostic packages. What it *did* add is
 a constraint on how this architecture may be changed from now on —
-[`docs/standards/safe-changes-headless.md`](../standards/safe-changes-headless.md) (ADR-020).
+[`docs/standards/safe-changes-headless.md`](../standards/safe-changes-headless.md) (ADR-020,
+superseded by ADR-041).
 
 ## Physical roles
 
@@ -94,9 +98,11 @@ Two boundaries hold this together, and neither trusts the other:
 - **the socket's group and mode**, enforced by the kernel before the helper process exists;
 - **the router's capability check**, which is why `/ask` cannot reach `/restart`.
 
-The licensing question is **still unresolved.** What substitutes for an answer is a constraint:
-every model call is owner-initiated, in response to a message just sent. **Phase 12 must not make
-unattended calls without a new ADR** (ADR-025 §9).
+The licensing question was left open, and the constraint that substituted for an answer — every
+model call owner-initiated, in response to a message just sent — **is retired**. ADR-026 lifted it
+per provider on 2026-09-10; **ADR-040 retired §9 in full** on 2026-09-11. Autonomous calls are normal
+and **budget replaces attribution** as the control. The licensing position is recorded in ADR-040 §3
+as an **accepted judgement with its reasoning**, not as resolved.
 
 ## Not implemented yet
 
