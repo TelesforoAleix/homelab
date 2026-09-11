@@ -182,7 +182,8 @@ one-byte corruption and requires its own check to fire.
 4. **SHA-256 PCR bank needs firmware.** If Option C is ever wanted properly, allocation must happen
    in the Lenovo BIOS, not from Linux.
 5. **No BIOS password.** Physical access implies a USB boot. Phase 13's territory.
-6. **No `guide/` material** — see below.
+6. ~~**No `guide/` material**~~ — **closed 2026-09-11.** `guide/18-foundations/` was written after
+   the phase was first declared complete. See §Definition of Done.
 
 ## Recommended roadmap changes
 

@@ -568,10 +568,15 @@ Making either wait on the other idles the one that is free. They are not sequent
    **Superseded 2026-09-11** before implementation; it is on no critical path and blocks nothing.
    See the Phase 19 entry above. What replaces it in this position is not yet settled — the
    successor ADRs are pending.
-3. **Phase 15.0 — model registry.** Brought forward on a dependency the Phase 19 brief surfaced:
+3. **Phase 15.0 — model registry.** ~~Brought forward on a dependency the Phase 19 brief
+   surfaced:~~ **restated 2026-09-11** — the Phase 19 brief is superseded, and the review removed
+   `model_policy` from agents entirely. Phase 15.0 is amended accordingly. The original reason
+   is preserved below as history:
    `model_policy` is a declared *need* that must reach the model helper, which requires a
    wire-protocol field that does not exist. Without 15.0 that manifest field is decorative.
-4. **Phase 20 — Factory rewrite.** Needs 19; wants 15.0.
+4. **Phase 20 — Factory rewrite.** ~~Needs 19; wants 15.0.~~ **Restated 2026-09-11:** it needs
+   neither. Phase 19 is superseded, and Phase 20's scope is being rewritten around the minimal
+   Factory Workbench and a synthetic acceptance project. Provisional until the successor ADRs.
 5. **Phases 10 and 21 together.** Knowledge design, ingestion and retrieval, and the new public
    `brain` repository built once around them rather than lifted from the old layout. Needs the
    ADR-015 decision from Phase 18 before it stores anything real.
