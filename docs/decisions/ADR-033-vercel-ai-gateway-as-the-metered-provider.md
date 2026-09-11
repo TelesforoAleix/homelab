@@ -113,6 +113,11 @@ The numeric ceilings are not set here; they are configuration and belong to the 
 - **The route vocabulary.** `utility`, `general_tools`, `reasoning_cached` and the rest are a task
   vocabulary, and ADR-026 §4 puts the declaration form in ADR-027's hands. It is settled once
   Phase 19 is settled, and the strategy document's names are a proposal, not a decision.
+  **Resolved 2026-09-11, hours after this ADR was written:** the Phase 19 design review concluded
+  that there *is* no agent-declared route vocabulary. Agents do not declare `model_policy`; the
+  Homelab router selects from the agent's role, a bounded task summary and non-authoritative
+  metadata. ADR-026 §4 survives — the agent's **role is** its declaration of need. This deferral
+  therefore resolves rather than remaining open; the successor ADR records it.
 - **Which models fill which route.** Configuration, decided by evaluation.
 - **What may leave the machine.** ADR-025 §8 currently permits only the question and the `/status`
   figures. A gateway carrying assembled context is a substantial widening, and §8 requires its own

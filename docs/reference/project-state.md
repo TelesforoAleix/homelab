@@ -12,10 +12,11 @@
   restated 2026-09-10 after ADR-031 added Phases 19-22:** the pending work runs on two parallel
   tracks. The **node track** needs the owner at the keyboard; **Phase 18 is complete**, leaving Phase 13
   and Phase 14 (backup, the ADR-015 encryption decision, an SSH recovery path); nothing reaches the
-  node until it lands. The **architecture track** needs no node access and runs **Phase 19** (tool
-  vocabulary — brief committed, the critical path), then **15.0** (model registry), then **20**
-  (Factory rewrite), then **10 + 21 together** (knowledge, retrieval, and the new public `brain`
-  built around them), then **22** (dashboard). The repository split is **done on the development
+  node until it lands. The **architecture track** needs no node access. **Restated 2026-09-11:** Phase 19 was
+  **superseded before implementation** and is on no critical path — see
+  `docs/handovers/19-tool-vocabulary-design-review-outcome.md`. The successor ADRs are pending
+  and the running order after them is deliberately not guessed. **ADR-033** settled the metered
+  provider (Vercel AI Gateway), and its spend governor is a precondition for any paid call. The repository split is **done on the development
   machine**; its node half is gated by Phase 18 and its brain half is deferred into Phase 21. See
   the Sequencing note at the end of `ROADMAP.md`, which supersedes this summary if they disagree.
   Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap records the
