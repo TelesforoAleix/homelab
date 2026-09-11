@@ -5,6 +5,12 @@ manual process is understood (ADR-012).
 
 Scripts are organised by **where they run**, which is not always where they are edited.
 
+## Repository-wide — run anywhere, and in CI
+
+| Script | Purpose |
+|---|---|
+| `boundary-gate.sh` | The ADR-029 §5 gate: refuses to let knowledge-shaped or output-shaped content sit in a public repository. Matches on **structure** — frontmatter vocabulary, concrete-versus-placeholder identifiers, path components — never on a word in prose, because ADR-029's own tables name the very paths a substring search would flag. Run `--self-test` to make it fail on planted content before trusting it; CI does that on every invocation. The working tree **fails**; history is **reported**, because history cannot be cleaned without a force-push that branch protection blocks. States its own limits in its header, including that the history scan is path-based only. |
+
 ## `macos/` — run on the MacBook
 
 | Script | Purpose |

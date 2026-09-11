@@ -1,0 +1,58 @@
+# The ADR-029 §5 boundary gate, run on every push and pull request.
+#
+# WHY THIS IS A WORKFLOW RATHER THAN A SCRIPT YOU REMEMBER TO RUN
+#
+#   ADR-029 §5 says the method/output boundary is "enforced by a check, not by
+#   care". A script nobody is obliged to run is care wearing a check's clothes.
+#   Five knowledge-base files sat in the public Factory repository for months
+#   and were found by a human reading a handover, not by anything automatic.
+#
+#   This is the first CI either public repository has had. Neither homelab nor
+#   factory had a .github/ directory at all before 2026-09-11, which is worth
+#   stating plainly: the secrets scanner from Phase 04 was always a manual
+#   script too.
+#
+# THE SELF-TEST RUNS FIRST, AND ITS FAILURE IS FATAL
+#
+#   The gate plants known-bad content and requires its own checks to fire on it,
+#   and plants known-good content and requires them not to. If that step fails,
+#   the job stops: a detector that cannot demonstrate it is capable of failing
+#   has nothing useful to say about a repository that looks clean.
+#
+#   This project has recorded thirteen occasions where a check reported a result
+#   it could not support. Running the self-test on every invocation is how this
+#   one avoids becoming the fourteenth.
+
+name: Boundary gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  boundary-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the --history report needs every ref, and a shallow
+          # clone would silently report "clean" for the part it cannot see.
+          fetch-depth: 0
+
+      - name: Prove the gate can fail
+        run: ./scripts/boundary-gate.sh --self-test
+
+      - name: Scan the working tree
+        run: ./scripts/boundary-gate.sh .
+
+      - name: Report on history
+        # Informational only. History cannot be cleaned without a force-push,
+        # which branch protection blocks and which breaks every existing clone,
+        # so failing on it would only teach people to disable this job.
+        continue-on-error: true
+        run: ./scripts/boundary-gate.sh --history .
