@@ -64,6 +64,14 @@ These mirror the numbered project roadmap.
   host processes, non-root containers, explicit-interface port publishing, layer caching, logs,
   diagnostics, disk accounting, and the Docker/firewall interaction Phase 13 inherits.
   *(Complete 2026-09-09. Leaves Docker installed and no containers running.)*
+- [`18-foundations`](18-foundations/README.md) — giving the machine a way back: measuring what is
+  actually irreplaceable before designing a backup (366 MB looked essential; 300 KB was), why the
+  backup must not become a second way to be root, why your filesystem metadata is part of the
+  backup and exFAT will silently drop it, encrypting for the machine you restore *onto*, and a
+  verifier that corrupts a copy on purpose to prove it can still fail. Then the disk-encryption
+  question asked properly — what it protects against, three premises that turned out to be wrong,
+  and why reaffirming a decision is a decision. *(Complete 2026-09-11. Four scripting bugs are
+  written up as the most useful part of the chapter.)*
 - [`09-model-executor`](09-model-executor/README.md) — asking a model a question without giving the
   bot a credential. Why the bot cannot just run `claude -p`, why the access rule belongs in the
   socket unit rather than in Python, what leaves the machine on every call and why logs do not,

@@ -6,8 +6,8 @@
   console as its recovery path, a verified backup, and **ADR-032**, which reaffirms ADR-015 and
   turns its "no sensitive data at rest" premise into an explicit gate: **no knowledge base, no
   project content and no private repository on the node** until encryption is revisited and
-  executed. Phase 21 and Phase 10 inherit that as a hard precondition. One Definition of Done
-  item is outstanding and recorded as such: no `guide/18-foundations/` material exists.
+  executed. Phase 21 and Phase 10 inherit that as a hard precondition. The Definition of Done is
+  satisfied in full, `guide/18-foundations/` included.
 - **Previously:** 09 — Model Executor, subscription-backed (complete, 2026-09-09). **Next,
   restated 2026-09-10 after ADR-031 added Phases 19-22:** the pending work runs on two parallel
   tracks. The **node track** needs the owner at the keyboard; **Phase 18 is complete**, leaving Phase 13

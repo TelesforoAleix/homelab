@@ -11,8 +11,8 @@
 restore, a recorded encryption decision, and a resolved `eno1` question. It had none of these on
 2026-09-10.
 
-One Definition of Done item is **not** satisfied: no `guide/` material was written. See §Definition
-of Done.
+The Definition of Done is satisfied in full, including `guide/18-foundations/`, which was
+written after the phase was first declared complete.
 
 ## What the next phase inherits
 
@@ -197,7 +197,7 @@ None. Phase 13 remains the dedicated hardening phase and inherits items 4 and 5 
 | Validation/tests passed | ✅ with a planted positive control |
 | Security implications considered | ✅ §Security notes |
 | Relevant repository files committed | ✅ |
-| **Human-facing guide updated** | ❌ **NOT DONE** |
+| Human-facing guide updated | ✅ `guide/18-foundations/` (2026-09-11) |
 | Project/internal documentation updated | ✅ |
 | ADRs created/updated | ✅ ADR-032; ADR-015 and ADR-016 pointers |
 | Actual costs recorded | ✅ zero |
@@ -208,11 +208,11 @@ None. Phase 13 remains the dedicated hardening phase and inherits items 4 and 5 
 | No failed units, no degraded state | ✅ running, 0 failed |
 | Structured handover written | ✅ this document |
 
-**The guide gap is real and is not being papered over.** `guide/18-foundations/` does not exist. The
-scripts are heavily self-documenting, but `PROJECT.md` §7 is explicit that `guide/` serves a
-different audience — a reader reproducing the build, who needs the *why* and the alternatives, not
-just runnable commands. A phase that produced a backup strategy and an encryption decision is
-exactly the kind a reader would want explained.
+**Closed 2026-09-11.** `guide/18-foundations/` was written after the phase was first declared
+complete, and the Definition of Done is now satisfied in full. It covers the measuring exercise that
+shaped the backup, the standing-privilege rule, the filesystem-metadata trap, encrypting for the
+restore target, the planted positive control, the four scripting defects, and the encryption
+decision asked as a threat-model question rather than a yes/no.
 
-**This is the one item standing between Phase 18 and a clean Definition of Done**, and it is
-recorded as outstanding rather than quietly marked complete.
+The gap was recorded as outstanding rather than quietly ticked, and is recorded as closed here for
+the same reason: the point of the Definition of Done is that it is applied literally.
