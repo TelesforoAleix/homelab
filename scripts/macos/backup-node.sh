@@ -96,7 +96,30 @@ NODE_PATHS=(
     /var/lib/homelab-model-helper
     /home/aleix/.claude
     /home/aleix/.codex
+    # Without these two a restored node has no network and no way for the owner
+    # to reach it, which would strand the rebuild at the console. Added after
+    # asking how a restore would actually work rather than assuming it would.
+    /home/aleix/.ssh
+    /etc/netplan
 )
+
+# DELIBERATELY NOT BACKED UP, so that these are decisions rather than omissions:
+#
+#   /var/lib/tailscale  -- the node's tailnet identity. Re-authenticating a
+#       rebuilt machine is a two-minute job and is cleaner than restoring the
+#       identity of a machine that no longer exists. ADR-019 governs the
+#       tailnet; this does not change it.
+#
+#   /etc/ssh/ssh_host_* -- the host keys. Restoring them makes a rebuilt
+#       machine present itself as the old one. Regenerating and accepting the
+#       new fingerprint once is the honest behaviour; the warning you would
+#       otherwise suppress is the warning that matters.
+#
+# NOTE: /etc/netplan contains the Wi-Fi passphrase. PROJECT.md and AGENTS.md
+# forbid committing it to the repository -- this is an encrypted archive on
+# removable media, which is a different thing, but it is why the card must be
+# treated as secret material and why the passphrase lives in a password
+# manager and never on the card itself.
 
 # ~/.codex is 366 MB, of which 365 MB reinstalls from the network. Excluding
 # those three directories takes it to ~236 KB while keeping auth.json, the

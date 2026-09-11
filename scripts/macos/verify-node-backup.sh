@@ -211,6 +211,8 @@ CRITICAL=(
     etc/polkit-1/rules.d/50-homelab-bot.rules
     home/aleix/.claude/.credentials.json
     home/aleix/.codex/auth.json
+    home/aleix/.ssh/authorized_keys
+    etc/netplan/00-installer-config.yaml
 )
 MISSING=0
 for c in "${CRITICAL[@]}"; do
