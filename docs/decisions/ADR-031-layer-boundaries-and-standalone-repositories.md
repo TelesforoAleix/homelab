@@ -4,7 +4,10 @@
 - **Date:** 2026-09-10
 - **Supersedes:** the visibility tables in ADR-029 §1 and ADR-030 §1. It generalises ADR-027 §3 and
   leaves ADR-029 §2 intact — §2 was already right, and the tables did not follow it.
-- **Superseded by:** none
+- **Superseded by:** **ADR-035** (2026-09-11), in part only — the *"never executes"* clause in §1,
+  the prerequisite in §7, and clarifications to §2, §4 and §9. **The rest of this ADR stands**, §3,
+  §5, §6, §8, §10 and §11 included. ADR-035 §1 is the section-by-section record.
+  Separately, §2's table cites ADR-027, which **ADR-034** replaces.
 - **Amended:** 2026-09-10, after the initial draft and before this ADR was merged — see below.
 
 ## Amendment, 2026-09-10

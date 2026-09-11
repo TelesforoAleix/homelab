@@ -3,7 +3,10 @@
 - **Status:** Accepted
 - **Date:** 2026-09-09
 - **Supersedes:** none
-- **Superseded by:** ADR-026 (§9 only — see the note at §9; the rest of this ADR stands)
+- **Superseded by:** ADR-026 (§9 only — see the note at §9; the rest of this ADR stands).
+  **ADR-034 §13 changes §10** — *"the model's output is never an instruction"* — but **only when
+  tool-using agents are implemented**. Until then §10 stands exactly as written and the Phase 09
+  canary check still applies. §1's credential boundary is untouched.
 
 ## Context
 

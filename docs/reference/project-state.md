@@ -14,16 +14,21 @@
   and Phase 14 (backup, the ADR-015 encryption decision, an SSH recovery path); nothing reaches the
   node until it lands. The **architecture track** needs no node access. **Restated 2026-09-11:** Phase 19 was
   **superseded before implementation** and is on no critical path — see
-  `docs/handovers/19-tool-vocabulary-design-review-outcome.md`. The successor ADRs are pending
-  and the running order after them is deliberately not guessed. **ADR-033** settled the metered
+  `docs/handovers/19-tool-vocabulary-design-review-outcome.md`. **Restated 2026-09-11:** the
+  successor ADRs are now **written and accepted** — **ADR-034** replaces ADR-027 in full and
+  **ADR-035** refines ADR-031. What remains of the reconciliation is roadmap work: rewriting
+  Phase 20's scope around the minimal Factory Workbench, rewriting Phase 22 as the homelab
+  administration dashboard, amending Phase 15.0, replacing the Sequencing note, and committing a
+  Workbench brief before any implementation. **Sub-phase numbering and running order are still
+  deliberately not guessed.** **ADR-033** settled the metered
   provider (Vercel AI Gateway), and its spend governor is a precondition for any paid call. The repository split is **done on the development
   machine**; its node half is gated by Phase 18 and its brain half is deferred into Phase 21. See
   the Sequencing note at the end of `ROADMAP.md`, which supersedes this summary if they disagree.
   Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap records the
   reason rather than being quietly rewritten.
 - **Architecture decisions taken 2026-09-10**, ahead of Phase 18 and carried into its brief per
-  ADR-017: ADR-026 (multi-provider model access), ADR-027 (the agent contract), ADR-028 (the project
-  contract) and ADR-029 (repository topology). These define how this repository — the **AI OS** —
+  ADR-017: ADR-026 (multi-provider model access), ADR-027 (the agent contract — **superseded in full
+  by ADR-034** on 2026-09-11), ADR-028 (the project contract) and ADR-029 (repository topology). These define how this repository — the **AI OS** —
   relates to a separate public `factory` repository holding agent, skill and workflow definitions,
   and to private repositories holding knowledge and products. **ADR-030 (2026-09-10) implemented
   the split on the development machine and added a fourth layer, `projects/`** — see below. The node
@@ -33,6 +38,9 @@
   accumulate, brain supplies*, put **one plan and one progress record in homelab**, and fixed agent
   manifests as **JSON**. Its repository change — a new public `brain` holding knowledge-base method —
   is **deferred and coupled to Phase 10**, so the repositories that exist today are unchanged by it.
+  **ADR-035 (2026-09-11) refines it in part**: Factory is no longer specification-only, because
+  Factory Workbench executes project operations while the configured backend executes AI. Nine of
+  ADR-031's eleven sections are untouched.
 - **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
   **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
 - **Reference node:** Lenovo ThinkCentre M700 Tiny
@@ -152,9 +160,24 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - known-working `main` branch;
 - **metered multi-provider model access as the target substrate**, vendor deliberately unnamed, with
   models as configuration and per-provider unattended eligibility enforced by the router (ADR-026);
-- **agents declare a need, never a model**; Factory declares and homelab enforces; declared tools
-  are intersected with caller authorisation so an agent is never a privilege escalation path
-  (ADR-027);
+- **agents declare a need, never a model**; Factory declares and homelab enforces (ADR-027,
+  **superseded in full by ADR-034** on 2026-09-11). Under ADR-034: **Factory agents declare portable
+  capabilities and execution backends provide concrete tools**, so homelab is one advanced backend
+  rather than a prerequisite; `capabilities` and `tools` are separate manifest fields and
+  `model_policy` is **removed**, because an agent's *role* is its declaration of need — **ADR-026 §4
+  survives intact**; incompatibility fails **before activation**, naming every missing requirement;
+  one scalar capability level becomes independent **effect / approval / availability / target scope**
+  properties; and **ADR-027's human ceiling is reversed for service specialists**, which may hold
+  narrow independent authority and run unattended — safe only because delegation does not transfer
+  access and the *receiving* agent validates every agent-to-agent request. **ADR-034 §13 changes
+  ADR-025 §10** when tool-using agents are implemented, and not before;
+- **Factory Workbench executes Factory project operations; the configured backend executes AI and
+  concrete tools** (ADR-035, 2026-09-11, refining ADR-031 §1 — nine of its eleven sections are
+  untouched). Workbench lives in Factory, holds **no homelab credential, model registry or tool
+  implementation**, and reaches AI through one of several adapters, of which only the deterministic
+  fake is fixed. **Two dashboards, not one that moved**: Workbench owns project views; Phase 22
+  becomes the homelab administration dashboard. **ADR-031 §7's tool-vocabulary prerequisite is
+  void**, so the Factory rewrite is unblocked;
 - **The Factory is stateless method; each project carries its own state** and references Factory
   definitions rather than copying them (ADR-028);
 - **method is public, output is private** (ADR-029 §2), with the unit of that decision the
@@ -167,8 +190,10 @@ See `docs/decisions/` for full ADRs. Current direction includes:
 - **each public layer must be independently adoptable** — someone must be able to take `factory` plus
   a knowledge base without `homelab`, or `homelab` alone, and each public repository needs a
   standalone quickstart. **None currently has one** (ADR-031 §4);
-- **a tool is what the runtime can refuse; a skill is what can only be followed** (ADR-031 §2), and
-  **agent manifests are JSON** — ADR-027 §2 decided five fields, not a serialisation (ADR-031 §11);
+- **a tool is what the runtime can refuse; a skill is what can only be followed** (ADR-031 §2) — and
+  under ADR-035 §3 a **capability** is a third thing, the portable *request* for a refusable outcome,
+  with the refusal still happening in the backend that owns the tool. **Agent manifests are JSON**
+  (ADR-031 §11), which ADR-034 did not reopen;
 - **one internal system: homelab.** One `ROADMAP.md` and one progress record govern this project's
   own development; Factory's `roadmap.md` and the Locked Decisions in its `progress.md` are
   superseded, and retiring them is Phase 20's work (ADR-031 §9, as amended). This does not narrow

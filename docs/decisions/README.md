@@ -47,7 +47,8 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   risk** — recorded as a disagreement, with the mechanism keeping it reversible one provider at a
   time. Supersedes ADR-025 §9; discharges ADR-008's "later experiments".
 
-- [`ADR-027-agent-contract.md`](ADR-027-agent-contract.md) — the agent contract: system agents
+- [`ADR-027-agent-contract.md`](ADR-027-agent-contract.md) — **Superseded in full by ADR-034**
+  (2026-09-11); kept as history. The agent contract: system agents
   (homelab) are distinguished from work agents (Factory) by whether they survive The Factory being
   swapped out; an agent declares context, skills, tools, model policy and unattended eligibility but
   **never names a model**; Factory declares and homelab enforces, because enforcement belongs where
@@ -110,3 +111,42 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   allocating SHA-256 needs platform authority that firmware deliberately discards before boot; and
   the volume group has zero free extents, so a separate encrypted volume has nowhere to live.
   Reaffirming is a decision; silence would not have been.
+- **[ADR-033](ADR-033-vercel-ai-gateway-as-the-metered-provider.md) — Vercel AI Gateway as the
+  metered provider** (2026-09-11). Settles the vendor ADR-026 deliberately left unnamed. Its **spend
+  governor is a precondition for any paid call**.
+
+- **[ADR-034](ADR-034-agent-contract-capabilities-and-authority.md) — The agent contract: portable
+  capabilities, backend tools, and independent authority** (2026-09-11). **Supersedes ADR-027 in
+  full**, after the Phase 19 design review rejected its premise before any implementation began.
+  **Factory agents declare portable capabilities; execution backends provide concrete tools** —
+  homelab is one advanced backend, not a prerequisite, which is what ADR-031 §4's standalone
+  requirement demands. A manifest's `capabilities` and `tools` are separate fields, and
+  `model_policy` is **removed**: an agent's *role* is its declaration of need, so **ADR-026 §4
+  survives intact** — removing the field changes the form §4 itself delegates, not the principle.
+  Incompatibility fails **before activation**, naming every missing requirement, rather than being
+  discovered at dispatch. One scalar capability level becomes independent **effect / minimum
+  approval / availability / target scope** properties. **ADR-027's human ceiling is reversed** for
+  service specialists, which may hold narrow independent authority and run unattended — safe only
+  because delegation **does not transfer access** and the *receiving* agent validates every
+  agent-to-agent request: *"a teammate asked" is never sufficient authorisation.* Identity is
+  attached by the runtime and never claimed by the model. **Changes ADR-025 §10** — a model's tool
+  request becomes an untrusted request checked by the runtime rather than something architecturally
+  inert — but only when tool-using agents are implemented. Records the reversal honestly: the review
+  first recommended homelab own the portable names, and the owner overruled it.
+
+- **[ADR-035](ADR-035-factory-workbench-and-execution-adapters.md) — Factory Workbench: Factory
+  executes project operations, backends execute AI** (2026-09-11). **Refines ADR-031 rather than
+  replacing it** — nine of its eleven sections are untouched. ADR-031 §1's *"fully operational as a
+  specification and never executes"* over-claimed: it forbade all execution in order to forbid
+  *enforcement*, and writing a ticket into a project's `ops/` enforces nothing. The narrower
+  boundary: **Factory Workbench executes Factory project operations; the configured backend executes
+  AI and concrete tools.** Workbench holds **no homelab credential, no model registry and no tool
+  implementation**, which is where §1's real property lives. AI reaches it through one of several
+  adapters — homelab, a direct API key, subscription CLIs, MCP, manual mode, and a **deterministic
+  fake** for repeatable tests — of which only the fake is fixed. **Two dashboards, not one that
+  moved**: Workbench stays in Factory and owns project views; Phase 22 becomes the homelab
+  administration dashboard. **ADR-031 §7's prerequisite on homelab's tool vocabulary is void**, so
+  the Factory rewrite is unblocked and the dependency inverts — concrete tools should follow observed
+  capability gaps rather than precede them, which is exactly what Phase 19 demonstrated. Local
+  Workbench binds `127.0.0.1` with no application login; a hosted one is Tailscale-only and public
+  exposure is out of scope. The plan stays in homelab (§9) even though the code lives in Factory.
