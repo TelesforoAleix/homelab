@@ -255,10 +255,10 @@ the existing private `brain` stays as it is, under its current name.
 
 **Inherited from Phase 01 — must be addressed, not inherited silently:**
 
-**ADR-015 must be explicitly revisited before this phase stores real data.** The reference node has
-no encryption at rest, accepted on the premise that it holds nothing sensitive. A Second Brain breaks
-that premise. Converting an unencrypted root filesystem afterwards generally means a reinstall, so
-the decision belongs at the start of this phase, not the end.
+~~**ADR-015 must be explicitly revisited before this phase stores real data.**~~ **Done.** ADR-032
+revisited it and made the premise an explicit gate; **ADR-037 executes it** — a separate LUKS volume
+holds knowledge and project content on the server, unlocked over SSH after boot. This phase stores
+real data **in that volume**, and root stays unencrypted and may not hold it.
 
 ## Phase 11 — Agent Framework Experiments
 
@@ -751,7 +751,8 @@ ADR-030 adds the `projects/` layer and closes ADR-029 §6 — every project carr
 
 **Nothing was cloned onto the node.** That half is still gated by Phase 18, for the reason the
 migration plan gave: cloning private repositories onto an unencrypted root filesystem with no
-backup is exactly the event ADR-015 exists to be revisited before.
+backup is exactly the event ADR-015 exists to be revisited before. *(True when written. Phase 18
+delivered the backup; ADR-037 executes the encryption, into a volume separate from root.)*
 
 ### Not finished by that split — ADR-031, 2026-09-10
 

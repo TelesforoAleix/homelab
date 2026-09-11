@@ -148,7 +148,8 @@ What was resolved:
 
 What was deliberately **not** done: no repository was cloned onto the reference node. The node still
 has an unencrypted root filesystem and no backup, and putting private repositories on it is the
-event ADR-015 exists to be revisited before. Phase 18 owns that decision.
+event ADR-015 exists to be revisited before. Phase 18 owns that decision. *(True when written.
+Phase 18 delivered the backup; ADR-037 executes the encryption, into a volume separate from root.)*
 
 Links: 50 in live documents were rewritten; ~300 in session notes and the append-only log were left
 pointing at old paths, with a translation table in the knowledge base's `05-logs/README.md`. Records
@@ -362,9 +363,12 @@ every install.
   single key remains. Phase 02 did not close this — it made
   lockout-class changes *recoverable while remote access still works* (ADR-020), which is a different
   thing from a recovery path.
-- **The reference node still has no backup of any kind.** Phase 04 gave the *repository* an offsite
-  copy; it did nothing for the machine. If the SSD fails, the node is rebuilt from the guide. That is
-  survivable by design, but it should not be mistaken for "backup is handled".
+- ~~**The reference node still has no backup of any kind.**~~ **Closed 2026-09-11 by Phase 18.** A
+  weekly, manual-by-design backup exists (`scripts/macos/backup-node.sh`) with a verifier that plants
+  a positive control, proved by **restoring**: 182 entries, 312 KB of node state, 20 MB of repository
+  mirrors. `/var/lib/tailscale` and `/etc/ssh/ssh_host_*` are deliberately excluded, with reasons.
+  **The backup is secret material** — it contains the credentials named below — and the card is
+  treated accordingly.
 - **The volume group has no free extents.** The root LV consumes all 235.4 G, so storage cannot be
   grown by `lvextend`; it needs another disk. Found in Phase 02, not owned by any phase yet.
 - **Docker consumes the root LV.** Logs are bounded by `/etc/docker/daemon.json`, and Phase 05
@@ -400,7 +404,9 @@ every install.
   but Phase 13 must not assume symmetry.
 - **Node key expiry deliberately disabled** on the Tailscale node (ADR-019) — a security control
   traded for availability. Phase 13 must revisit it rather than inherit it.
-- **The Telegram allowlist is per-deployment state on the node**, in no backup. New in Phase 07.
+- **The Telegram allowlist is per-deployment state on the node.** New in Phase 07; it had no backup
+  then. Phase 18 added a node backup covering node state — **whether the allowlist is inside it has
+  not been verified** and should be checked against `scripts/macos/backup-node.sh`.
 - **Telegram is a third party.** Every bot message transits and is stored on their infrastructure.
   Acceptable for uptime and disk figures; a reason not to extend the bot toward anything sensitive
   without revisiting. Phases 08 and 10.
@@ -439,11 +445,14 @@ every install.
   audited nor reconfigured by this project. Confidentiality between residents on a shared WPA2
   passphrase is effectively nil. **Treat the link as open Wi-Fi.** No port is forwarded to the node
   — proved by SSH host-key comparison — and no auto-forwarding protocol is available.
-- No encryption at rest (ADR-015), which compounds with the cleartext Wi-Fi passphrase (ADR-016).
-  Phase 13 should treat these together.
-- **Phase 10 must not silently inherit ADR-015.** Once the node stores significant sensitive or
-  personal Second Brain data, encryption at rest must be reconsidered on its merits — and converting
-  an unencrypted root filesystem after the fact usually means a reinstall.
+- No encryption at rest on **root** (ADR-015), which compounds with the cleartext Wi-Fi passphrase
+  (ADR-016). Phase 13 should treat these together.
+  **Partly addressed 2026-09-11:** ADR-032 revisited ADR-015 and **ADR-037 executes it** — a separate
+  LUKS volume will hold knowledge and project content, unlocked over SSH after boot. **Root stays
+  unencrypted**, so the credentials named above remain at rest in the clear. Not yet built.
+- ~~**Phase 10 must not silently inherit ADR-015.**~~ **Resolved.** The decision was taken rather than
+  inherited: ADR-032 made the premise an explicit gate, and ADR-037 discharges it for an encrypted
+  volume. Phase 10 stores real data **in that volume**, not on root.
 
 ## Phase 02 status
 
@@ -602,7 +611,7 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Tailnet | `100.71.62.71`; node key expiry disabled |
 | Admin user | `aleix`, sudo-capable; **`sudo` requires a password — no `NOPASSWD`** |
 | Docker access | `aleix` is in `docker` group `983`; this is root-equivalent (ADR-022) |
-| Storage | LVM, 232 GB root, 8.9 GB used, 212 GB available (5%), unencrypted |
+| Storage | LVM, 232 GB root, 8.9 GB used, 212 GB available (5%), **unencrypted — ADR-037 decided, not yet executed**; zero free extents |
 | Health | `systemctl is-system-running` → `running`, no failed units |
 | Tooling | `tmux` 3.6, `htop`, `jq`, `git`, `vim`, `nano`, `less`, `lsof`, `tree`, `ncdu`, `ripgrep`, Docker 29.8.0, Compose v5.5.1, containerd 2.3.5, Claude Code 2.1.236, Codex CLI 0.153.4, `bubblewrap` 0.11.1 |
 | AI authentication | Claude `claude.ai` / first-party / Pro; Codex `Logged in using ChatGPT`; relevant API-key variables unset |

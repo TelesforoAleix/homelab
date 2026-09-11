@@ -95,6 +95,21 @@ and personal notes rather than secrets, and proper secrets are not stored there.
 projects onto the always-running server. That is the reason to do it, and recording the modest
 security value is more useful than overstating it.
 
+**A known limitation, recorded rather than discovered later.** The Phase 18 handover names what is on
+the node today: *"two OAuth credentials, the Telegram bot token and the Wi-Fi passphrase sit on an
+unencrypted filesystem, on a machine with no BIOS password"*, and calls that the strongest argument
+for revisiting encryption sooner.
+
+**This ADR does not address that.** Those credentials live on **root**, which stays unencrypted, so
+encrypting the data volume leaves them exactly where they are. The owner's assessment in §6 — that
+proper secrets are not stored there — is about the *content* going into the encrypted volume, and it
+is not a claim about service credentials already on root.
+
+Closing that gap needs either root encryption (a reinstall), moving service credentials into the
+encrypted volume and accepting that those services cannot start until it is unlocked, or a BIOS
+password to raise the cost of the USB-boot path. **None of the three is decided here**, and the gap
+should be closed deliberately rather than left implied by this ADR's existence.
+
 ### 7. ADR-032's gate is discharged for the encrypted volume only
 
 The unencrypted root still may not hold the knowledge base, project content or any private
