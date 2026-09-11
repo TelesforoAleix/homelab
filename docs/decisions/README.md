@@ -166,3 +166,71 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   favoured Node but stops being load-bearing once the browser no longer parses. ADR-035 §2's
   boundary is untouched: no homelab credential, no model registry, no tool implementation, loopback
   only, no public exposure.
+
+### Proposed 2026-09-11 — the constraint review's outcome
+
+Eight decisions taken together after [`constraint-review.md`](../reference/constraint-review.md)
+tested every accepted constraint against the
+[target architecture](../reference/target-architecture.md). They are listed as one group because they
+were decided as one, and several only make sense together.
+
+- **[ADR-037](ADR-037-encryption-at-rest-executed.md) — Encryption at rest, executed.** Discharges
+  ADR-032's content gate, which contradicted the architecture: the system is meant to be always
+  running and to hold the knowledge, and the gate kept the knowledge off the machine that is always
+  running. **Shrink the root LV, put a LUKS volume in the freed extents, leave root unencrypted, and
+  unlock over SSH via Tailscale** — which removes the TPM, and with it the SHA-1 binding weakness,
+  rather than answering it. **Degraded-until-unlocked is a normal state**: the node returns, the bot
+  returns, the AI system waits. Gated on `findmnt -no FSTYPE /`: **if it returns `xfs` this ADR is
+  void**, because XFS cannot be shrunk. States honestly that the security value is modest and the
+  governance value is the point.
+
+- **[ADR-038](ADR-038-component-placement.md) — Everything runs on the server.** Supersedes ADR-035
+  §7's "first real Workbench runs on the MacBook". Harness, Workbench, Factory, projects and `brain`
+  all on the node; the MacBook is a client and a terminal. **The harness binds loopback only**, since
+  every client is a local process — stronger than a tailnet endpoint. Workbench binds loopback too and
+  is reached by SSH tunnel, keeping the OS user boundary as the boundary. ADR-023's property survives
+  for the bot, and the measurable rule becomes *every listening socket is accounted for and bound to a
+  stated interface*.
+
+- **[ADR-039](ADR-039-egress-policy.md) — What may leave the machine.** Supersedes ADR-025 §8, whose
+  reasoning survives intact: content chosen by *whatever can write a log line* still never leaves.
+  What changes is the form — an enumeration of two items becomes a policy classifying **by whose data
+  it is**. The owner's own material may leave to approved providers; third-party or personal data may
+  not without a new decision; secrets never. Tightens in one place on the day third-party data enters.
+
+- **[ADR-040](ADR-040-autonomous-operation.md) — Autonomous operation is normal.** Retires ADR-025 §9
+  fully rather than leaving it half-lifted. Scheduled, client-initiated and system-initiated calls are
+  ordinary; **budget replaces attribution** as the control, because attribution never controlled spend.
+  The licensing question is recorded as an **accepted judgement with reasoning**, not as resolved, so a
+  later reader knows it was decided rather than missed. The rejected alternative — route autonomous
+  work to metered inference — is kept as the reversal mechanism.
+
+- **[ADR-041](ADR-041-change-safety-revised.md) — The node has a console on demand.** Supersedes
+  ADR-020, whose title and premise say "console-less node" and whose premise **Phase 18 disproved**:
+  `getty@tty1` active, login authenticated at `seat0/tty1`. Classification before change stays;
+  **"lockout-class" is redefined from *unrecoverable* to *recovery requires physical access*** — a cost,
+  not a catastrophe. Draws the distinction ADR-020 missed: between what needs a walk and what needs a
+  backup. `AGENTS.md` asserted the false premise and is corrected.
+
+- **[ADR-042](ADR-042-readable-not-packaged.md) — Public and readable, not packaged.** Narrows
+  ADR-031 §4 for `homelab` only; Factory's standalone adoptability is unchanged and already proved.
+  A personal AI operating system holding *your* knowledge and budgets is an installation, not a
+  product, and requiring it to run standalone taxed every layer with abstraction for a user who does
+  not exist. **Configuration is the seam**: examples published, values not. `homelab` holds the
+  knowledge tools; **`brain` holds the knowledge**.
+
+- **[ADR-043](ADR-043-cross-cutting-contracts.md) — Cross-cutting contracts and living specs.**
+  Amends ADR-017 narrowly. Sequential self-contained phases stay. A concern applying at every layer is
+  **specified once as a normative contract and implemented per scope** — applying ADR-031 §9, which was
+  already the rule and was not being used. Two implementations of one contract is the design; the risk
+  is drift, and both sides test against the contract. Living specs are legitimate artifacts that
+  **decide nothing** — which is what keeps them from becoming the planning context ADR-017 abolished.
+
+- **[ADR-044](ADR-044-client-service-exposure.md) — A declared capability is not a granted
+  authorization.** Extends ADR-034 with the boundary it does not cover. **Factory declares what an
+  agent is for; Home Lab decides what it will do.** Which services a *client* may reach is checked
+  first and is the stronger boundary, and the two refusals must say different things. System-control
+  services are unreachable from work clients whatever capability an agent declares — not a statement
+  about trust in Factory, but that a client orchestrating autonomous agents is the wrong place to
+  accept an instruction that can take the system offline. Fixes the service/capability/tool
+  distinction before layer 4 is built.
