@@ -14,7 +14,7 @@
   configuration as the seam and `brain` holding the knowledge. **Cross-cutting concerns are specified
   once and implemented per scope**, and living specs are legitimate artifacts that decide nothing.
   **A declared capability grants nothing** — which services a client may reach is checked first.
-- **Target architecture:** [`target-architecture.md`](target-architecture.md) (2026-09-11) — what the
+- **Target architecture:** [`target-architecture.md`](../architecture/target-architecture.md) (2026-09-11) — what the
   system is meant to **be** when finished: nine request layers, governance under all of them, clients
   (Telegram, scheduler, Factory, voice) that are **not** layers. Written because the roadmap answers
   *what next* and the ADRs answer *what was decided*, and neither answered *what is this*. It records
@@ -50,9 +50,10 @@
   for harness work that had no home. The Sequencing note of 2026-09-11 supersedes its predecessor in
   full. **Phase 20.0 is complete** (2026-09-11) and the
   **Phase 23 brief is committed**, so Phase 23 is ready to start. Its §0.1 records that two accepted
-  gates constrain the harness's own core capability — **ADR-032 §2** keeps project content off the
-  node, and **ADR-025 §8** permits only the question to leave — making *where the harness runs and
-  what may leave* a checkpoint decision. **ADR-033 §5's spend governor does not exist and no metered
+  gates constrained the harness's own core capability. **Both are now resolved** — ADR-037 puts
+  knowledge and projects in an encrypted volume on the server, ADR-038 places every component there,
+  and ADR-039 replaces the egress enumeration with a policy. **The brief predates those ADRs and is
+  superseded in part.** **ADR-033 §5's spend governor does not exist and no metered
   call is possible until it does.** Its deliverable lands in `factory`, not
   here. Reading Factory at `97ccb86` found the read half already built — an 864-line **read-only**
   `dashboard/` — and found that a browser page cannot create a worktree, commit, run tests or open a
@@ -225,7 +226,9 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   coupled to Phase 10 (ADR-031 §6, as amended);
 - **each public layer must be independently adoptable** — someone must be able to take `factory` plus
   a knowledge base without `homelab`, or `homelab` alone, and each public repository needs a
-  standalone quickstart. **None currently has one** (ADR-031 §4);
+  standalone quickstart. **Narrowed 2026-09-11 by ADR-042**: this applies to `factory`, which
+  discharged it in Phase 20.0 by running from a clean clone. `homelab` is **public and readable, not
+  packaged** — configuration is the seam, examples published and values not (ADR-031 §4, ADR-042);
 - **a tool is what the runtime can refuse; a skill is what can only be followed** (ADR-031 §2) — and
   under ADR-035 §3 a **capability** is a third thing, the portable *request* for a refusable outcome,
   with the refusal still happening in the backend that owns the tool. **Agent manifests are JSON**
@@ -353,8 +356,10 @@ every install.
 
 - ~~SSH password authentication~~ — ✅ **closed 2026-09-09** by Phase 03 (ADR-018). The server
   advertises `publickey` only.
-- **Single SSH key, no backup, and no console.** Phase 03 removed the monitor and left one Ed25519
-  key as the only way in. New debt, owned by Phase 13. Phase 02 did not close this — it made
+- **Single SSH key.** Phase 03 removed the monitor and left one Ed25519 key as the only way in.
+  New debt, owned by Phase 13. **Two thirds of this is closed:** Phase 18 delivered a backup verified
+  by restoring, and the console was never actually gone — it is available on demand (ADR-041). The
+  single key remains. Phase 02 did not close this — it made
   lockout-class changes *recoverable while remote access still works* (ADR-020), which is a different
   thing from a recovery path.
 - **The reference node still has no backup of any kind.** Phase 04 gave the *repository* an offsite
@@ -406,7 +411,10 @@ every install.
   personal subscription falls within either provider's terms. Phase 09 avoided the question with a
   constraint — owner-initiated calls only (ADR-025 §9). **On 2026-09-10 the owner decided to accept
   the risk for the interim** and ADR-026 superseded §9: subscription providers may serve unattended
-  calls, with eligibility now a per-provider field the router enforces. The disagreement is recorded
+  calls, with eligibility now a per-provider field the router enforces. **ADR-040 then retired §9 in
+  full on 2026-09-11**: autonomous calls are normal, budget replaces attribution as the control, and
+  the licensing position is recorded as an accepted judgement rather than a resolved question. The
+  disagreement is recorded
   in ADR-026 §5 rather than smoothed over — rate limiting bounds *capacity*, not terms, and the
   residual exposure is account action or throttling. **The control that makes this reversible is the
   `unattended` field, which must not be removed** just because every current entry is `true`.
@@ -445,7 +453,7 @@ every install.
 |---|---|
 | Brief | ✅ [`02-linux-fundamentals.md`](../handovers/02-linux-fundamentals.md), committed before implementation |
 | Standard | ✅ [`safe-changes-headless.md`](../standards/safe-changes-headless.md), referenced from `AGENTS.md` |
-| ADR-020 | ✅ **Accepted** — change safety on a console-less node |
+| ADR-020 | **Superseded** by ADR-041 (2026-09-11) — its console-less premise was false |
 | Guide | ✅ [`guide/02-linux-fundamentals/`](../../guide/02-linux-fundamentals/README.md) |
 | Command reference | ✅ [`linux-command-reference.md`](linux-command-reference.md) |
 | Scripts | ✅ `scripts/macos/preflight.sh`, `scripts/server/lab-sandbox.sh` — both run on the real machine |
@@ -456,8 +464,10 @@ every install.
 
 **What Phase 02 deliberately did not teach**, so no later phase assumes it: no networking changes
 were practised, no `sudoers` editing, no firewalling, no backup or restore, and no LVM growth. Those
-were classified Tier 3 — studied by reading, not by changing — because the node has no console and
-Phase 13 will have a better safety net.
+were classified Tier 3 — studied by reading, not by changing — because the node had no console *as
+Phase 02 understood it* and Phase 13 will have a better safety net. **That premise was corrected in
+2026-09-11 (ADR-041): a console is available on demand.** The caution was still right; its severity
+was overstated.
 
 ## Phase 04 status
 
@@ -614,7 +624,8 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and
 `scripts/server/verify-remote-access.sh` (Phase 03 posture; run under `sudo` for a complete report).
 
-> **The console is gone.** This is now a written standard rather than a warning:
+> **The console is detached, not gone** — available on demand, connectors present, login tested
+> (Phase 18, ADR-041). This is a written standard rather than a warning:
 > [`docs/standards/safe-changes-headless.md`](../standards/safe-changes-headless.md), adopted as
 > ADR-020 and referenced from `AGENTS.md`. Apply it before any change touching network, remote
 > access, authentication, boot, or the admin account. `scripts/macos/preflight.sh` checks the parts

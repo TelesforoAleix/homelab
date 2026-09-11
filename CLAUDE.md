@@ -7,7 +7,7 @@ Before making material changes, read:
 - `AGENTS.md`
 - `PROJECT.md`
 - `ROADMAP.md`
-- `docs/reference/target-architecture.md`
+- `docs/architecture/target-architecture.md`
 - `docs/reference/project-state.md`
 - the current phase handover under `docs/handovers/`
 

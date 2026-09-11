@@ -119,10 +119,15 @@ Phase 08 asked which of two prices this phase would pay. **It paid the second:**
 personal subscriptions, at no monetary cost and an unresolved amount of licensing risk. No API key,
 no metered billing, no new service, no overage. ADR-008's prohibition on paid API access is intact.
 
-What that risk is bounded by is written down rather than waved at: **every model call is initiated
-by the owner**, in response to a message just sent, which keeps the usage pattern the same shape as
-a person using their own subscription interactively (ADR-025 §9). That is a constraint, not an
-answer, and Phase 12 must not break it without a new ADR.
+What bounded that risk when this was written was a constraint — every model call initiated by the
+owner, in response to a message just sent (ADR-025 §9). **That constraint is retired.** ADR-026
+lifted it per provider on 2026-09-10 and **ADR-040 retired it in full** on 2026-09-11: autonomous
+calls are normal, and the control is now the **spend governor** (ADR-033 §5), which does not exist
+yet and is a precondition for any metered call.
+
+The licensing position is recorded in ADR-040 §3 as an **accepted judgement with its reasoning** —
+all work is ultimately owner-instructed — rather than as a resolved question. The rejected
+alternative, routing autonomous work to metered inference, is kept there as the reversal mechanism.
 
 ### The cost that is real and is not money
 

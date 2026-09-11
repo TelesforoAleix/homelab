@@ -19,6 +19,7 @@ Files: 57
 - `docs/README.md`
 - `docs/architecture/current-architecture.md`
 - `docs/architecture/target-architecture.md`
+- `docs/reference/constraint-review.md`
 - `docs/build-log/2026-09-08-repository-bootstrap.md`
 - `docs/build-log/README.md`
 - `docs/decisions/ADR-001-used-hardware-reference-build.md`

@@ -4,7 +4,7 @@ Read these files before material work:
 
 1. `PROJECT.md`
 2. `ROADMAP.md`
-3. `docs/reference/target-architecture.md` — what the system is meant to *be*
+3. `docs/architecture/target-architecture.md` — what the system is meant to *be*
 4. `docs/reference/project-state.md`
 5. the relevant phase handover/brief under `docs/handovers/`
 6. relevant ADRs under `docs/decisions/`
