@@ -22,8 +22,11 @@
   than a move; **Phase 19** inverted to follow observed capability gaps; **Phase 15** was amended off
   `model_policy`; and **Phase 23 — Homelab AI Foundation** was added, the one new structural entry,
   for harness work that had no home. The Sequencing note of 2026-09-11 supersedes its predecessor in
-  full. **Next: the Phase 20.0 brief, which must be committed before implementation (ADR-017) and
-  does not exist yet.** **ADR-033** settled the metered
+  full. The **Phase 20.0 brief is written and committed**
+  (2026-09-11), so **Phase 20.0 is ready to implement**. Its deliverable lands in `factory`, not
+  here. Reading Factory at `97ccb86` found the read half already built — an 864-line **read-only**
+  `dashboard/` — and found that a browser page cannot create a worktree, commit, run tests or open a
+  pull request, which is the brief's §6.1 decision. **ADR-033** settled the metered
   provider (Vercel AI Gateway), and its spend governor is a precondition for any paid call. The repository split is **done on the development
   machine**; its node half is gated by Phase 18 and its brain half is deferred into Phase 21. See
   the Sequencing note at the end of `ROADMAP.md`, which supersedes this summary if they disagree.
