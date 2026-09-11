@@ -492,6 +492,21 @@ roadmap. An adopter takes those and writes their own plan (ADR-031 §4).
 Build the **minimum Factory Workbench** and the **public synthetic acceptance project** that proves
 it, per ADR-035. A sub-phase under the roadmap's rule above, not a renumbering.
 
+Status: **Complete** (2026-09-11). All seven functional objectives met. The deliverable is in the
+**`factory`** repository — the first phase whose code lands outside this one. 41 unit tests, the
+synthetic project's 14 steps and 7 planted refusals, and a run from a **clean clone with no homelab
+installed**, which discharges **ADR-031 §4's standalone-quickstart criterion by demonstration** after
+it had been outstanding since the layers were named.
+
+- Brief: [`docs/handovers/20.0-minimal-factory-workbench.md`](docs/handovers/20.0-minimal-factory-workbench.md)
+- Handover: [`docs/handovers/20.0-minimal-factory-workbench-handover.md`](docs/handovers/20.0-minimal-factory-workbench-handover.md)
+- Guide: [`guide/20.0-minimal-factory-workbench/`](guide/20.0-minimal-factory-workbench/README.md)
+- Decision: **ADR-036** (the write path and runtime), resolving the brief's §6.1 at a checkpoint
+
+**Carried forward, and not to be silently inherited:** the **adapter interface is unproved** — it has
+one implementation, the deterministic fake, so ADR-036's second-adapter equivalence check has not
+run. Phase 23 builds the first real backend and is where that is discovered.
+
 **Added 2026-09-11.** Unblocked now: its only prerequisites are ADR-034 and ADR-035, both accepted.
 
 Workbench opens a project by being pointed at its root or `ops/`, creates a new project and its
