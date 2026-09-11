@@ -2,7 +2,13 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Current phase:** 18 — Foundations (**complete**, 2026-09-11). The node now has a tested
+- **Current phase:** 20.0 — Minimal Factory Workbench (**complete**, 2026-09-11). **Factory
+  Workbench executes.** The deliverable is in the public `factory` repository — the first phase whose
+  code lands outside this one. A CLI write engine, a loopback-only server in front of it, and the
+  existing read-only dashboard turned writable. Proved from a **clean clone with no homelab
+  installed**, which discharges **ADR-031 §4** by demonstration. Produces **ADR-036**. **The adapter
+  interface is unproved** — one implementation only; Phase 23 inherits that risk.
+- **Previously:** 18 — Foundations (**complete**, 2026-09-11). The node now has a tested
   console as its recovery path, a verified backup, and **ADR-032**, which reaffirms ADR-015 and
   turns its "no sensitive data at rest" premise into an explicit gate: **no knowledge base, no
   project content and no private repository on the node** until encryption is revisited and
@@ -22,8 +28,8 @@
   than a move; **Phase 19** inverted to follow observed capability gaps; **Phase 15** was amended off
   `model_policy`; and **Phase 23 — Homelab AI Foundation** was added, the one new structural entry,
   for harness work that had no home. The Sequencing note of 2026-09-11 supersedes its predecessor in
-  full. The **Phase 20.0 brief is written and committed**
-  (2026-09-11), so **Phase 20.0 is ready to implement**. Its deliverable lands in `factory`, not
+  full. **Phase 20.0 is complete** (2026-09-11); the next
+  item is **Phase 23 — Homelab AI Foundation**, whose brief does not exist yet. Its deliverable lands in `factory`, not
   here. Reading Factory at `97ccb86` found the read half already built — an 864-line **read-only**
   `dashboard/` — and found that a browser page cannot create a worktree, commit, run tests or open a
   pull request, which is the brief's §6.1 decision. **ADR-033** settled the metered
