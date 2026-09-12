@@ -1,6 +1,6 @@
 # Current Architecture
 
-**State:** Phases 01–09, 12, 18, 18.1 and 20.0 complete — the reference node runs Ubuntu Server, is
+**State:** Phases 01–09, 12, 18, 18.1, 18.2 and 20.0 complete — the reference node runs Ubuntu Server, is
 administered remotely over Tailscale with key-only SSH, and has Docker Engine/Compose plus two
 subscription-authenticated AI operator CLIs. **The monitor and keyboard are detached**; the node runs
 headless, with a console available on demand — the connectors are present and console login is tested
@@ -10,6 +10,14 @@ unlocked over SSH after boot (ADR-037). **The node reports its own recovery** (P
 once-per-boot timer sends downtime, clean-versus-unplanned classification and the volume's lock
 state to Telegram, and `OnFailure=` on the bot, the model helper and the watchdog itself pages the
 owner when a unit dies — with no daemon, no listening socket, and no path to a model.
+
+**The four layers live on the node** (Phase 18.2, 2026-09-12): `homelab`, `factory`, `brain`,
+`projects/oncla` and `projects/factory` are clones inside the encrypted volume at `/srv/homelab`,
+owned `aleix:aleix`, and the **Factory Workbench runs there as `homelab-workbench.service`**, bound to
+`127.0.0.1:8765`, reached from the MacBook only through `ssh homelab-workbench`'s `LocalForward`.
+The MacBook is a client and a terminal; nothing runs from its clones. The node holds one new secret —
+an SSH key to GitHub with write access to the three private repositories — and one new listening
+socket, on loopback. ADR-038 §5's rule is now the measured statement: **seven sockets, seven names.**
 
 **`Interface → Router → Executor → Model` now exists as code**, not as a diagram. Phase 07 built the
 Interface; Phase 08 built the Router and the Executors; Phase 09 connected the model.
@@ -36,10 +44,13 @@ superseded by ADR-041).
 ```text
 MacBook Pro  —  development / administration interface
     │  Ed25519 key, passphrase in the login keychain (ADR-018)
-    │  VS Code Remote SSH over the same "homelab" alias
+    │  VS Code Remote SSH over the same "homelab" alias, into /srv/homelab/...
     │
-    ├── ssh homelab      → MagicDNS over Tailscale     ← primary
+    ├── ssh homelab      → MagicDNS over Tailscale     ← primary; scripts, scp, VS Code
     │                      WireGuard mesh (ADR-005, ADR-019)
+    │
+    ├── ssh homelab-workbench → same host, plus LocalForward 127.0.0.1:8765
+    │                      the ONLY door to the Workbench (ADR-038 §2; Phase 18.2)
     │
     └── ssh homelab-lan  → 192.168.1.57 on the LAN     ← fallback
                            kept as a network-independent path; the console is a
@@ -62,8 +73,15 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
         runs as homelab-bot; reads the previous boot's journal and findmnt;
         sends one of four literal messages via homelab-notify.sh; OUTBOUND HTTPS only
         RestrictAddressFamilies has no AF_UNIX: the model helper is unreachable at the kernel
-    homelab-notify@{bot,model-helper,watchdog}.service — OnFailure= targets, same account,
+    homelab-notify@{bot,model-helper,watchdog,workbench}.service — OnFailure= targets, same account,
         same LoadCredential= token grant; homelab-notify@ itself has no OnFailure= (recursion guard)
+    /srv/homelab (LUKS2, unlocked over SSH) — aleix:aleix 0750 (Phase 18.2)
+        homelab/ factory/ brain/ projects/oncla/ projects/factory/ — clones, SSH remotes
+        ~aleix/.ssh/id_ed25519_github — the node's GitHub key, NOT in the backup
+    homelab-workbench.service — the Factory Workbench (Phase 18.2, ADR-036, ADR-038)
+        runs as aleix under NoNewPrivileges; ProtectSystem=strict + ReadWritePaths=/srv/homelab
+        ConditionPathIsMountPoint= / PartOf= / WantedBy=homelab-data.target — the canary
+        LISTENS on 127.0.0.1:8765 only; no AF_UNIX; systemd-analyze security: 1.3 OK
     NO MONITOR, NO KEYBOARD — all DRM connectors report disconnected
     Cold-boots headless to a reachable state in ~26 seconds
 ```
@@ -91,7 +109,9 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | **Model executor** | **Active** — `/ask`, two providers with independent usage limits and automatic fallback, cheapest model by default. The model gets **no tools** (verified with a canary), and its output is never dispatched |
 | **Encrypted data volume** | **Active, locked at boot** — `ubuntu-vg/data` (LUKS2, 128 GiB) → mapper `homelab-data` → ext4, mounted at `/srv/homelab`. Unlocked manually over SSH via `data-volume.sh unlock`; `noauto` in `/etc/crypttab` and `/etc/fstab` keeps boot from waiting on it (ADR-037, Phase 18.1) |
 | **Watchdog / notifier** | **Active** — `homelab-watchdog.timer` (`OnBootSec=90s`, `WantedBy=timers.target`) → `homelab-watchdog.service` (oneshot, `User=homelab-bot`, `SupplementaryGroups=systemd-journal`, `LoadCredential=` on the bot's token, `RestrictAddressFamilies=AF_INET AF_INET6`). Classifies the previous stop from PID 1's journal (`Shutting down.` present → clean, absent → unplanned), computes downtime from `journalctl --list-boots`, reads lock state from `/etc/crypttab` + `findmnt`. `homelab-notify@.service` is the single send primitive and the `OnFailure=` target for the bot (drop-in), the model helper (drop-in) and the watchdog; it has no `OnFailure=` of its own. Three boots observed 2026-09-12: enable, clean reboot, power cut — all reported correctly (Phase 12) |
-| **`homelab-data.target` / `-probe.service`** | **Active pattern** — `ConditionPathIsMountPoint=/srv/homelab`, `PartOf=`/`WantedBy=homelab-data.target`. A dependent unit started while locked is skipped, not failed; `is-system-running` stays `running` either way. The probe is the reference implementation for Phase 18.2's first real service |
+| **`homelab-data.target` + `homelab-workbench.service`** | **Active pattern** — `ConditionPathIsMountPoint=/srv/homelab`, `PartOf=`/`WantedBy=homelab-data.target`, and **no `WorkingDirectory=` on the volume** (implicit `RequiresMountsFor=` would run before the Condition — found by a false alert, Phase 18.2). A dependent unit started while locked is skipped, not failed; `is-system-running` stays `running` either way. The Workbench is the canary; the 18.1 probe is removed. Contract: `docs/standards/volume-dependent-services.md` |
+| **Factory Workbench** | **Active** — `homelab-workbench.service`, `User=aleix`, `python3 -m workbench.cli --project /srv/homelab/projects/factory serve` from `/srv/homelab/factory` via `PYTHONPATH`. Binds `127.0.0.1:8765` only (refused otherwise in `server.py`); reached through `ssh homelab-workbench`; no application login — the OS user is the boundary (ADR-035 §7, ADR-036 §5, ADR-038). `OnFailure=homelab-notify@workbench.service`. Score 1.3 OK. **Writes records into `projects/factory/ops/` and never commits** — the owner commits by hand (Phase 18.2) |
+| **The four layers in the volume** | **Active** — five clones at `/srv/homelab/{homelab,factory,brain,projects/oncla,projects/factory}`, SSH remotes, cloned with `~aleix/.ssh/id_ed25519_github` (owner-account key, write to the three private repos; excluded from `backup-node.sh` by design). The MacBook's clones remain as working copies (Phase 18.2) |
 
 ## Confirmed architectural direction
 
@@ -144,5 +164,9 @@ as an **accepted judgement with its reasoning**, not as resolved.
 - ~~encryption at rest~~ — **executed** by Phase 18.1 (2026-09-12, ADR-037); root stays unencrypted
   by decision (ADR-046)
 - local GPU node (Phase 16)
+- the harness endpoint (Phase 23.0) — the Workbench is on loopback and the socket rule is measured;
+  the endpoint follows the same shape
+- a dedicated Workbench account — it runs as `aleix` under `NoNewPrivileges`; Phase 13 takes or
+  declines the upgrade with a reason (Phase 18.2)
 
 Update this document when a phase changes the actually deployed architecture.

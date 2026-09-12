@@ -107,7 +107,6 @@ NODE_PATHS=(
     /etc/crypttab
     /etc/fstab
     /etc/systemd/system/homelab-data.target
-    /etc/systemd/system/homelab-data-probe.service
     /usr/local/sbin/data-volume.sh
     # Phase 12: all seven deployed files. The watchdog script calls
     # homelab-notify.sh and the units name homelab-notify@.service; a
@@ -122,6 +121,14 @@ NODE_PATHS=(
     /etc/systemd/system/homelab-notify@.service
     /etc/systemd/system/homelab-telegram-bot.service.d/onfailure.conf
     /etc/systemd/system/homelab-model-helper@.service.d/onfailure.conf
+    # Phase 18.2: the Workbench unit and its alert drop-in. The probe unit
+    # that used to sit under homelab-data.target above is gone -- the
+    # Workbench is the canary now (docs/standards/volume-dependent-services.md).
+    # The node's GitHub key (~aleix/.ssh/id_ed25519_github) is deliberately
+    # NOT captured -- see NODE_EXCLUDES. A restored node generates a new key
+    # and the owner registers it; the old one is revoked on GitHub (brief §9).
+    /etc/systemd/system/homelab-workbench.service
+    /etc/systemd/system/homelab-workbench.service.d/onfailure.conf
 )
 
 # DELIBERATELY NOT BACKED UP, so that these are decisions rather than omissions:
@@ -164,6 +171,13 @@ NODE_EXCLUDES=(
     --exclude=/home/aleix/.codex/packages
     --exclude=/home/aleix/.codex/plugins
     --exclude=/home/aleix/.codex/cache
+    # Phase 18.2: the node-side GitHub key grants write to three private
+    # repositories and is passphrase-less. /home/aleix/.ssh is in NODE_PATHS
+    # for authorized_keys, which a restore cannot do without; the key is a
+    # different kind of thing -- a secret whose copy on the card would be a
+    # second place to revoke. A rebuilt node generates its own (brief §6.2/§9).
+    --exclude=/home/aleix/.ssh/id_ed25519_github
+    --exclude=/home/aleix/.ssh/id_ed25519_github.pub
 )
 
 fail() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }

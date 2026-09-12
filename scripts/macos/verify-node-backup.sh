@@ -216,7 +216,6 @@ CRITICAL=(
     etc/crypttab
     etc/fstab
     etc/systemd/system/homelab-data.target
-    etc/systemd/system/homelab-data-probe.service
     usr/local/sbin/data-volume.sh
     # Phase 12: matches backup-node.sh's NODE_PATHS additions, same commit --
     # all seven deployed files, see that file's comment for why.
@@ -227,6 +226,9 @@ CRITICAL=(
     etc/systemd/system/homelab-notify@.service
     etc/systemd/system/homelab-telegram-bot.service.d/onfailure.conf
     etc/systemd/system/homelab-model-helper@.service.d/onfailure.conf
+    # Phase 18.2: matches backup-node.sh, same commit. The probe is gone.
+    etc/systemd/system/homelab-workbench.service
+    etc/systemd/system/homelab-workbench.service.d/onfailure.conf
 )
 MISSING=0
 for c in "${CRITICAL[@]}"; do

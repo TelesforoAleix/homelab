@@ -519,6 +519,17 @@ a web service.
 
 **Depends on 18.1.** Nothing moves before the volume exists.
 
+**Status: Complete (2026-09-12).** Five clones in `/srv/homelab` (`aleix:aleix`, SSH remotes, node
+key on the owner's GitHub account); `homelab-workbench.service` runs the Factory Workbench as `aleix`
+under `NoNewPrivileges` on `127.0.0.1:8765`, tied to the volume by the pattern now written as
+`docs/standards/volume-dependent-services.md`, and replaces the 18.1 probe as the canary; the door is
+`ssh homelab-workbench` (`LocalForward` on its own alias — on `homelab` it broke every scripted SSH).
+All sixteen validation rows observed, including a locked reboot, a crash loop and the socket table
+(7, each named). The one real finding: `WorkingDirectory=` on the volume adds an implicit
+`RequiresMountsFor=` that runs before the Condition and fired a false alert — fixed, and in the
+standard. Docker's `data-root` stays on root. **Phase 13 is now next.** Handover:
+`docs/handovers/18.2-migration-to-the-server-handover.md`.
+
 ## Phase 19 — Tool Vocabulary & Capability Levels
 
 Publish homelab's **named tool vocabulary and its capability levels** as a stable public interface,
@@ -959,8 +970,10 @@ credential gap ADR-037 §6 records and does not close.
 is the notification that matters most, and the watchdog lives on root where it works before the
 volume is open. Small, and it makes every later phase easier to operate.
 
-**3. Phase 18.2 — Migration to the server.** Everything moves into the volume. Phase 13 gets more
-urgent the moment this lands.
+**3. Phase 18.2 — Migration to the server.** ~~Everything moves into the volume. Phase 13 gets more
+urgent the moment this lands.~~ **Done 2026-09-12.** The node runs a web service on loopback and
+holds a GitHub key with write access; **Phase 13 is promoted to next** (18.2 handover, *To Phase 13*),
+ahead of 15.0, which can still run alongside.
 
 **4. Phase 15.0 — Model registry.** Can run at any point from here; costs nothing and is already
 briefed. Do it while the node work settles.

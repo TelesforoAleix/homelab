@@ -196,3 +196,11 @@ indicative; the DKK column is the actual paid amount.
 - If EUR values are estimates, record the conversion basis/date where useful.
 - Separate one-time, recurring, and usage-based costs.
 - Keep reproduction estimates visibly separate from actual spend.
+
+## Phase 18.2 — Migration to the server
+
+**Phase 18.2 actual spend: 0 DKK.** Five `git clone`s, one systemd unit and a drop-in, one SSH key
+registered on the existing GitHub account (SSH keys and private repositories are free on it), and
+`python3-yaml` from the Ubuntu archive — already installed, only `apt-mark manual` applied. No
+package purchased, no subscription, no metered call, no hardware. Reference-build running total
+unchanged at **899 DKK (~121 EUR)**.
