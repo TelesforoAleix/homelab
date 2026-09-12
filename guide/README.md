@@ -79,6 +79,13 @@ These mirror the numbered project roadmap.
   `_PID=1` is mandatory, why the model helper is unreachable at the kernel and must stay so, and two
   `pipefail` traps that misclassify silently. *(Complete 2026-09-12. Clean reboot and power cut both
   tested live; the first version's "disproof" of its own heuristic is written up as the lesson.)*
+- [`18.2-migration-to-the-server`](18.2-migration-to-the-server/README.md) — the four layers move
+  into the encrypted volume and the Workbench runs from there, on loopback, through an SSH tunnel.
+  Clone-don't-copy and what "the remote is the backup" does not cover; the volume-dependent unit
+  contract and the one directive that silently defeats it (`WorkingDirectory=` → implicit
+  `RequiresMountsFor=`, found by a false alert); why a forward belongs on its own SSH alias; the
+  node's GitHub key and how to revoke it; and every listening socket named. *(Complete 2026-09-12.
+  Sixteen validation rows observed live, including a locked reboot and a crash loop.)*
 - [`09-model-executor`](09-model-executor/README.md) — asking a model a question without giving the
   bot a credential. Why the bot cannot just run `claude -p`, why the access rule belongs in the
   socket unit rather than in Python, what leaves the machine on every call and why logs do not,
