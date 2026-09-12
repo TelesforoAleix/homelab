@@ -110,7 +110,9 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   viable; the TPM is 2.0 and enrolment works, but only against the **SHA-1** bank, because
   allocating SHA-256 needs platform authority that firmware deliberately discards before boot; and
   the volume group has zero free extents, so a separate encrypted volume has nowhere to live.
-  Reaffirming is a decision; silence would not have been.
+  Reaffirming is a decision; silence would not have been. **Its content gate is discharged for the
+  encrypted volume by ADR-037 §7** — the unencrypted root still may not hold the knowledge base,
+  project content or any private repository; the gate moves, it does not disappear.
 - **[ADR-033](ADR-033-vercel-ai-gateway-as-the-metered-provider.md) — Vercel AI Gateway as the
   metered provider** (2026-09-11). Settles the vendor ADR-026 deliberately left unnamed. Its **spend
   governor is a precondition for any paid call**.

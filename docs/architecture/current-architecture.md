@@ -1,6 +1,6 @@
 # Current Architecture
 
-**State:** Phases 01–09 complete — the reference node runs Ubuntu Server, is administered remotely
+**State:** Phases 01–09, 18 and 20.0 complete — the reference node runs Ubuntu Server, is administered remotely
 over Tailscale with key-only SSH, and has Docker Engine/Compose plus two subscription-authenticated
 AI operator CLIs. **The monitor and keyboard are detached**; the node runs headless, with a console available on
 demand — the connectors are present and console login is tested (Phase 18, ADR-041).
@@ -36,11 +36,13 @@ MacBook Pro  —  development / administration interface
     │                      WireGuard mesh (ADR-005, ADR-019)
     │
     └── ssh homelab-lan  → 192.168.1.57 on the LAN     ← fallback
-                           kept because there is no console any more
+                           kept as a network-independent path; the console is a
+                           separate, physical recovery route, available on demand (ADR-041)
     ▼
 Lenovo ThinkCentre M700 Tiny  —  "homelab"
     Ubuntu Server 26.04.1 LTS, kernel 7.0.0-31-generic
-    UEFI boot · LVM without encryption (ADR-015) · 232 GB root
+    UEFI boot · LVM without encryption (ADR-015; ADR-037 decided a separate
+    encrypted data volume, not yet executed — Phase 18.1) · 232 GB root
     Wi-Fi wlp1s0, 2.4 GHz (ADR-016) · eno1 present, unused
     SSH: publickey only. No passwords, no root login (ADR-018)
     Docker Engine 29.8.0 + Compose v5.5.1, rootful (ADR-022)
@@ -60,6 +62,7 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | Ubuntu Server 26.04.1 LTS | **Active** |
 | OpenSSH server (socket-activated) | **Active** — key-only; passwords and root login refused (ADR-018) |
 | Tailscale 1.102.3 | **Active** — MagicDNS primary route, node key expiry disabled (ADR-019) |
+| ufw (firewall) | **Active** since 2026-09-10 — default deny inbound; allows `tailscale0` and Tailscale's UDP port on `wlp1s0` |
 | VS Code Remote SSH | **Active** — `~/.vscode-server` on the node |
 | netplan + wpasupplicant (Wi-Fi) | **Active** |
 | unattended-upgrades | **Active** |
@@ -107,13 +110,17 @@ as an **accepted judgement with its reasoning**, not as resolved.
 ## Not implemented yet
 
 - knowledge/RAG services (Phase 10)
-- automation (Phase 12) — **constrained**: no unattended model calls without a new ADR (ADR-025)
+- automation (Phase 12) — autonomous model calls are normal; budget replaces attribution as the
+  control (ADR-040, which retired ADR-025 §9 in full)
 - voice input (Phase 17 — moved out of Phase 09, see `ROADMAP.md`)
 - alerting or metrics on any service (nothing reports the bot dying)
 - narrower filesystem confinement for the model helper — `ReadWritePaths=/home/aleix` is broader
   than it should eventually be, and was deliberately not guessed at (ADR-025)
-- any backup of the node (Phase 13)
-- firewall, encryption at rest (Phase 13)
+- ~~any backup of the node (Phase 13)~~ — delivered by Phase 18: a verified, restorable backup
+  (`scripts/macos/backup-node.sh`)
+- ~~firewall (Phase 13)~~ — `ufw` active since 2026-09-10 (default deny inbound; `tailscale0` plus
+  Tailscale's UDP port allowed)
+- encryption at rest — decided by ADR-037, not yet executed; Phase 18.1, not Phase 13
 - local GPU node (Phase 16)
 
 Update this document when a phase changes the actually deployed architecture.

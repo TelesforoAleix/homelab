@@ -18,7 +18,9 @@
 #   On this node that matters more than usual. eno1 is down with no carrier,
 #   so `ssh homelab` (Tailscale) and `ssh homelab-lan` (LAN) are independent
 #   above the link layer and identical below it. Losing the network does not
-#   cost one route. It costs both, at once, on a machine with no console.
+#   cost one route. It costs both, at once, and recovery then means a physical
+#   walk to the console -- a cost, not a catastrophe, but not free either
+#   (ADR-041, superseding ADR-020).
 #
 #   Before running this, from the MacBook:
 #     bash scripts/macos/preflight.sh          # both routes, two sessions
@@ -58,7 +60,7 @@ note(){ printf '  --   %s\n' "$*"; }
 [ "${1:-}" = "install" ] || {
   printf 'usage: sudo bash %s install\n' "$0" >&2
   printf '\nThe explicit argument is deliberate. This change rewrites the\n' >&2
-  printf 'packet-filtering rules on a machine with no console.\n' >&2
+  printf 'packet-filtering rules whose console recovery costs a physical visit.\n' >&2
   exit 2
 }
 
@@ -84,7 +86,8 @@ if [ "${WLINES:-0}" -eq 0 ]; then
   note "cannot determine session count -- check manually with: w"
 elif [ "${SESSIONS:-0}" -lt 2 ]; then
   die "only ${SESSIONS} interactive session(s). Open a second and leave it idle.
-This is a lockout-class change on a node with no console (ADR-020)."
+This is a lockout-class change; console recovery costs a physical visit,
+not a catastrophe, but plan for it (ADR-041, superseding ADR-020)."
 else
   ok "${SESSIONS} interactive sessions -- one can stay idle as the way back"
 fi
