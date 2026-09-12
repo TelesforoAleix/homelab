@@ -159,6 +159,13 @@ Reference-build running total unchanged at **899 DKK (~121 EUR)**, plus the exis
 subscriptions recorded in Phase 06 (€45.50/month ≈ 339 DKK/month), which this phase now uses
 programmatically for the first time.
 
+## Phase 12 — Scheduling, monitoring and notifications
+
+**Phase 12 actual spend: 0 DKK.** Two systemd units, two scripts and three drop-in lines, all on the
+node's existing packages (`systemd` 259.5, `curl` 8.18.0). The one place a package was tempting —
+`wtmpdb`, to restore `last -x` — was declined; the journal carries the same signal. No subscription,
+no metered call, no hardware. Reference-build running total unchanged at **899 DKK (~121 EUR)**.
+
 ## Existing subscriptions used by the project
 
 These are costs even though they pre-date Home Lab. The owner supplied the actual billed EUR amounts

@@ -27,7 +27,23 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 18.1 — Encryption execution (**complete**, 2026-09-12). **ADR-037 is true on the
+- **Current phase:** 12 — Scheduling, monitoring and notifications (**complete**, 2026-09-12). **The node
+  reports its own recovery, and the unlocked-at-boot gap Phase 18.1 opened is closed.**
+  `homelab-watchdog.timer` fires one oneshot unit 90 s after every boot; it classifies the previous
+  stop from PID 1's journal (`Shutting down.` present → clean reboot, absent → unplanned — not `last
+  -x`, which this Ubuntu no longer ships), computes downtime from `journalctl --list-boots`, reads the
+  volume's lock state unprivileged, and sends exactly one of four literal messages to Telegram through
+  `homelab-notify.sh`. `OnFailure=` drop-ins on the bot and the model helper (and on the watchdog
+  itself) page the owner through the same script when a unit dies — the *"nothing reports the bot
+  dying"* line in `current-architecture.md` is struck. **Observed 2026-09-12:** three boots (enable,
+  `sudo reboot`, mains pulled), three correct messages including `LOCKED`, both classifier branches
+  live; the alert fired on a real crash (15 `SIGKILL`s, seven alerts — one per crash, not one at the
+  start limit) and not on a clean `stop`; the model helper refused at the kernel (`Errno 97`, no
+  `AF_UNIX`); nothing regressed (`1.3 OK`, `id homelab-bot` unchanged, 6 listeners, `running`). Zero
+  cost, no package, no ADR. The scheduler **cannot reach a model** until Phase 15.1's governor lands
+  and a new ADR names it a client (ADR-044 §4). Handover:
+  [`12-scheduling-monitoring-notifications-handover.md`](../handovers/12-scheduling-monitoring-notifications-handover.md).
+- **Previously:** 18.1 — Encryption execution (**complete**, 2026-09-12). **ADR-037 is true on the
   machine, not only on paper.** Root shrunk to 64 GiB; a 128 GiB LUKS2 volume (`ubuntu-vg/data` →
   `homelab-data` → `/srv/homelab`) exists in the freed extents, opens with the passphrase, refuses
   without it; **11,116 extents (43.42 GiB) deliberately left free** in the volume group, closing the
@@ -364,6 +380,27 @@ systemd ignores it. The effective window was 10s against `RestartSec=10`, so the
 **unreachable** for two phases. `install-telegram-bot.sh` now runs `systemd-analyze verify` on
 every install.
 
+## Phase 12 status
+
+**Complete 2026-09-12.** Brief merged to `main` before implementation per ADR-017 (`ab093ef`);
+executed on branch `phase/12-work` in a separate worktree.
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`12-scheduling-monitoring-notifications.md`](../handovers/12-scheduling-monitoring-notifications.md) |
+| Handover | ✅ [`12-scheduling-monitoring-notifications-handover.md`](../handovers/12-scheduling-monitoring-notifications-handover.md) |
+| Guide | ✅ [`guide/12-scheduling-monitoring-notifications/`](../../guide/12-scheduling-monitoring-notifications/README.md) |
+| Boot notice | ✅ `homelab-watchdog.timer` enabled; fired once per boot on three boots 2026-09-12 (17:20:22 enable, 17:25:13 clean reboot, 17:34:51 power cut), `NRestarts=0`, every message reached Telegram |
+| Classification | ✅ Journal-based, PID 1 only. Clean reboot → `clean reboot` (marker present); power cut → `unplanned reboot` (marker absent). `last -x` is not available on this node and was not installed |
+| Lock state | ✅ `unlocked` and `LOCKED -- ssh homelab && sudo data-volume.sh unlock` both observed live; "not configured" not producible on this node by design |
+| Failure alert | ✅ Fires on a real crash (`Home Lab alert: homelab-telegram-bot.service failed.` + journal lines), not on a clean `stop`; recursion guard verified empty |
+| Model-helper boundary | ✅ `RestrictAddressFamilies=AF_INET AF_INET6` — `OSError: [Errno 97]` at socket creation; positive control is the bot's own connection |
+| Regression | ✅ `id homelab-bot` byte-identical, `ss -tln` 6 listeners, bot `1.3 OK`, `--failed` empty, `is-system-running` → `running`, after the kill run and after both reboots |
+| Backup lists | ✅ All seven deployed files in `NODE_PATHS` and `CRITICAL`, same commit (the brief named three; widened during execution) |
+| ADRs | None required (brief §13) |
+| Cost | 0 DKK |
+| Residual | `homelab-notify@.service`'s own failure is unwatched (recursion guard, by decision); multi-recipient delivery untested (one owner); `systemctl poweroff` path untested (only `reboot` was) |
+
 ## Open risks carried forward
 
 > **The repository is now public.** Everything below is publicly documented. That is intentional for
@@ -641,7 +678,7 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | AI credential files | `/home/aleix/.claude/.credentials.json` and `/home/aleix/.codex/auth.json`, both mode `0600`, owner `aleix:aleix`; contents never captured |
 | AI processes/services | None; both CLIs are interactive operator commands |
 | Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache |
-| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts**. **`homelab-model-helper.socket`** — active, enabled; templated service instantiated per connection |
+| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts**. **`homelab-model-helper.socket`** — active, enabled; templated service instantiated per connection. **`homelab-watchdog.timer`** — active, enabled, once per boot (Phase 12, 2026-09-12); `OnFailure=` drop-ins on the bot and the model helper → `homelab-notify@<alias>.service` |
 | Model helper socket | `/run/homelab-model-helper.sock`, `aleix:homelab-bot`, mode `660` |
 | Model access | `/ask` works. Claude `haiku`, Codex `gpt-5.6-luna`; caps 6/hour, 30/day per provider |
 | Restart limit | **`StartLimitIntervalUSec=5min`** on the running unit — was silently 10s until Phase 09 fixed it |

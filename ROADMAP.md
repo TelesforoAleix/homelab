@@ -289,6 +289,21 @@ needs its own brief.
 The always-running plumbing: the **scheduler** as a trigger source, a **watchdog** that observes, and
 a **notifier** that reports.
 
+**Status: Complete (2026-09-12).** Built as `homelab-watchdog.timer` → `homelab-watchdog.service`
+(once per boot, 90 s, `User=homelab-bot`) → `homelab-watchdog.sh` → `homelab-notify.sh`, plus
+`OnFailure=` drop-ins on the bot and the model helper (and on the watchdog itself) targeting
+`homelab-notify@<alias>.service`. Classification is journal-based (PID 1's `Shutting down.`), not
+`last -x` — this Ubuntu ships no `last`, and no package was added. **The unlocked-at-boot gap from
+Phase 18.1 is closed:** a clean reboot and a real power cut both produced the correct Telegram
+message, including the `LOCKED` state, unprompted; the failure alert fired on a real crash and not on
+a clean stop; nothing regressed (`1.3 OK`, `id homelab-bot` unchanged, 6 listeners). The scheduler
+**cannot reach a model** — `RestrictAddressFamilies` omits `AF_UNIX` — until Phase 15.1's two
+preconditions are met.
+
+- Handover: [`docs/handovers/12-scheduling-monitoring-notifications-handover.md`](docs/handovers/12-scheduling-monitoring-notifications-handover.md)
+- Guide: [`guide/12-scheduling-monitoring-notifications/`](guide/12-scheduling-monitoring-notifications/README.md)
+- Decisions: none required (brief §13)
+
 **Repurposed 2026-09-11 (ADR-045 §3), correcting an earlier assessment.** The target architecture
 first recorded this phase as *absorbed*, on the grounds that the scheduler is a client at layer 1
 rather than a phase of its own. That was half right and it dropped something real — the monitoring
