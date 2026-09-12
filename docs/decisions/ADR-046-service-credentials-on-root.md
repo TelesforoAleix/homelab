@@ -1,6 +1,6 @@
 # ADR-046: Service credentials stay on the unencrypted root — an accepted risk
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-12
 - **Supersedes:** none. **Closes the gap ADR-037 §6 recorded and explicitly did not close.** Extends
   ADR-032 §3's naming of what root holds into a decision about it. Proposed alongside the Phase 18.1
