@@ -1,12 +1,15 @@
 # Current Architecture
 
-**State:** Phases 01–09, 18, 18.1 and 20.0 complete — the reference node runs Ubuntu Server, is
+**State:** Phases 01–09, 12, 18, 18.1 and 20.0 complete — the reference node runs Ubuntu Server, is
 administered remotely over Tailscale with key-only SSH, and has Docker Engine/Compose plus two
 subscription-authenticated AI operator CLIs. **The monitor and keyboard are detached**; the node runs
 headless, with a console available on demand — the connectors are present and console login is tested
 (Phase 18, ADR-041). **Encryption at rest is executed** (Phase 18.1, 2026-09-12): root is shrunk and
 stays unencrypted by decision (ADR-046); a separate LUKS2 volume holds knowledge and project content,
-unlocked over SSH after boot (ADR-037).
+unlocked over SSH after boot (ADR-037). **The node reports its own recovery** (Phase 12, 2026-09-12): a
+once-per-boot timer sends downtime, clean-versus-unplanned classification and the volume's lock
+state to Telegram, and `OnFailure=` on the bot, the model helper and the watchdog itself pages the
+owner when a unit dies — with no daemon, no listening socket, and no path to a model.
 
 **`Interface → Router → Executor → Model` now exists as code**, not as a diagram. Phase 07 built the
 Interface; Phase 08 built the Router and the Executors; Phase 09 connected the model.
@@ -55,6 +58,12 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
         runs as homelab-bot (uid 999), no shell, no home, no privileged group
         long polling: OUTBOUND HTTPS only, no listening socket
         systemd-analyze security: 1.3 OK
+    homelab-watchdog.timer → .service — once per boot, 90 s after boot (Phase 12)
+        runs as homelab-bot; reads the previous boot's journal and findmnt;
+        sends one of four literal messages via homelab-notify.sh; OUTBOUND HTTPS only
+        RestrictAddressFamilies has no AF_UNIX: the model helper is unreachable at the kernel
+    homelab-notify@{bot,model-helper,watchdog}.service — OnFailure= targets, same account,
+        same LoadCredential= token grant; homelab-notify@ itself has no OnFailure= (recursion guard)
     NO MONITOR, NO KEYBOARD — all DRM connectors report disconnected
     Cold-boots headless to a reachable state in ~26 seconds
 ```
@@ -81,6 +90,7 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | **Model helper** | **Active** — `homelab-model-helper.socket` + templated service. Runs as `aleix` because it must reach the credentials the bot cannot; socket-activated, one process per connection, so nothing holds an OAuth token between requests. Access control is the socket's group and mode, not code (ADR-025) |
 | **Model executor** | **Active** — `/ask`, two providers with independent usage limits and automatic fallback, cheapest model by default. The model gets **no tools** (verified with a canary), and its output is never dispatched |
 | **Encrypted data volume** | **Active, locked at boot** — `ubuntu-vg/data` (LUKS2, 128 GiB) → mapper `homelab-data` → ext4, mounted at `/srv/homelab`. Unlocked manually over SSH via `data-volume.sh unlock`; `noauto` in `/etc/crypttab` and `/etc/fstab` keeps boot from waiting on it (ADR-037, Phase 18.1) |
+| **Watchdog / notifier** | **Active** — `homelab-watchdog.timer` (`OnBootSec=90s`, `WantedBy=timers.target`) → `homelab-watchdog.service` (oneshot, `User=homelab-bot`, `SupplementaryGroups=systemd-journal`, `LoadCredential=` on the bot's token, `RestrictAddressFamilies=AF_INET AF_INET6`). Classifies the previous stop from PID 1's journal (`Shutting down.` present → clean, absent → unplanned), computes downtime from `journalctl --list-boots`, reads lock state from `/etc/crypttab` + `findmnt`. `homelab-notify@.service` is the single send primitive and the `OnFailure=` target for the bot (drop-in), the model helper (drop-in) and the watchdog; it has no `OnFailure=` of its own. Three boots observed 2026-09-12: enable, clean reboot, power cut — all reported correctly (Phase 12) |
 | **`homelab-data.target` / `-probe.service`** | **Active pattern** — `ConditionPathIsMountPoint=/srv/homelab`, `PartOf=`/`WantedBy=homelab-data.target`. A dependent unit started while locked is skipped, not failed; `is-system-running` stays `running` either way. The probe is the reference implementation for Phase 18.2's first real service |
 
 ## Confirmed architectural direction
@@ -116,10 +126,15 @@ as an **accepted judgement with its reasoning**, not as resolved.
 ## Not implemented yet
 
 - knowledge/RAG services (Phase 10)
-- automation (Phase 12) — autonomous model calls are normal; budget replaces attribution as the
-  control (ADR-040, which retired ADR-025 §9 in full)
+- ~~automation (Phase 12)~~ — **the scheduler exists** (Phase 12, 2026-09-12) as a systemd timer that
+  triggers one oneshot unit; it **cannot reach a model** (`RestrictAddressFamilies` omits `AF_UNIX`)
+  until Phase 15.1's governor lands and a new ADR names it a client (ADR-044 §4). Autonomous model
+  calls are normal in principle (ADR-040); the budget control that makes them safe does not exist yet
 - voice input (Phase 17 — moved out of Phase 09, see `ROADMAP.md`)
-- alerting or metrics on any service (nothing reports the bot dying)
+- ~~alerting or metrics on any service (nothing reports the bot dying)~~ — **closed by Phase 12**
+  (2026-09-12): `OnFailure=` on the bot, the model helper and the watchdog pages Telegram on a real
+  crash and not on a clean `stop`; tested with 15 `SIGKILL`s. Metrics remain unbuilt, by scope. The
+  one unwatched failure is `homelab-notify@.service`'s own
 - narrower filesystem confinement for the model helper — `ReadWritePaths=/home/aleix` is broader
   than it should eventually be, and was deliberately not guessed at (ADR-025)
 - ~~any backup of the node (Phase 13)~~ — delivered by Phase 18: a verified, restorable backup
