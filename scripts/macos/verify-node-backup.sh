@@ -213,6 +213,11 @@ CRITICAL=(
     home/aleix/.codex/auth.json
     home/aleix/.ssh/authorized_keys
     etc/netplan/00-installer-config.yaml
+    etc/crypttab
+    etc/fstab
+    etc/systemd/system/homelab-data.target
+    etc/systemd/system/homelab-data-probe.service
+    usr/local/sbin/data-volume.sh
 )
 MISSING=0
 for c in "${CRITICAL[@]}"; do
