@@ -27,7 +27,15 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 18.2 — Migration to the server (**complete**, 2026-09-12). **The four layers are
+- **Current phase:** 13 — Security hardening (**in progress**, 2026-09-12; S1 audit and S2 software
+  controls complete, S3 credentials-and-the-box pending). S2 landed, all OBSERVED: sshd `AllowUsers
+  aleix`/`MaxAuthTries 3`/no X11/no agent forwarding; a `DOCKER-USER` chain that keeps published
+  container ports behind ufw; a tty-only console timeout; the model helper can no longer read the
+  node's GitHub key; `wifi-powersave-off` bounded to `CAP_NET_ADMIN`; `aleix` out of `lxd`; a second
+  SSH key `age`-encrypted on the card; a Tailscale ACL allowing only tcp/22 to the node. Seven
+  sockets, unchanged. ADR-047 decides the Workbench's account question (declined; sandbox is the
+  boundary). See `guide/13-security-hardening/`.
+- **Previous phase:** 18.2 — Migration to the server (**complete**, 2026-09-12). **The four layers are
   on the node inside the encrypted volume, and the Factory Workbench runs there as a service on
   loopback, reached only through `ssh homelab-workbench`.** Five clones at `/srv/homelab`, one
   node-side GitHub key, one new listening socket (`127.0.0.1:8765`, named); the 18.1 probe is
@@ -445,12 +453,11 @@ executed on branch `phase/12-work` in a separate worktree.
 
 - ~~SSH password authentication~~ — ✅ **closed 2026-09-09** by Phase 03 (ADR-018). The server
   advertises `publickey` only.
-- **Single SSH key.** Phase 03 removed the monitor and left one Ed25519 key as the only way in.
-  New debt, owned by Phase 13. **Two thirds of this is closed:** Phase 18 delivered a backup verified
-  by restoring, and the console was never actually gone — it is available on demand (ADR-041). The
-  single key remains. Phase 02 did not close this — it made
-  lockout-class changes *recoverable while remote access still works* (ADR-020), which is a different
-  thing from a recovery path.
+- ~~**Single SSH key.**~~ **Closed 2026-09-12 by Phase 13 (S2).** A second Ed25519 pair: public
+  half in `authorized_keys` (two lines now), private half `age`-encrypted on the backup card next to
+  the LUKS header, tested from the MacBook without the agent (rc 0), plaintext destroyed. With the
+  console (ADR-041) and the restored backup (Phase 18) that is the third leg. The history: Phase 03
+  left one key; Phase 02 made lockout-class changes recoverable, which is a different thing.
 - ~~**The reference node still has no backup of any kind.**~~ **Closed 2026-09-11 by Phase 18.** A
   weekly, manual-by-design backup exists (`scripts/macos/backup-node.sh`) with a verifier that plants
   a positive control, proved by **restoring**: 182 entries, 312 KB of node state, 20 MB of repository
@@ -478,21 +485,31 @@ executed on branch `phase/12-work` in a separate worktree.
   client behavior can drift between phases. Re-run the constrained fixture and record the new
   version after a material update.
 - **Rootful Docker without user-namespace remapping.** Container root maps to host root; mitigated by
-  non-root container defaults and Compose hardening. Phase 13 should revisit rootless Docker or
-  userns-remap on its merits.
+  non-root container defaults and Compose hardening. **Phase 13 declined (2026-09-12):** inventory is
+  zero and the decision has nothing to protect yet; the first phase that ships a container decides,
+  and says so in its brief.
 - ~~No firewall.~~ **Closed 2026-09-10, out of phase**, because the shared-network finding made it
   the highest-value control available. `ufw` denies inbound by default and permits only `tailscale0`
   plus Tailscale's UDP port. Applied with a timed self-revert and verified in both directions.
-  **Phase 13 still owns the rest** — `fail2ban` is deliberately absent (this server accepts no
-  passwords), node key expiry, Tailscale ACLs and rootless Docker are untouched.
-- **Docker and Tailscale now both own packet-filtering chains.** Docker publishes with DNAT before
-  host firewall `INPUT` rules, so Phase 13 must design firewalling around Docker rather than
-  assuming `ufw deny` controls published container ports.
-- **IPv4/IPv6 forwarding policy is asymmetric.** IPv4 `FORWARD` is `DROP`; IPv6 `FORWARD` is
-  `ACCEPT`. Not reachable today because IPv6 forwarding is disabled and Docker bridge IPv6 is off,
-  but Phase 13 must not assume symmetry.
-- **Node key expiry deliberately disabled** on the Tailscale node (ADR-019) — a security control
-  traded for availability. Phase 13 must revisit it rather than inherit it.
+  **Phase 13 (2026-09-12) took the rest:** `fail2ban` declined (no passwords, inbound only from
+  `tailscale0` — nothing for it to count); node key expiry stays disabled (declined, revisit if the
+  machine leaves the home); **Tailscale ACL applied** — members → node tcp/22 only, `config/tailscale/acl.hujson`;
+  rootless Docker declined, above.
+- ~~**Docker and Tailscale now both own packet-filtering chains.**~~ **Narrowed 2026-09-12 by Phase
+  13.** Docker still publishes with DNAT before `INPUT`, and `DOCKER-FORWARD` accepts before ufw's
+  forward chains — so ufw never sees a published port. The `DOCKER-USER` chain (ufw
+  `after{,6}.rules`, `scripts/server/apply-docker-user-rules.sh`) now drops anything arriving from
+  `wlp1s0`/`eno1` and returns for `tailscale0`, `lo`, Docker bridges and established flows. Rule
+  presence OBSERVED; the live published-port proof is S3's first step. **`apply-firewall.sh` resets
+  ufw and erases this block — run the DOCKER-USER script after it, always** (baseline standard §6).
+- ~~**IPv4/IPv6 forwarding policy is asymmetric.**~~ **Was already closed on 2026-09-10** by ufw's
+  `deny (routed)` default; OBSERVED by Phase 13 S1 (`ip6tables -S FORWARD` → `-P FORWARD DROP`).
+  This bullet was stale from the moment ufw was enabled.
+- **Node key expiry deliberately disabled** on the Tailscale node (ADR-019). **Revisited by Phase 13
+  (2026-09-12) and kept disabled, by decision:** the console exists but the owner is not always
+  home, and a lapsed key silently removes the remote path; device approval covers re-authentication.
+  Revisit trigger: the machine leaves the home. The ACL now sits in front of sshd as the device-level
+  control.
 - ~~**The Telegram allowlist is per-deployment state on the node... whether it is inside the backup
   has not been verified.**~~ **Verified.** All three allowlist files (`allowlist`,
   `privileged-allowlist`, `restart-allowlist`) resolve under `/etc/homelab-telegram-bot`, which
