@@ -43,7 +43,12 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectKernelLogs=yes
 ProtectControlGroups=yes
-RestrictAddressFamilies=AF_NETLINK
+# WHY three families and not AF_NETLINK alone: nl80211 is netlink, but `iw`
+# resolves the interface name with if_nametoindex(), which glibc does via an
+# ioctl on a plain AF_UNIX/AF_INET socket. OBSERVED 2026-09-12 21:21 UTC with
+# AF_NETLINK only: "command failed: No such file or directory (-2)", the unit
+# failed and the runner reverted it.
+RestrictAddressFamilies=AF_NETLINK AF_UNIX AF_INET
 SystemCallArchitectures=native
 # WHY not more: PrivateDevices/PrivateNetwork would hide the very interface it
 # configures; a syscall filter on a root oneshot buys little and risks a silent

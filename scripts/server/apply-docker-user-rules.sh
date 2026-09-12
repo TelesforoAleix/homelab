@@ -3,9 +3,9 @@
 # Make ufw's boundary hold for published container ports (DOCKER-USER).
 #
 # Run on:  the Ubuntu server, as root
-# Usage:   sudo bash /tmp/apply-docker-user-rules.sh          # apply, self-revert armed
-#          sudo bash /tmp/apply-docker-user-rules.sh --keep   # cancel the self-revert
-#          sudo bash /tmp/apply-docker-user-rules.sh --undo   # restore the backups now
+# Usage:   sudo bash /tmp/p13/apply-docker-user-rules.sh          # apply, self-revert armed
+#          sudo bash /tmp/p13/apply-docker-user-rules.sh --keep   # cancel the self-revert
+#          sudo bash /tmp/p13/apply-docker-user-rules.sh --undo   # restore the backups now
 # Phase:   13 -- Security hardening, S2, brief §6.4.
 #
 # WHY THIS EXISTS
@@ -138,7 +138,7 @@ cat <<EOF
   1. From the MacBook, a FRESH connection:   ssh -o BatchMode=yes homelab true; echo \$?
   2. Optional real proof (pulls one small image, removed afterwards):
        see the S2 runbook step 2b.
-  3. Only then:   sudo bash /tmp/apply-docker-user-rules.sh --keep
+  3. Only then:   sudo bash /tmp/p13/apply-docker-user-rules.sh --keep
   ----------------------------------------------------------------
 
 EOF

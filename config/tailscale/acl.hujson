@@ -26,13 +26,8 @@
 		{"src": ["autogroup:member"], "dst": ["homelab"], "ip": ["tcp:22"]},
 	],
 
-	// Evaluated on every save in the admin console. If the console rejects a
-	// test line, delete the test, not the grant.
-	"tests": [
-		{
-			"src":    "autogroup:member",
-			"accept": ["homelab:22"],
-			"deny":   ["homelab:8765", "homelab:443", "homelab:36121"],
-		},
-	],
+	// No "tests" block: the console rejects autogroup:member as a test source
+	// ("unknown user or host", OBSERVED 2026-09-12) and the single-user tailnet
+	// has no other principal to name without committing an e-mail address.
+	// The proof is the runbook's nc: port 22 answers, port 2222 times out.
 }

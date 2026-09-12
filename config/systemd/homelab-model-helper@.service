@@ -117,13 +117,15 @@ InaccessiblePaths=-/home/aleix/.ssh
 # WHY SystemCallArchitectures: native-only ABI; nothing here is 32-bit.
 SystemCallArchitectures=native
 
-# WHY SystemCallFilter (Phase 13 S2, one trial round -- brief 6.12): the same
-# allow-list the Workbench and the bot run under, proved on Python 3.14.4. If
-# the /ask fixture fails with it, these two lines are removed in the same
-# session and the reason recorded; the header's "SystemCallFilter" note then
-# stands as written.
-SystemCallFilter=@system-service
-SystemCallFilter=~@privileged @resources @obsolete @mount @swap @reboot @raw-io @debug @module @cpu-emulation
+# SystemCallFilter -- TRIED AND REMOVED (Phase 13 S2, 2026-09-12 21:18 UTC).
+# The Workbench/bot allow-list (@system-service minus the usual groups) was
+# installed for one trial round per brief 6.12. The first /ask through it
+# ended with `claude/haiku failed exit=-31` -- SIGSYS: the Node.js CLI makes
+# a system call the list forbids. Removed in the same session; the next /ask
+# answered (`outcome=ok`). The Phase 09 note above ("left off while the
+# syscall surface of a JIT plus a namespace sandbox is unmeasured") stands,
+# now with a measurement: it is not @system-service. Bisecting which group is
+# missing is a later phase's job, if ever; one round was the budget.
 
 # Still deliberately NOT set (see the block above): MemoryDenyWriteExecute
 # (Node JIT), RestrictNamespaces (codex's own sandbox), ProtectHome (the

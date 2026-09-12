@@ -93,7 +93,7 @@ sudo bash /tmp/p13/apply-docker-user-rules.sh
 ```bash
 # T — row 6 + fresh connection
 echo "== fresh connection after ufw reload =="; ssh -o BatchMode=yes homelab true; echo "rc=$?"
-ssh homelab 'sudo iptables -S DOCKER-USER; sudo ip6tables -S FORWARD | head -1'
+ssh -t homelab 'sudo iptables -S DOCKER-USER; sudo ip6tables -S FORWARD | head -1'   # -t: sudo needs a terminal
 ```
 
 **2b — optional real proof** (pulls `python:3-alpine`, ~50 MB, removed afterwards; without it the
@@ -146,8 +146,9 @@ Row 9's positive half (tty login ends after 900 s) is proved at the box in S3. R
 echo "== install hardened helper unit; daemon-reload; socket stays up; no restart needed =="
 sudo bash /tmp/p13/p13-s2.sh helper
 echo "== the key is unreadable under the new directive (run as aleix with the same InaccessiblePaths) =="
-sudo systemd-run --wait --pipe --quiet -p User=aleix -p InaccessiblePaths=-/home/aleix/.ssh \
+sudo systemd-run --wait --pipe --quiet --collect -p User=aleix -p InaccessiblePaths=-/home/aleix/.ssh \
   -- /bin/ls -la /home/aleix/.ssh ; echo "rc=$? (expect non-zero / permission denied)"
+# --collect: a transient unit that fails on purpose must not linger as a failed unit (OBSERVED: it did, and dirtied is-system-running until reset-failed)
 echo "== Phase 09 verification (socket, bot reaches it, credential boundary, no new listener) =="
 sudo bash /tmp/p13/install-model-helper.sh verify
 ```
@@ -222,8 +223,10 @@ mkdir -p "/Volumes/SD Card/homelab-backup/recovery-key"
 age -p -o "/Volumes/SD Card/homelab-backup/recovery-key/id_ed25519_homelab_recovery.age" "$K"
 cp "$K.pub" "/Volumes/SD Card/homelab-backup/recovery-key/"
 echo "== prove the card copy decrypts to the same key, then destroy the plaintext =="
-age -d "/Volumes/SD Card/homelab-backup/recovery-key/id_ed25519_homelab_recovery.age" | ssh-keygen -y -f /dev/stdin | cut -d' ' -f1-2
+T2=$(mktemp); chmod 600 "$T2"     # ssh-keygen refuses /dev/stdin (0660 "too open") -- decrypt to a 0600 file
+age -d -o "$T2" "/Volumes/SD Card/homelab-backup/recovery-key/id_ed25519_homelab_recovery.age" && ssh-keygen -y -f "$T2" | cut -d' ' -f1-2
 cut -d' ' -f1-2 "$K.pub"                                    # the two lines above must match
+rm -P "$T2"
 rm -P "$K" "$K.pub"; rmdir "$KEYDIR"; ls ~/.ssh                # private half absent from the MacBook
 ssh-add -l                                                    # still only the primary key
 ```
@@ -244,8 +247,7 @@ MacBook out of the node and leaves the node fine — edit the policy again from 
 https://login.tailscale.com/admin/acls/file ; the console (ADR-041) is the fallback.
 
 1. Open https://login.tailscale.com/admin/acls/file in the browser.
-2. Replace the whole policy with the contents of `config/tailscale/acl.hujson`. The console runs the
-   `tests` block on save; if it rejects the *test* syntax, delete the `tests` block, not the grant.
+2. Replace the whole policy with the contents of `config/tailscale/acl.hujson` (`pbcopy < config/tailscale/acl.hujson`).
 3. Save.
 
 ```bash
@@ -254,8 +256,10 @@ echo "== fresh connection under the new ACL =="; ssh -o BatchMode=yes homelab tr
 echo "== tunnel alias (still TCP 22 — the forward rides inside SSH) =="
 ssh -o BatchMode=yes -N homelab-workbench & TUN=$!; sleep 3
 curl -m 5 -s -o /dev/null -w 'workbench via tunnel: HTTP %{http_code}\n' http://127.0.0.1:8765/; kill $TUN
-echo "== a non-22 port on the node is now refused at the tailnet layer (expect timeout) =="
-nc -zv -w3 100.71.62.71 36121
+echo "== a non-22 port is now dropped at the tailnet layer (expect 'Operation timed out', not 'refused') =="
+nc -zv -w3 100.71.62.71 2222
+# Not 36121: that is tailscaled's PeerAPI port, which Tailscale lets peers reach whenever any grant
+# connects them, regardless of the port list (OBSERVED: 'succeeded' under the new policy).
 ```
 
 Row 8's negative half (a device *not* in the allow list) is **PREDICTED** — the tailnet has no

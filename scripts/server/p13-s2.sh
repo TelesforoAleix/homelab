@@ -3,7 +3,7 @@
 # Phase 13 S2 -- the node-side steps that are not sshd or the firewall.
 #
 # Run on:  the Ubuntu server, as root
-# Usage:   sudo bash /tmp/p13-s2.sh <tmout|helper|helper-nofilter|wifi|lxd> [--undo]
+# Usage:   sudo bash /tmp/p13/p13-s2.sh <tmout|helper|helper-nofilter|wifi|lxd> [--undo]
 # Phase:   13 -- Security hardening. Runbook: guide/13-security-hardening/s2-runbook.md
 #
 # Every subcommand prints what it is about to do, backs up the file it replaces
@@ -18,7 +18,8 @@ say() { printf '  %s\n' "$*"; }
 die() { printf '\n  ERROR: %s\n\n' "$*" >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || die "run with sudo"
 
-backup() { [ -f "$1" ] && { cp -p "$1" "$1.bak-$STAMP"; say "backup: $1.bak-$STAMP"; } || say "no existing $1 (nothing to back up)"; }
+backup() { # never overwrite an earlier backup from the same day (a second round would lose the original)
+  if [ -f "$1" ]; then [ -f "$1.bak-$STAMP" ] && say "backup exists: $1.bak-$STAMP (kept)" || { cp -p "$1" "$1.bak-$STAMP"; say "backup: $1.bak-$STAMP"; }; else say "no existing $1 (nothing to back up)"; fi; }
 restore() { [ -f "$1.bak-$STAMP" ] || die "no backup $1.bak-$STAMP"; cp -p "$1.bak-$STAMP" "$1"; say "restored $1"; }
 
 cmd="${1:-}"; undo="${2:-}"
@@ -39,17 +40,17 @@ helper|helper-nofilter)
   U=/etc/systemd/system/homelab-model-helper@.service
   if [ "$undo" = --undo ]; then restore "$U"; systemctl daemon-reload; say "daemon-reload done; next connection uses the restored unit"; exit 0; fi
   [ -f "$SRC/homelab-model-helper@.service" ] || die "copy config/systemd/homelab-model-helper@.service to $SRC first"
-  tmp="$(mktemp)"; cp "$SRC/homelab-model-helper@.service" "$tmp"
+  tmp="$(mktemp -d)/homelab-model-helper@.service"; cp "$SRC/homelab-model-helper@.service" "$tmp"   # verify needs the real name
   if [ "$cmd" = helper-nofilter ]; then
     say "about to: install the hardened helper unit WITHOUT the two SystemCallFilter lines (bisect round, brief 6.12)"
     sed -i '/^SystemCallFilter=/d' "$tmp"
   else
-    say "about to: install the hardened helper unit (InaccessiblePaths ~/.ssh, native ABI, syscall filter)"
+    say "about to: install the hardened helper unit (InaccessiblePaths ~/.ssh, native ABI; the syscall filter was removed after S2 -- see the unit)"
   fi
   say "no restart: the socket stays up; instances are per-connection, so the next /ask uses the new unit"
   backup "$U"
   systemd-analyze verify "$tmp" 2>&1 | sed 's/^/    /' || true
-  install -o root -g root -m 0644 "$tmp" "$U"; rm -f "$tmp"
+  install -o root -g root -m 0644 "$tmp" "$U"; rm -rf "$(dirname "$tmp")"
   systemctl daemon-reload
   say "installed. socket still: $(systemctl is-active homelab-model-helper.socket)"
   say "score (offline, from the file):"
