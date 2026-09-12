@@ -11,7 +11,7 @@ two honest states on a fresh boot: *skipped because the volume is locked* and *r
 unlocked*. It must never have a third — *failed* — because the volume was not there, and it must never
 run against the empty mountpoint underneath.
 
-## 1. The contract — four directives
+## 1. The contract — four directives, and one thing not to write
 
 ```ini
 [Unit]
@@ -30,8 +30,20 @@ WantedBy=homelab-data.target
 | `PartOf=homelab-data.target` | Stop and restart with the target | `data-volume.sh lock` stops the target first; `PartOf=` propagates that stop so nothing is still writing when the volume is unmounted. Without it `lock` gets a busy mount |
 | `WantedBy=homelab-data.target` | Enable through the target, not `multi-user.target` | Enabling into `multi-user.target` would start the unit at boot, when the volume is always locked; the condition would skip it and nothing would start it on unlock. Through the target, unlock pulls it in |
 
+| **No `WorkingDirectory=`, `RootDirectory=`, `StateDirectory=` or anything else that names a path on the volume as the unit's *place*** | Would add an implicit `RequiresMountsFor=` | systemd derives `RequiresMountsFor=` from such directives, which pulls `srv-homelab.mount` in as a `Requires=`. **Dependency jobs run before conditions are evaluated**: on a locked volume the mount job fails, the unit fails "with result dependency", `OnFailure=` pages the owner about a volume that is merely locked, and the `Condition` is never consulted. OBSERVED 2026-09-12 19:17 UTC on `homelab-workbench.service` (`A dependency job for homelab-workbench.service failed`, rc 1, a Telegram alert) with `WorkingDirectory=/srv/homelab/factory`. `ReadWritePaths=`, `ProtectSystem=`, `Environment=` and an `ExecStart=` naming a path on the volume add nothing (bisected with user units the same day). Give a service its paths through arguments and environment instead |
+
 Enable with `sudo systemctl enable <unit>` — the `[Install]` section makes that a symlink under
 `homelab-data.target.wants/`. Never `enable --now` while the volume is locked and expect it to start.
+
+**After every edit of a unit that carries this contract:**
+
+```bash
+systemctl show -p RequiresMountsFor,Requires --value <unit>
+# → first line empty; second line without srv-homelab.mount
+```
+
+A unit that fails this check will *look* correct on a locked boot — nothing pulls it until the target
+starts — and only misbehave on a manual `start` while locked, which is exactly the canary test.
 
 ## 2. Two things every script must know
 
@@ -94,6 +106,7 @@ and the watchdog ran and said so. It could only do that because it does not wait
 
 ```text
 Needs the volume?   ConditionPathIsMountPoint= · After= · PartOf= · WantedBy=homelab-data.target
+No WorkingDirectory= on the volume: implicit RequiresMountsFor= runs before the Condition.
 Condition, not Assert.        Skipped is inactive, not failed.
 start returns 0 on skip.      Check is-active.
 Prove it as a pair:           lock → refusal ; unlock → active.

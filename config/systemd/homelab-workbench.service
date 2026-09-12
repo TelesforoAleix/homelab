@@ -73,9 +73,28 @@ Type=simple
 User=aleix
 Group=aleix
 
-# The Workbench is imported as a package from the factory clone; -m needs the
-# cwd on sys.path, which is what WorkingDirectory= gives it.
-WorkingDirectory=/srv/homelab/factory
+# NO WorkingDirectory= -- THE TRAP THE S3 RUN FOUND (2026-09-12 19:17 UTC)
+#
+#   The first version of this unit had WorkingDirectory=/srv/homelab/factory
+#   so that `-m workbench.cli` resolved. systemd turns a WorkingDirectory=
+#   into an implicit RequiresMountsFor= on that path, which pulls
+#   srv-homelab.mount in as a Requires=. Dependency jobs run BEFORE
+#   conditions are evaluated: on a locked volume the mount job fails, the
+#   unit fails "with result dependency", OnFailure= pages the owner about a
+#   volume that is merely locked, and ConditionPathIsMountPoint= is never
+#   consulted. OBSERVED: `sudo data-volume.sh lock; sudo systemctl start
+#   homelab-workbench.service` -> "A dependency job for
+#   homelab-workbench.service failed", rc=1, a Telegram alert. Bisected
+#   unprivileged with user units (S3 fix-up): WorkingDirectory= adds
+#   RequiresMountsFor=/srv/homelab/factory; ReadWritePaths=, ProtectSystem=,
+#   Environment= and ExecStart= add nothing. So the module path is given
+#   through PYTHONPATH instead and the cwd is whatever systemd gives a
+#   service without one (/). The Workbench writes nothing relative to its
+#   cwd: --project is absolute and the dashboard is found from __file__.
+#   Check after every edit of this file:
+#     systemctl show -p RequiresMountsFor,Requires --value homelab-workbench.service
+#   -> empty, and no srv-homelab.mount.
+Environment=PYTHONPATH=/srv/homelab/factory
 # --project names the factory-ops workspace: the project the Factory operates
 # on. host and port are the Workbench's own defaults (127.0.0.1:8765) and
 # server.py refuses any non-loopback host by itself (ADR-036 §5); they are
