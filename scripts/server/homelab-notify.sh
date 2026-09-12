@@ -17,7 +17,7 @@
 # WHY IT ALSO KNOWS HOW TO COMPOSE A FAILURE ALERT (--alert)
 #
 #   §7.6 needs a short case statement mapping a literal alias (bot,
-#   model-helper, watchdog) to the unit(s) that actually failed, then a few
+#   model-helper, watchdog; workbench since Phase 18.2) to the unit(s) that actually failed, then a few
 #   journal lines for context, before sending. That composition step lives
 #   here, in one `bash -n`- and shellcheck-able file, rather than as an inline
 #   one-liner inside homelab-notify@.service's ExecStart= -- systemd's own
@@ -121,7 +121,12 @@ compose_alert() {
         bot)          unit="homelab-telegram-bot.service" ;;
         model-helper) unit="homelab-model-helper@*.service" ;;
         watchdog)     unit="homelab-watchdog.service" ;;
-        *) die "unknown alert alias: '${alias}' (expected bot, model-helper or watchdog)" ;;
+        # Phase 18.2: the Workbench's OnFailure= drop-in names this alias.
+        # An alias not listed here dies at the notifier, so the alert for a
+        # new unit is lost exactly when it is wanted -- add the case with the
+        # drop-in, same commit.
+        workbench)    unit="homelab-workbench.service" ;;
+        *) die "unknown alert alias: '${alias}' (expected bot, model-helper, watchdog or workbench)" ;;
     esac
 
     # journalctl -u accepts a glob (systemd >= 246; this node runs 259.5), so

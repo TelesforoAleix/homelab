@@ -1,0 +1,157 @@
+# Home Lab Workbench -- Phase 18.2.
+#
+# Installed to /etc/systemd/system/homelab-workbench.service
+#
+# Runs the Factory Workbench (factory/workbench, ADR-036) from the encrypted
+# data volume, as a system service, bound to loopback. It is reached from the
+# MacBook through the SSH tunnel in config/ssh/homelab.ssh-config.example and
+# from nowhere else (ADR-038 §2, §4).
+#
+# THIS UNIT IS THE CANARY of docs/standards/volume-dependent-services.md. It
+# replaced homelab-data-probe.service on 2026-09-12. The four directives in
+# [Unit]/[Install] below are that contract; do not "simplify" them without
+# reading the standard -- it also names the units that must NOT carry them.
+#
+# WHY User=aleix, THE ADMIN ACCOUNT (Phase 18.2 brief §6.1, §9)
+#
+#   The repositories in the volume are owned by aleix, the account the tunnel
+#   lands as and the account the owner edits as over VS Code Remote SSH. The
+#   Workbench writes records into /srv/homelab/projects/factory/ops/ and must
+#   write them as the same owner, or the owner's next `git commit` there
+#   trips over root-owned files. A dedicated `workbench` account would need
+#   its own repo ownership for no boundary gain while there is one person and
+#   no automated client; Phase 13 takes or declines that upgrade with a
+#   reason, and Phase 23.0's endpoint runs as its own account and reaches this
+#   service over loopback, not the filesystem. NoNewPrivileges= below is what
+#   keeps "runs as the sudo-capable account" from meaning "can become root".
+#
+# WHY NO AF_UNIX (S1 observation, 2026-09-12)
+#
+#   The brief's first draft kept AF_UNIX for an SSH agent because it assumed
+#   the Workbench pushes with gitops.py. Reading workbench/engine.py shows the
+#   served Workbench never invokes git at all: it writes files under ops/ and
+#   appends to ops/audit/audit.jsonl, and only the acceptance script calls
+#   gitops. So this process needs no UNIX socket, and the same seccomp
+#   refusal Phase 12 proved for the watchdog (OSError 97) applies here to the
+#   model helper socket, which this account could otherwise open at the DAC
+#   layer (/run/homelab-model-helper.sock is aleix:homelab-bot 0660).
+#
+# WHAT WAS PROVED BEFORE THIS FILE WAS WRITTEN (S2, systemd-run --user, python
+# 3.14.4): every seccomp-class directive below -- NoNewPrivileges,
+# MemoryDenyWriteExecute, RestrictAddressFamilies, LockPersonality,
+# RestrictRealtime, RestrictSUIDSGID, RestrictNamespaces, the SystemCallFilter
+# pair -- with `validate`, `serve`, a GET and a POST that wrote a record. The
+# mount-namespace directives (ProtectSystem etc.) cannot be applied by the
+# user manager and are proved by the owner with `sudo systemd-run` in S3
+# before the unit is enabled.
+#
+# Verify with `systemd-analyze security homelab-workbench.service`; the brief
+# (§8 row 13) expects a worse score than the bot's 1.3 because this unit must
+# write to the volume and run as a real user. Check the RUNNING unit, not
+# this file.
+
+[Unit]
+Description=Home Lab Workbench -- Factory dashboard on loopback (Phase 18.2)
+Documentation=https://github.com/TelesforoAleix/homelab
+
+# --- The volume contract (docs/standards/volume-dependent-services.md) ------
+# Skip, not fail, while the volume is locked: Condition, never Assert.
+ConditionPathIsMountPoint=/srv/homelab
+# Start after the target that data-volume.sh unlock starts once the mount is
+# in place; stop with it when data-volume.sh lock stops the target, so the
+# umount never meets a busy mount.
+After=homelab-data.target
+PartOf=homelab-data.target
+
+# Bounded restart loop. In [Unit], not [Service] -- the bot's unit records why
+# (StartLimitIntervalSec= is silently ignored in [Service]).
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=aleix
+Group=aleix
+
+# The Workbench is imported as a package from the factory clone; -m needs the
+# cwd on sys.path, which is what WorkingDirectory= gives it.
+WorkingDirectory=/srv/homelab/factory
+# --project names the factory-ops workspace: the project the Factory operates
+# on. host and port are the Workbench's own defaults (127.0.0.1:8765) and
+# server.py refuses any non-loopback host by itself (ADR-036 §5); they are
+# spelled out here so the listening address is visible in the unit.
+ExecStart=/usr/bin/python3 -m workbench.cli --project /srv/homelab/projects/factory serve --host 127.0.0.1 --port 8765
+
+# Python block-buffers stdout when it is a pipe, so the "Factory Workbench --
+# project ..." start line would only reach the journal at exit. Unbuffered,
+# it appears when the service starts, which is when a reader looks for it.
+# No bytecode: the clone stays a clean checkout (__pycache__ is gitignored in
+# factory, but not writing it at all is simpler than relying on that).
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+# --- Restart policy ------------------------------------------------------
+# on-failure, not always: a clean `systemctl stop` (and the stop that
+# PartOf= propagates from data-volume.sh lock) must stay stopped.
+Restart=on-failure
+RestartSec=10
+
+# --- Failure alert -------------------------------------------------------
+# In the drop-in homelab-workbench.service.d/onfailure.conf, the Phase 12
+# way, so the alert wiring is one removable file rather than part of the
+# security-boundary text below.
+
+# --- Privilege -----------------------------------------------------------
+# The line that matters most for a service running as the admin account:
+# no execve() from this process tree can gain privilege, so a compromised
+# Workbench is a compromised unprivileged aleix, not a root path.
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+# Records the service writes are 0600 aleix (observed in S2). Git tracks only
+# the executable bit, so the mode does not show up in the owner's commits.
+UMask=0077
+
+# --- Filesystem ----------------------------------------------------------
+# Read-only view of the whole system except the one tree this exists to
+# write: the volume. Narrower than the volume (the ops/ directory alone) is
+# tempting, but the factory checkout and the project root are read on every
+# request, and a future "serve a second project" should not need a unit edit.
+ProtectSystem=strict
+ReadWritePaths=/srv/homelab
+# The service never needs aleix's home: no git, no SSH key, no agent.
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectProc=invisible
+
+# --- Kernel and system ---------------------------------------------------
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# Proved against Python 3.14.4 on this node (S2) -- the interpreter needs no
+# writable+executable memory here.
+MemoryDenyWriteExecute=yes
+
+# --- Network -------------------------------------------------------------
+# A loopback TCP listener and nothing else. No AF_UNIX -- see the header.
+RestrictAddressFamilies=AF_INET AF_INET6
+
+# --- System calls --------------------------------------------------------
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete @mount @swap @reboot @raw-io @debug @module @cpu-emulation
+
+[Install]
+# Through the volume's target, never multi-user.target: at boot the volume is
+# always locked, and only `data-volume.sh unlock` starting the target should
+# pull this in.
+WantedBy=homelab-data.target
