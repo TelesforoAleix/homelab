@@ -273,7 +273,14 @@ New, this phase:
   755, following `data-volume.sh`'s own precedent of one committed, commented bash script with no
   installer wrapper (unlike the bot and model helper, this needs no new account, no polkit rule and
   no multi-file staging, so a dedicated `install-*.sh` reproduces `data-volume.sh`'s own C11-style
-  direct `install` commands for no benefit).
+  direct `install` commands for no benefit). Its own sending step calls the shared primitive below
+  rather than repeating it.
+- `scripts/server/homelab-notify.sh` — the one definition of "post this text to every allowlisted
+  chat_id," installed alongside `homelab-watchdog.sh` and called by it and by §7.6's
+  `homelab-notify@.service`. See §7.6.
+- `config/systemd/homelab-notify@.service`, plus two drop-ins,
+  `config/systemd/homelab-telegram-bot.service.d/onfailure.conf` and
+  `config/systemd/homelab-model-helper@.service.d/onfailure.conf` — §7.6.
 
 Existing files the execution stage must touch **in the same commit as the two new unit files**, or
 the coverage gap Phase 18.1 shipped and this repository just finished fixing
@@ -284,6 +291,49 @@ the coverage gap Phase 18.1 shipped and this repository just finished fixing
   These two lists must agree or the coverage check silently stops covering, exactly as it did for
   Phase 18.1's five paths; do not add to one without the other, and do not defer the second list to a
   follow-up commit.
+
+### 7.6 Failure alerting for services that stay up — `OnFailure=`, not a poller
+
+§7.1's timer fires once per boot. If `homelab-telegram-bot.service` dies at 15:00 on a node that
+otherwise stays up, nothing above notices. `current-architecture.md`'s own *Not implemented yet* list
+already names this: *"alerting or metrics on any service (nothing reports the bot dying)."* This
+phase closes it, because the mechanism costs nothing this phase hasn't already built.
+
+**`OnFailure=`, not a second poller.** A unit entering `failed` is a state transition systemd already
+tracks; reacting to it needs no interval and no daemon, so it does not reopen "recovery-oriented, not
+real-time" — nothing samples anything while the watched services are healthy.
+
+**Which units, and what watches the watcher.** `homelab-telegram-bot.service`,
+`homelab-model-helper@.service`, and `homelab-watchdog.service` itself each get one — the last
+because it costs one line and the mechanism already exists. Nothing watches `homelab-notify@.service`
+(next paragraph): if all four failed simultaneously, the honest answer is that nothing sends the
+fourth alert. Recorded, not hidden.
+
+**One new templated unit, `homelab-notify@.service`** (`Type=oneshot`), reusing §7.2's account and
+credential pattern exactly (`User=homelab-bot`, the same `LoadCredential=`,
+`RestrictAddressFamilies=AF_INET AF_INET6` — no `AF_UNIX`, so §6's refusal covers this path too; a
+failure alert has no more business reaching the model helper than the boot notice does). `%i` is a
+short **literal alias** (`bot`, `model-helper`, `watchdog`), never a raw `%n`/`%N` specifier — the
+templated helper unit's instance name would need `systemd-escape` to embed correctly, exactly the
+class of mistake Phase 18.1 defect 4 already made once (`homelab-data` vs `homelab\x2ddata`). The
+notifier maps the alias to a real unit name with a two-line `case` statement and pulls its last few
+journal lines for context.
+
+**The recursion guard is an absence.** `homelab-notify@.service` carries no `OnFailure=` of its own.
+If it fails, that failure is terminal and visible (`systemctl --failed`, `is-system-running
+degraded`) rather than triggering a second alert about the first alert failing.
+
+**The seam is a drop-in, not an edit.** `homelab-telegram-bot.service.d/onfailure.conf` and
+`homelab-model-helper@.service.d/onfailure.conf` each add one `[Unit]`/`OnFailure=` line. ADR-023
+governs the bot's unit as a complete, reviewable security-boundary document; a drop-in adds behaviour
+without touching that committed text, and is trivially removable. Verify `systemd-analyze security
+homelab-telegram-bot` is still `1.3 OK` and `id homelab-bot` is still byte-identical **with the
+drop-in installed**, not only before it exists — a drop-in can still add directives, so its absence
+from the base file is not proof by itself.
+
+**For whichever stage closes this phase:** remove *"alerting or metrics on any service (nothing
+reports the bot dying)"* from `current-architecture.md`'s *Not implemented yet* list — not edited
+from this branch (§Out of scope).
 
 ## 8. Validation / tests
 
@@ -314,15 +364,20 @@ returns 0.
 | Notifier cannot read LUKS key material | `sudo -u homelab-bot cryptsetup luksDump /dev/ubuntu-vg/data` from the watchdog's own account | Permission denied | The same command run by root over SSH succeeds — the volume can still be legitimately inspected, so the refusal is a real boundary, not everything being broken |
 | Scheduler/watchdog cannot reach the model helper | From inside `homelab-watchdog.service`'s own cgroup, attempt a `connect(2)` to `/run/homelab-model-helper.sock` | Refused at `AF_UNIX` (not in `RestrictAddressFamilies`), before the socket's own `SocketGroup=` check ever runs | The bot's own unit, which does carry `AF_UNIX`, performing the identical connect to the identical socket succeeds (already proved in Phase 09) |
 | Watchdog reports honestly, locked | Run `homelab-watchdog.sh` once while `findmnt /srv/homelab` fails | Message's `<STATE>` row is `LOCKED -- ...` | Immediately after `sudo data-volume.sh unlock`, the same script run again reports `unlocked` — same command, different real state, different truthful output |
+| Failure alert fires on a real crash | `sudo systemctl kill -s SIGKILL homelab-telegram-bot.service`, repeated until the unit's own start-limit is hit | Unit ends `failed (Result: start-limit-hit)`; `homelab-notify@bot.service` runs, naming the unit and its last journal lines | The row below — same unit, same operator, only the exit path differs |
+| Failure alert does not fire on routine maintenance | `sudo systemctl stop homelab-telegram-bot.service` | Unit ends `inactive (dead)`, not `failed`; `homelab-notify@bot.service` never runs | The row above — otherwise every maintenance `stop` would page the owner |
 
 **Structural checks, run once, not just observed at boot:**
 
 - `systemctl show -p After,Requires,Wants,Conditions homelab-watchdog.service` names nothing
   belonging to `homelab-data.target`, the probe, or the bot.
-- `systemd-analyze security homelab-telegram-bot.service` unchanged from Phase 18.1's `1.3 OK`.
+- `systemd-analyze security homelab-telegram-bot.service` unchanged from Phase 18.1's `1.3 OK`,
+  checked with both drop-ins installed (§7.6).
 - `id homelab-bot` byte-identical to Phase 07/18.1. `ss -tln` still 6 listeners.
 - `systemctl list-dependencies timers.target` includes `homelab-watchdog.timer`, confirming it is
   boot-class and classified as such in the execution runbook (§7.1).
+- `systemctl show -p OnFailure --value homelab-notify@.service` prints nothing — the recursion guard
+  (§7.6), checked rather than assumed.
 
 ## 9. Security considerations
 
@@ -343,10 +398,14 @@ returns 0.
 
 ## 10. Repository changes expected
 
-- `config/systemd/homelab-watchdog.timer`, `config/systemd/homelab-watchdog.service` — new.
-- `scripts/server/homelab-watchdog.sh` — new.
-- `scripts/macos/backup-node.sh`, `scripts/macos/verify-node-backup.sh` — both extended, same commit
-  (§7.5).
+- `config/systemd/homelab-watchdog.timer`, `config/systemd/homelab-watchdog.service`,
+  `config/systemd/homelab-notify@.service` — new.
+- `scripts/server/homelab-watchdog.sh`, `scripts/server/homelab-notify.sh` — new.
+- `config/systemd/homelab-telegram-bot.service.d/onfailure.conf`,
+  `config/systemd/homelab-model-helper@.service.d/onfailure.conf` — new drop-ins (§7.6), not edits to
+  the units they attach to.
+- `scripts/macos/backup-node.sh`, `scripts/macos/verify-node-backup.sh` — both extended, same commit,
+  covering every file above (§7.5).
 - No changes to `homelab-telegram-bot.service`, `bot.py`, `router.py`, `executors.py`,
   `model_client.py`, `data-volume.sh`, or any ADR, per §Out of scope.
 
@@ -393,8 +452,12 @@ Per `PROJECT.md` §12, adjusted for this phase:
 - [ ] `homelab-telegram-bot.service`, `id homelab-bot`, and `ss -tln` are unchanged (§8 structural
       checks).
 - [ ] The real power-cut test (§8, items 1–5) passes and the notification arrives unprompted.
-- [ ] `backup-node.sh`'s `NODE_PATHS` and `verify-node-backup.sh`'s `CRITICAL` both gain the three new
-      paths, in the same commit (§7.5).
+- [ ] `backup-node.sh`'s `NODE_PATHS` and `verify-node-backup.sh`'s `CRITICAL` both gain every new
+      path from §7.5/§7.6, in the same commit.
+- [ ] The failure-alert path (§7.6) fires on a real crash and does not fire on a clean `stop`; the
+      recursion guard (`homelab-notify@.service` has no `OnFailure=`) is checked, not assumed.
+- [ ] `current-architecture.md`'s *Not implemented yet* line about the bot's death going unreported
+      is either removed by the closing stage or the DoD records why it still applies.
 - [ ] Relevant repository files are committed; the guide is updated (§11); project documentation is
       updated (§12).
 - [ ] No ADR is required (§13), or one is written if execution finds otherwise.
@@ -424,6 +487,12 @@ model helper, enforced by omitting `AF_UNIX` from `RestrictAddressFamilies`. Lif
 the governor landed and enforcing budget before any call, and a new ADR naming the scheduler as a
 client authorised to reach that service (ADR-044 §4's default is nothing). This phase does not lift
 it and does not design toward lifting it; it names the two preconditions and stops.
+
+**`current-architecture.md`'s "nothing reports the bot dying" gap is closed by this brief, not
+deferred** (§7.6) — `OnFailure=` on the bot, the model helper, and the watchdog itself, alerting
+through the same account and credential grant §7.2 already established. The one honestly-named
+residual is `homelab-notify@.service`'s own failure, which nothing watches (§7.6) and no phase is
+asked to fix here.
 
 **Open risks and unsatisfied controls, not to be silently inherited:**
 
