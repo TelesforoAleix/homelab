@@ -26,9 +26,11 @@
 #   escalation. polkit needs no setuid -- the decision happens inside PID 1 --
 #   so NoNewPrivileges stays on.
 #
-#   It is also far safer to get wrong. A malformed sudoers file BREAKS sudo on a
-#   node with no console. A malformed polkit rule DENIES. This deviation reduces
-#   the phase's lockout risk rather than accepting it.
+#   It is also far safer to get wrong. A malformed sudoers file BREAKS sudo,
+#   recoverable only via the physical console -- a cost, not a catastrophe, but
+#   still a walk to the machine (ADR-041, superseding ADR-020). A malformed
+#   polkit rule DENIES. This deviation reduces the phase's lockout risk rather
+#   than accepting it.
 #
 # TWO GATES, DELIBERATELY
 #
@@ -58,7 +60,8 @@ if [ "${WLINES:-0}" -eq 0 ]; then
   note "cannot determine session count -- check manually with: w"
 elif [ "${SESSIONS:-0}" -lt 2 ]; then
   die "only ${SESSIONS} interactive session(s). This changes authorisation policy
-on a node with no console (ADR-020). Open a second session and leave it idle."
+on a node whose console recovery costs a physical visit (ADR-041, superseding
+ADR-020). Open a second session and leave it idle."
 else
   ok "${SESSIONS} interactive sessions -- one can stay idle as the way back"
 fi
@@ -145,7 +148,8 @@ printf '\n--- proving it does NOT extend (as %s) ---\n' "$SVC_USER"
 # --no-ask-password is MANDATORY here, and the first version of this script
 # omitted it. Without it, systemctl registers a polkit interactive agent on the
 # controlling TTY, so instead of being denied the test PROMPTED THE ADMIN for
-# their password -- to restart tailscaled, on a node with no console.
+# their password -- to restart tailscaled, on a node whose recovery route is a
+# physical console visit, not a re-run of this test (ADR-041, superseding ADR-020).
 #
 # Two things were wrong with that, and the second is worse:
 #

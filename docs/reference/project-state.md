@@ -373,7 +373,8 @@ every install.
   **The backup is secret material** — it contains the credentials named below — and the card is
   treated accordingly.
 - **The volume group has no free extents.** The root LV consumes all 235.4 G, so storage cannot be
-  grown by `lvextend`; it needs another disk. Found in Phase 02, not owned by any phase yet.
+  grown by `lvextend`. Found in Phase 02. **Owned by Phase 18.1** since ADR-045 — the answer is the
+  **shrink** (ADR-037 §1), not another disk.
 - **Docker consumes the root LV.** Logs are bounded by `/etc/docker/daemon.json`, and Phase 05
   finished with Docker inventory at zero, but images, containers, volumes and build cache all land on
   the root filesystem.
@@ -407,9 +408,11 @@ every install.
   but Phase 13 must not assume symmetry.
 - **Node key expiry deliberately disabled** on the Tailscale node (ADR-019) — a security control
   traded for availability. Phase 13 must revisit it rather than inherit it.
-- **The Telegram allowlist is per-deployment state on the node.** New in Phase 07; it had no backup
-  then. Phase 18 added a node backup covering node state — **whether the allowlist is inside it has
-  not been verified** and should be checked against `scripts/macos/backup-node.sh`.
+- ~~**The Telegram allowlist is per-deployment state on the node... whether it is inside the backup
+  has not been verified.**~~ **Verified.** All three allowlist files (`allowlist`,
+  `privileged-allowlist`, `restart-allowlist`) resolve under `/etc/homelab-telegram-bot`, which
+  `backup-node.sh:93` collects recursively, and `verify-node-backup.sh`'s coverage check names all
+  three inside the restored tar (Phase 18). The model helper has no allowlist.
 - **Telegram is a third party.** Every bot message transits and is stored on their infrastructure.
   Acceptable for uptime and disk figures; a reason not to extend the bot toward anything sensitive
   without revisiting. Phases 08 and 10.

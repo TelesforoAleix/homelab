@@ -19,7 +19,8 @@ Documentation=https://github.com/TelesforoAleix/homelab
 # Network, not network-online. The bot backs off and retries by design, so it
 # does not need to wait for full connectivity -- and depending on
 # network-online.target would tie a non-essential service to a boot-time
-# ordering barrier on a node with no console (ADR-020).
+# ordering barrier on a node administered only remotely, where the console is a
+# recovery path rather than a monitoring one (ADR-041, superseding ADR-020).
 After=network.target
 
 # The start rate limit belongs to the UNIT, not the service. systemd moved
