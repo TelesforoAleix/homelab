@@ -102,6 +102,33 @@ LockPersonality=yes
 #   looks like a model outage. A measured filter is a candidate for a later
 #   phase.
 
+# --- Phase 13 (security hardening) --------------------------------------
+#
+# WHY InaccessiblePaths: since Phase 18.2, /home/aleix/.ssh holds a
+# passphrase-less key with push access to three private repositories. This
+# unit runs untrusted prompts through two CLIs as `aleix` with /home/aleix
+# writable, so until now a compromised helper could read that key. The CLIs
+# need ~/.claude and ~/.codex and nothing under ~/.ssh. The leading "-" means
+# the unit still starts if the directory is absent (a rebuilt node before the
+# key is generated). OBSERVED S1: score 3.9, key readable; target of this
+# change is "key unreadable, fixture passes", not a score.
+InaccessiblePaths=-/home/aleix/.ssh
+
+# WHY SystemCallArchitectures: native-only ABI; nothing here is 32-bit.
+SystemCallArchitectures=native
+
+# WHY SystemCallFilter (Phase 13 S2, one trial round -- brief 6.12): the same
+# allow-list the Workbench and the bot run under, proved on Python 3.14.4. If
+# the /ask fixture fails with it, these two lines are removed in the same
+# session and the reason recorded; the header's "SystemCallFilter" note then
+# stands as written.
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete @mount @swap @reboot @raw-io @debug @module @cpu-emulation
+
+# Still deliberately NOT set (see the block above): MemoryDenyWriteExecute
+# (Node JIT), RestrictNamespaces (codex's own sandbox), ProtectHome (the
+# unit's purpose). Phase 13 re-read each reason and kept it.
+
 # --- Network -------------------------------------------------------------
 #
 # Both providers are HTTPS APIs. AF_UNIX is needed for the connection itself.

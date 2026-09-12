@@ -25,5 +25,29 @@ Type=oneshot
 ExecStart=/usr/sbin/iw dev wlp1s0 set power_save off
 RemainAfterExit=yes
 
+# --- Phase 13 (security hardening) --------------------------------------
+# OBSERVED S1: systemd-analyze security 9.6 UNSAFE -- a root oneshot with every
+# capability. `iw` needs exactly one thing: CAP_NET_ADMIN on a netlink socket.
+#
+# WHY User=root is kept: CAP_NET_ADMIN is required, and a DynamicUser with an
+# ambient capability was judged more moving parts than a bounded root for a
+# one-line command that runs once per boot on the ONLY network path. If this
+# unit fails, the node stays reachable but power-save stays on -- the exact
+# fault Phase 01 chased. Keep this minimal and test with a restart.
+CapabilityBoundingSet=CAP_NET_ADMIN
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_NETLINK
+SystemCallArchitectures=native
+# WHY not more: PrivateDevices/PrivateNetwork would hide the very interface it
+# configures; a syscall filter on a root oneshot buys little and risks a silent
+# failure at boot. The residual score is recorded in the guide, not chased.
+
 [Install]
 WantedBy=multi-user.target
