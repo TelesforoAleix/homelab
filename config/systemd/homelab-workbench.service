@@ -108,9 +108,13 @@ RestartSec=10
 NoNewPrivileges=yes
 CapabilityBoundingSet=
 AmbientCapabilities=
-# Records the service writes are 0600 aleix (observed in S2). Git tracks only
-# the executable bit, so the mode does not show up in the owner's commits.
-UMask=0077
+# 0027, not the bot's 0077: records the service writes come out 0640
+# aleix:aleix -- readable by the group, never by others. Under 0077 (S2's
+# first proof) they were 0600, which is fine for git (it tracks only the
+# executable bit) but would hide every Workbench-written record from any
+# future second account in the aleix group, for no gain while the volume and
+# the 0750 mountpoint are the boundary. Orchestrator decision, S2 review.
+UMask=0027
 
 # --- Filesystem ----------------------------------------------------------
 # Read-only view of the whole system except the one tree this exists to
