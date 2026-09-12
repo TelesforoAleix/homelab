@@ -27,7 +27,15 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 12 — Scheduling, monitoring and notifications (**complete**, 2026-09-12). **The node
+- **Current phase:** 18.2 — Migration to the server (**complete**, 2026-09-12). **The four layers are
+  on the node inside the encrypted volume, and the Factory Workbench runs there as a service on
+  loopback, reached only through `ssh homelab-workbench`.** Five clones at `/srv/homelab`, one
+  node-side GitHub key, one new listening socket (`127.0.0.1:8765`, named); the 18.1 probe is
+  retired and `homelab-workbench.service` is the canary of
+  [`docs/standards/volume-dependent-services.md`](../standards/volume-dependent-services.md). All
+  sixteen validation rows observed, including a locked reboot and a crash loop. **Phase 13 is next**
+  — the node now runs a web service. See the Phase 18.2 status table below.
+- **Previous phase:** 12 — Scheduling, monitoring and notifications (**complete**, 2026-09-12). **The node
   reports its own recovery, and the unlocked-at-boot gap Phase 18.1 opened is closed.**
   `homelab-watchdog.timer` fires one oneshot unit 90 s after every boot; it classifies the previous
   stop from PID 1's journal (`Shutting down.` present → clean reboot, absent → unplanned — not `last
@@ -380,6 +388,32 @@ systemd ignores it. The effective window was 10s against `RestartSec=10`, so the
 **unreachable** for two phases. `install-telegram-bot.sh` now runs `systemd-analyze verify` on
 every install.
 
+## Phase 18.2 status
+
+**Complete 2026-09-12.** Brief committed before implementation per ADR-017 (`ba366be`); executed on
+branch `phase/18.2-work` in a separate worktree. Every row of brief §8 OBSERVED by the owner on the
+node on 2026-09-12.
+
+| Item | State |
+|---|---|
+| Brief | ✅ [`18.2-migration-to-the-server.md`](../handovers/18.2-migration-to-the-server.md) — corrected during S1 (§6.3, §6.4, §6.6, §8 row 7, §16) with the observations in the commit |
+| Handover | ✅ [`18.2-migration-to-the-server-handover.md`](../handovers/18.2-migration-to-the-server-handover.md) |
+| Guide | ✅ [`guide/18.2-migration-to-the-server/`](../../guide/18.2-migration-to-the-server/README.md) |
+| Standard | ✅ [`docs/standards/volume-dependent-services.md`](../standards/volume-dependent-services.md) — four directives, the `WorkingDirectory=` trap, the canary, the negative clause |
+| Clones | ✅ Five, at `/srv/homelab`, `aleix:aleix`, SSH remotes, at each remote's HEAD; `brain` proved private by anonymous `ls-remote`; 12 s total |
+| Node key | ✅ `~aleix/.ssh/id_ed25519_github`, owner-account key titled `homelab node — 2026-09-12`; `ssh -T` authenticated; excluded from `backup-node.sh` |
+| Workbench | ✅ `homelab-workbench.service` enabled via `homelab-data.target`, `1.3 OK`, `127.0.0.1:8765` only; acceptance run on the node `PASSED` 14/7 in 0.4 s |
+| Refusal + control | ✅ Locked: `start` rc 0, `inactive`, `skipped, unmet condition check`, **no alert**; unlock → `active` without a manual start — twice |
+| Tunnel | ✅ Tailnet `curl` → `(7) Failed to connect`; through `ssh homelab-workbench` → HTML; one real `POST /api/status` on a `release_ready` ticket → `ok: true`, file changed, no commit |
+| Sockets | ✅ 7, each named: 2× sshd, 2× resolved, 2× tailscaled, 1× python3 loopback |
+| Locked boot | ✅ `sudo reboot` → Telegram `clean reboot. Data volume: LOCKED` at 19:42 UTC; no failed units; Workbench `inactive` → `active` on unlock |
+| Crash loop | ✅ `failed` on kill 5 (start limit counts the unlock's start); 5 alerts; `stop` → no alert |
+| Probe | ✅ Removed from node, `config/systemd/`, both backup lists |
+| Backups | ✅ 130 files verified; both new units in coverage; key absent |
+| ADRs | None required (brief §13); §6's recommendations taken |
+| Cost | 0 DKK |
+| Residual | `ops/` writes and `audit.jsonl` uncommitted until the owner commits (Phase 14); `factory-ops` records: 93 legacy statuses, `<ID>-slug` filenames duplicate on update; `verify-node-backup.sh` silent sudo pause; `RootDirectory=`/`StateDirectory=` predicted not observed; Tailscale drop mid-action untested |
+
 ## Phase 12 status
 
 **Complete 2026-09-12.** Brief merged to `main` before implementation per ADR-017 (`ab093ef`);
@@ -678,13 +712,14 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | AI credential files | `/home/aleix/.claude/.credentials.json` and `/home/aleix/.codex/auth.json`, both mode `0600`, owner `aleix:aleix`; contents never captured |
 | AI processes/services | None; both CLIs are interactive operator commands |
 | Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache |
-| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts**. **`homelab-model-helper.socket`** — active, enabled; templated service instantiated per connection. **`homelab-watchdog.timer`** — active, enabled, once per boot (Phase 12, 2026-09-12); `OnFailure=` drop-ins on the bot and the model helper → `homelab-notify@<alias>.service` |
+| **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts**. **`homelab-model-helper.socket`** — active, enabled; templated service instantiated per connection. **`homelab-watchdog.timer`** — active, enabled, once per boot (Phase 12, 2026-09-12); `OnFailure=` drop-ins on the bot, the model helper and the Workbench → `homelab-notify@<alias>.service`. **`homelab-workbench.service`** — active, enabled via `homelab-data.target` (Phase 18.2, 2026-09-12); `User=aleix`, `1.3 OK`; skipped while the volume is locked, started by unlock |
+| **Volume contents** | `/srv/homelab` `aleix:aleix 0750`: `homelab/`, `factory/`, `brain/`, `projects/oncla/`, `projects/factory/` — clones, SSH remotes, 47 M (Phase 18.2). Node GitHub key at `~aleix/.ssh/id_ed25519_github` |
 | Model helper socket | `/run/homelab-model-helper.sock`, `aleix:homelab-bot`, mode `660` |
 | Model access | `/ask` works. Claude `haiku`, Codex `gpt-5.6-luna`; caps 6/hour, 30/day per provider |
 | Restart limit | **`StartLimitIntervalUSec=5min`** on the running unit — was silently 10s until Phase 09 fixed it |
 | Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |
 | Service hardening | `systemd-analyze security` → **1.3 OK** |
-| Listening | **6 sockets, unchanged — but `:22` is now FILTERED on the shared Wi-Fi.** `ufw` is active and enabled at boot: default deny inbound, allow on `tailscale0`, plus UDP 41641 on `wlp1s0` for Tailscale direct connections. sshd still *binds* `0.0.0.0:22`; ufw drops the packets before they reach it. **Proved 2026-09-10** — LAN SSH times out while ICMP to the same address succeeds |
+| Listening | **7 sockets** — the 6 below plus **`127.0.0.1:8765` (python3, `aleix`, the Workbench; loopback only, proved unreachable over the tailnet)** since Phase 18.2, 2026-09-12. **`:22` is FILTERED on the shared Wi-Fi.** `ufw` is active and enabled at boot: default deny inbound, allow on `tailscale0`, plus UDP 41641 on `wlp1s0` for Tailscale direct connections. sshd still *binds* `0.0.0.0:22`; ufw drops the packets before they reach it. **Proved 2026-09-10** — LAN SSH times out while ICMP to the same address succeeds |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | **27.9s** (was 24.4s). Firmware POST rose 10.97s → 13.81s when the fTPM was enabled |
 | **Console** | **Attached and login-tested 2026-09-11 (Phase 18).** A display is connected on `card1-DP-1`, `getty@tty1` is active. **It is Phase 18's chosen "second way in"**, over a second SSH key, because it survives network, firewall, SSH and Tailscale failure alike. Session 29 (the Phase 18 login test) was **closed deliberately 2026-09-12** at Phase 18.1's step B1, per the rule it established: log out before walking away. No console session was left open at Phase 18.1's close; monitor and keyboard were detached again after its power-cut test |
