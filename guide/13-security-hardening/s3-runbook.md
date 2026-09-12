@@ -104,7 +104,9 @@ off` (boot proof of S2 4b), bot `Encrypted=bot-token`, watchdog's last line from
 **If the bot is silent after 3 minutes:** console login → `sudo bash /tmp/p13/p13-s3.sh creds-undo`
 → `/status`. 6.6 is then *declined* with the journal as the reason; do **not** proceed to the BIOS.
 
-**If it answered:** the sealed credential loads unattended — remove the plaintext:
+**If it answered:** the sealed credential loads unattended. **Confirm — by looking, not by pasting —
+that the bot token is in your password manager before continuing; if it is not, stop here** (the
+fallback would be `@BotFather /revoke` + a new token, a different runbook). Then remove the plaintext:
 ```bash
 # T
 ssh -t homelab 'sudo bash /tmp/p13/p13-s3.sh creds-shred'
