@@ -109,6 +109,17 @@ NODE_PATHS=(
     /etc/systemd/system/homelab-data.target
     /etc/systemd/system/homelab-data-probe.service
     /usr/local/sbin/data-volume.sh
+    # Phase 12: the boot-recovery trigger and its script. Without these three
+    # a restored node has no way to tell the owner it came back, which is
+    # this phase's entire reason for existing. (homelab-notify.sh,
+    # homelab-notify@.service and the two onfailure.conf drop-ins are NOT
+    # listed here -- the Phase 12 brief §7.5 scopes this backup-list update to
+    # exactly these three, and the execution stage report records that as a
+    # gap worth the orchestrator's attention rather than one silently
+    # widened or silently accepted.)
+    /etc/systemd/system/homelab-watchdog.timer
+    /etc/systemd/system/homelab-watchdog.service
+    /usr/local/sbin/homelab-watchdog.sh
 )
 
 # DELIBERATELY NOT BACKED UP, so that these are decisions rather than omissions:

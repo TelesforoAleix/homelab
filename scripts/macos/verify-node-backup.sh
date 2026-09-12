@@ -218,6 +218,12 @@ CRITICAL=(
     etc/systemd/system/homelab-data.target
     etc/systemd/system/homelab-data-probe.service
     usr/local/sbin/data-volume.sh
+    # Phase 12: matches backup-node.sh's NODE_PATHS additions, same commit --
+    # see that file's comment for why only these three of the phase's seven
+    # new files are covered here.
+    etc/systemd/system/homelab-watchdog.timer
+    etc/systemd/system/homelab-watchdog.service
+    usr/local/sbin/homelab-watchdog.sh
 )
 MISSING=0
 for c in "${CRITICAL[@]}"; do
