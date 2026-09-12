@@ -49,6 +49,8 @@ run cat /etc/crypttab
 
 say "BLOCK A -- ADR-046 check 2: no key-file / keyfile on root for the data volume (expect no output)"
 run sudo grep -rl 'key-file\|keyfile' /etc/crypttab /etc/systemd/system /usr/local/sbin
+note "S1 found one hit that is a comment in homelab-watchdog.sh; the same grep without comment lines:"
+run sudo grep -rlE '^[^#]*(key-file|keyfile)' /etc/crypttab /etc/systemd/system /usr/local/sbin
 note "ADR-046 check 3 (credential table complete) is a reading exercise; block I lists what is on root."
 
 # ---------------------------------------------------------------------------------
@@ -71,15 +73,15 @@ for t in homelab-model-helper@.service homelab-notify@.service; do
   say "BLOCK B -- template $t (offline analysis of the unit file; live instance if one exists)"
   f="/etc/systemd/system/$t"
   run systemd-analyze security --no-pager --offline=true "$f"
-  run systemctl show -p "$PROPS" "$t"
+  # systemctl show refuses a bare template name (OBSERVED S1); use a loaded instance instead.
   inst=$(systemctl list-units --all --no-legend --plain "${t%@.service}@*" 2>/dev/null | awk '{print $1}' | head -1)
-  if [ -n "${inst:-}" ]; then run systemd-analyze security --no-pager "$inst"; else note "no live instance of $t right now (expected)"; fi
+  if [ -n "${inst:-}" ]; then run systemctl show -p "$PROPS" "$inst"; run systemd-analyze security --no-pager "$inst"; else note "no loaded instance of $t right now"; fi
   run ls -la "/etc/systemd/system/$t.d/" 2>/dev/null || note "no drop-in dir for $t"
 done
 
 say "BLOCK B -- the notifier's OnFailure wiring and the volume-dependent negative clause (standard §4)"
 run systemctl show -p After,Requires,Wants,PartOf,ConditionPathIsMountPoint --value homelab-watchdog.service
-run systemctl show -p After,Requires,Wants,PartOf,ConditionPathIsMountPoint --value homelab-notify@.service
+run systemctl show -p After,Requires,Wants,PartOf,ConditionPathIsMountPoint --value homelab-notify@bot.service
 run systemctl show -p RequiresMountsFor,Requires --value homelab-workbench.service
 
 say "BLOCK B -- the whole system, for context (scores for every unit systemd knows)"
@@ -162,6 +164,8 @@ run sudo grep -rnvE '^\s*(#|$)' /etc/sudoers.d/
 run ls -la /etc/profile.d/
 run grep -rn TMOUT /etc/profile /etc/profile.d/ /etc/bash.bashrc 2>/dev/null
 run systemctl is-active getty@tty1
+run sudo passwd -S root
+run snap list lxd
 run loginctl list-sessions --no-pager
 
 # ---------------------------------------------------------------------------------
