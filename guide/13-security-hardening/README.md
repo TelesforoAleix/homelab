@@ -170,34 +170,34 @@ Sources: **18.2** = 18.2 handover *Phase 13 by name* items 1–7; **18.1** = 18.
 | # | Item | Source | OBSERVED state | Outcome | § |
 |---|---|---|---|---|---|
 | 1 | Socket baseline: seven, each named | 18.2 #1 | Seven, identical to the list; **re-measured at S2 close: seven, identical** | **Closed (OBSERVED)** — baseline goes into the standard in S4 | 4.5 |
-| 2 | GitHub key on the node, passphrase-less, account-level | 18.2 #2 | `0600`, one `Host` block, `IdentitiesOnly`; not in ADR-046's table; `gh` listing pending | **Narrow (6.2b):** keep, add table row + revocation path, audit by title from the MacBook; record 6.2(a) as Phase 14's change if it picks unattended push | 6.2 |
-| 3 | Workbench as `aleix` vs dedicated account | 18.2 #3 | Sandbox exactly as believed: `ProtectHome=yes`, no `AF_UNIX`, `NoNewPrivileges`, RW only `/srv/homelab`; 1.3 | **Decline with ADR-047** — boundary is the sandbox; triggers recorded | 6.1 |
-| 4 | Docker `data-root` on root | 18.2 #4 | `/var/lib/docker`, inventory zero, `docker0` down | **Decline (keep)** — trigger has not fired; recorded | 6.4 |
-| 5 | BIOS password | 18 #5, 18.1, 18.2 #5 | None; Secure Boot on; PXE ×2, USB, CD entries in boot order; stale Windows entry | **Close (S3, at the box):** supervisor password, boot order locked to disk, network boot off; Secure Boot left on | 6.5 |
+| 2 | GitHub key on the node, passphrase-less, account-level | 18.2 #2 | `0600`, one `Host` block, `IdentitiesOnly`; not in ADR-046's table; `gh` listing pending | **Narrowed (6.2b) — pending S3 for the ADR-046 row:** keep; audited by title from the MacBook (one key, OBSERVED); 6.2(a) recorded as Phase 14's change if it picks unattended push | 6.2 |
+| 3 | Workbench as `aleix` vs dedicated account | 18.2 #3 | Sandbox exactly as believed: `ProtectHome=yes`, no `AF_UNIX`, `NoNewPrivileges`, RW only `/srv/homelab`; 1.3 | **Declined — ADR-047 written (S4 pre-write)**; boundary is the sandbox, five triggers | 6.1 |
+| 4 | Docker `data-root` on root | 18.2 #4 | `/var/lib/docker`, inventory zero, `docker0` down | **Declined (keep)** — trigger has not fired; recorded here and in the handover | 6.4 |
+| 5 | BIOS password | 18 #5, 18.1, 18.2 #5 | None; Secure Boot on; PXE ×2, USB, CD entries in boot order; stale Windows entry | **Pending S3 (at the box):** supervisor password, boot order locked, network boot off, Windows entry left, Secure Boot left on | 6.5 |
 | 6 | Console idle timeout | 18.1, 18.2 #5 | No `TMOUT` | **Installed (S2, OBSERVED unset on pts)**; tty positive proof at the box in S3 | 6.5 |
-| 7 | `systemd-creds` TPM2 binding of the bot token | 18.1, 18.2 #5, ADR-046 | `has-tpm2` yes; token `root:root 0600`; Secure Boot on | **Evaluate in S3** — condition 1 holds; 2 and 3 (rollback, real reboot) decide it. Both bot and notifier or neither | 6.6 |
-| 8 | ADR-046 revisit triggers as a checklist | 18.1, 18.2 #5 | Checks 1 PASS, 2 PASS-with-defect, 3 FAIL (sixth row) | **Close (S3):** amend ADR — row, check-2 grep, trigger 3 fired, dated re-run | 4.3 |
+| 7 | `systemd-creds` TPM2 binding of the bot token | 18.1, 18.2 #5, ADR-046 | `has-tpm2` yes; token `root:root 0600`; Secure Boot on | **Pending S3** — condition 1 holds; rollback written (`p13-s3.sh creds-undo`); condition 3 is the real reboot. **Three units, not two** (the watchdog loads it too) — all or none | 6.6 |
+| 8 | ADR-046 revisit triggers as a checklist | 18.1, 18.2 #5 | Checks 1 PASS, 2 PASS-with-defect, 3 FAIL (sixth row) | **Pending S3:** amend ADR — sixth row, token row rewritten if 6.6 lands, check-2 grep, trigger 3 fired, dated re-run | 4.3 |
 | 9 | Two SSH aliases keep working | 18.2 #6 | Both work concurrently, tunnel 200 | **Closed (OBSERVED)** — repeated after sshd and after the ACL, rc 0 + HTTP 200 both times | §5 |
-| 10 | Password exposure → rule | 18.2 #7 | Not yet a rule | **Close (S4):** the no-silent-pause rule in the baseline; S1's own runbook applied it | 6.3 |
+| 10 | Password exposure → rule | 18.2 #7 | Not yet a rule | **Closed (S4 pre-write):** `service-security-baseline.md` §7; every Phase 13 runbook applied it | 6.3 |
 | 11 | Single SSH client key | RM, PS | One key in `authorized_keys`, one on the MacBook | **Closed (S2, OBSERVED):** second Ed25519 pair accepted (rc 0, no agent), `age`-encrypted on the card, plaintext destroyed | 6.8 |
 | 12 | Node key expiry disabled | RM, PS | OBSERVED disabled (admin console) | **Declined (keep disabled)**, revisit if the machine leaves the home | 6.7 |
 | 13 | Tailscale SSH declined; ACLs | RM | ACL was allow-all; TS-SSH inert | **ACL applied (S2, OBSERVED):** member → node tcp/22 only; port 2222 drops; TS-SSH stays declined, `ssh` block gone | 6.7 |
 | 14 | Firewall + `fail2ban` | RM, PS | ufw done 09-10; `fail2ban` absent; no passwords accepted | **Firewall closed (DOCKER-USER, S2); `fail2ban` declined** — nothing for it to count | 6.4, 6.9 |
 | 15 | Docker publishes before ufw `INPUT` | PS | `DOCKER-USER` was empty | **Closed (S2, OBSERVED rules present, persisted in `after.rules`)**; the live published-port proof (2b) not run → PREDICTED | 6.4 |
-| 16 | IPv4/IPv6 FORWARD asymmetric | PS | **Both already `DROP`** | **Close — already closed 2026-09-10 by ufw**; project-state corrected; §8 row 6 becomes a re-proof | 6.4 |
-| 17 | Rootful Docker, no userns-remap | PS | No container; rootful | **Decline** — nothing to protect; the first phase that ships a container decides (likely 23.x or 15.x) | 6.4 |
-| 18 | Docker consumes the root LV | PS | 0 B used | **Narrow:** record; bounded logs already; no action | 6.4 |
-| 19 | `aleix` in `docker` | PS, ADR-022 | True | **Decline (accepted, ADR-022)** — restated in the baseline: never a service account | §5 |
-| 20 | OAuth credentials in `/home/aleix` | PS, ADR-046 | `0600`; readable by the model helper (by design) | **Decline (ADR-046 §2)** — stays; deferred to 23.3. New: also readable next to the GitHub key → 6.12 | 6.11 |
-| 21 | Root not encrypted + cleartext Wi-Fi passphrase | PS | Unchanged; ADR-046 accepted | **Decline (ADR-046)** — out of scope by brief §1 | §1 |
+| 16 | IPv4/IPv6 FORWARD asymmetric | PS | **Both already `DROP`** | **Closed — was already closed 2026-09-10 by ufw** (OBSERVED both `DROP`); project-state and brief corrected | 6.4 |
+| 17 | Rootful Docker, no userns-remap | PS | No container; rootful | **Declined** — nothing to protect; the first phase that ships a container decides (likely 23.x) | 6.4 |
+| 18 | Docker consumes the root LV | PS | 0 B used | **Narrowed (recorded):** 0 B; bounded logs; no action | 6.4 |
+| 19 | `aleix` in `docker` | PS, ADR-022 | True | **Declined (accepted, ADR-022)** — restated in the baseline §3 | §5 |
+| 20 | OAuth credentials in `/home/aleix` | PS, ADR-046 | `0600`; readable by the model helper (by design) | **Declined (ADR-046 §2)** — stays; deferred to 23.3. The helper's view of the neighbouring GitHub key was closed in S2 (row 26) | 6.11 |
+| 21 | Root not encrypted + cleartext Wi-Fi passphrase | PS | Unchanged; ADR-046 accepted | **Declined (ADR-046)** — out of scope by brief §1 | §1 |
 | 22 | sshd audit | brief | was: `x11forwarding yes`, `maxauthtries 6`, no `AllowUsers`, agent forwarding on | **Narrowed (S2, OBSERVED `sshd -T`):** all four set; TCP forwarding stays | 6.9 |
-| 23 | unattended-upgrades / reboot | brief | Security pockets; `Automatic-Reboot` default false | **Close (record):** no change; optionally make `false` explicit for a reader | 6.10 |
+| 23 | unattended-upgrades / reboot | brief | Security pockets; `Automatic-Reboot` default false | **Closed (recorded, no change):** security pockets only, `Automatic-Reboot` default false, reboots are the owner's | 6.10 |
 | 24 | Scores for all units | brief 4.2 | S1: 1.3/1.3/1.3/1.3/3.9/9.6 | **Closed (S2):** now 1.3/1.3/1.3/1.3/**3.8**/**5.1**; the two above 2.0 carry `# WHY` waivers in the unit | 4.2 |
 | 25 | `aleix` in `lxd` (found in S1, 6.14) | S1 | was member; LXD not installed | **Closed (S2, OBSERVED):** removed; fresh session shows no `lxd` | 6.14 |
 | 26 | Model helper could read the GitHub key (6.12) | S1 | readable | **Narrowed (S2, OBSERVED):** `InaccessiblePaths`, `Permission denied` inside the sandbox; filter declined after SIGSYS | 6.12 |
 | 27 | `wifi-powersave-off` at 9.6 as root (6.13) | S1 | 9.6 | **Narrowed (S2, OBSERVED):** `CAP_NET_ADMIN`-bounded, 5.1, power-save off, reachable | 6.13 |
 
-## New open decisions found in S1 (not in brief §6)
+## New open decisions found in S1 (not in brief §6) — with their outcomes
 
 **6.12 The model helper can read the GitHub push key.** `homelab-model-helper@.service` runs as
 `aleix` with `ReadWritePaths=/home/aleix` and no `ProtectHome=`; since 18.2 that home holds a
@@ -208,6 +208,7 @@ AI CLIs on untrusted prompts. Score 3.9, no `# WHY`. **Proposal:** `Inaccessible
 `RestrictNamespaces=yes`, and try the bot's syscall allow-list; **not** `MemoryDenyWriteExecute=`
 without a test (the CLIs are Node.js with a JIT). Waive the remaining gap with `# WHY` comments.
 Verify with `verify-ai-cli-access.sh`. Not lockout-class.
+**Outcome (S2):** taken minus `RestrictNamespaces` (the unit's Phase 09 `# WHY`: codex's sandbox) and minus the syscall filter (SIGSYS). Key unreadable, `/ask` ok, 3.8.
 
 **6.13 `wifi-powersave-off.service` at 9.6 as root.** It needs `CAP_NET_ADMIN` and `AF_NETLINK`, and
 nothing else. **Proposal:** `CapabilityBoundingSet=CAP_NET_ADMIN`, `AmbientCapabilities=CAP_NET_ADMIN`
@@ -216,22 +217,27 @@ with `DynamicUser=yes` *or* keep root with `NoNewPrivileges`, `ProtectSystem=str
 It is `WantedBy=multi-user.target` → **boot-class** under the standard (a failing oneshot dirties
 `systemctl --failed`, though the link stays up with power-save on). Test with `restart`, then the
 next real reboot in S3 proves it.
+**Outcome (S2):** taken; round 1 failed (`AF_NETLINK` alone), round 2 with `AF_UNIX AF_INET`: 5.1, power-save off. Boot proof pending S3.
 
 **6.14 `aleix` is in `lxd`.** Root-equivalent (the daemon runs as root and members control it),
 installer default, not decided anywhere. Is LXD installed (`snap list lxd`)? If not: `deluser aleix lxd`
 — an admin-account change, so lockout-class in the standard's table, though a group removal cannot
 break login. If yes: same treatment as `docker` under ADR-022, stated.
+**Outcome (S2):** removed; LXD not installed; verified in a fresh session.
 
 **6.15 EFI boot order has two PXE entries ahead of USB.** `eno1` has no cable, so PXE cannot fire
 today; but the BIOS step in 6.5 should disable network boot as well as lock the order, and the stale
 `Windows Boot Manager` entry can go (`efibootmgr -b 0000 -B`, or leave — cosmetic). Folded into 6.5's
 checklist for the orchestrator to confirm.
+**Outcome:** network boot off — yes; Windows entry — left (pending S3 at the box).
 
 **6.16 §8 row 8 (ACL negative test) has no second device.** The tailnet is two devices. Either a
 phone joins for one test or the row is PREDICTED and named as debt in the handover.
+**Outcome:** PREDICTED by decision; the port-level negative (2222 times out) is OBSERVED.
 
 **6.17 ADR-046 check 2 has a false positive.** Its grep matches its own documentation in the watchdog.
 Amend the check to `grep -rhv '^\s*#' … | grep -l …` or narrow the pattern to `key-file=|keyfile=`. S3.
+**Outcome:** pending S3 (ADR-046 amendment); the audit script already runs the comment-free variant.
 
 ## Corrections to the brief made in S1
 
