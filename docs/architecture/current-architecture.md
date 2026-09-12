@@ -1,9 +1,12 @@
 # Current Architecture
 
-**State:** Phases 01–09, 18 and 20.0 complete — the reference node runs Ubuntu Server, is administered remotely
-over Tailscale with key-only SSH, and has Docker Engine/Compose plus two subscription-authenticated
-AI operator CLIs. **The monitor and keyboard are detached**; the node runs headless, with a console available on
-demand — the connectors are present and console login is tested (Phase 18, ADR-041).
+**State:** Phases 01–09, 18, 18.1 and 20.0 complete — the reference node runs Ubuntu Server, is
+administered remotely over Tailscale with key-only SSH, and has Docker Engine/Compose plus two
+subscription-authenticated AI operator CLIs. **The monitor and keyboard are detached**; the node runs
+headless, with a console available on demand — the connectors are present and console login is tested
+(Phase 18, ADR-041). **Encryption at rest is executed** (Phase 18.1, 2026-09-12): root is shrunk and
+stays unencrypted by decision (ADR-046); a separate LUKS2 volume holds knowledge and project content,
+unlocked over SSH after boot (ADR-037).
 
 **`Interface → Router → Executor → Model` now exists as code**, not as a diagram. Phase 07 built the
 Interface; Phase 08 built the Router and the Executors; Phase 09 connected the model.
@@ -41,8 +44,9 @@ MacBook Pro  —  development / administration interface
     ▼
 Lenovo ThinkCentre M700 Tiny  —  "homelab"
     Ubuntu Server 26.04.1 LTS, kernel 7.0.0-31-generic
-    UEFI boot · LVM without encryption (ADR-015; ADR-037 decided a separate
-    encrypted data volume, not yet executed — Phase 18.1) · 232 GB root
+    UEFI boot · LVM, root 64 GB unencrypted by decision (ADR-046) ·
+    LUKS2 data volume 128 GB at /srv/homelab, unlocked over SSH (ADR-037,
+    executed Phase 18.1) · 43.42 GB left free in the volume group
     Wi-Fi wlp1s0, 2.4 GHz (ADR-016) · eno1 present, unused
     SSH: publickey only. No passwords, no root login (ADR-018)
     Docker Engine 29.8.0 + Compose v5.5.1, rootful (ADR-022)
@@ -76,6 +80,8 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | **Telegram status bot** | **Active** — `homelab-telegram-bot.service`, the project's first service. Read-only, standard library only, never forks a process. Long polling means **no listening socket**; isolation proved by attempted access (ADR-023) |
 | **Model helper** | **Active** — `homelab-model-helper.socket` + templated service. Runs as `aleix` because it must reach the credentials the bot cannot; socket-activated, one process per connection, so nothing holds an OAuth token between requests. Access control is the socket's group and mode, not code (ADR-025) |
 | **Model executor** | **Active** — `/ask`, two providers with independent usage limits and automatic fallback, cheapest model by default. The model gets **no tools** (verified with a canary), and its output is never dispatched |
+| **Encrypted data volume** | **Active, locked at boot** — `ubuntu-vg/data` (LUKS2, 128 GiB) → mapper `homelab-data` → ext4, mounted at `/srv/homelab`. Unlocked manually over SSH via `data-volume.sh unlock`; `noauto` in `/etc/crypttab` and `/etc/fstab` keeps boot from waiting on it (ADR-037, Phase 18.1) |
+| **`homelab-data.target` / `-probe.service`** | **Active pattern** — `ConditionPathIsMountPoint=/srv/homelab`, `PartOf=`/`WantedBy=homelab-data.target`. A dependent unit started while locked is skipped, not failed; `is-system-running` stays `running` either way. The probe is the reference implementation for Phase 18.2's first real service |
 
 ## Confirmed architectural direction
 
@@ -120,7 +126,8 @@ as an **accepted judgement with its reasoning**, not as resolved.
   (`scripts/macos/backup-node.sh`)
 - ~~firewall (Phase 13)~~ — `ufw` active since 2026-09-10 (default deny inbound; `tailscale0` plus
   Tailscale's UDP port allowed)
-- encryption at rest — decided by ADR-037, not yet executed; Phase 18.1, not Phase 13
+- ~~encryption at rest~~ — **executed** by Phase 18.1 (2026-09-12, ADR-037); root stays unencrypted
+  by decision (ADR-046)
 - local GPU node (Phase 16)
 
 Update this document when a phase changes the actually deployed architecture.

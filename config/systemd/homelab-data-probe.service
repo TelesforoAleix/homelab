@@ -1,0 +1,14 @@
+[Unit]
+Description=Probe: data volume dependency (Phase 18.1 fixture)
+ConditionPathIsMountPoint=/srv/homelab
+After=homelab-data.target
+PartOf=homelab-data.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c "date -Is > /srv/homelab/.probe && echo probe-wrote-file"
+ExecStop=/bin/rm -f /srv/homelab/.probe
+
+[Install]
+WantedBy=homelab-data.target

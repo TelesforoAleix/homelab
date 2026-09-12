@@ -457,6 +457,16 @@ expiry, rootless Docker. Phase 18 is narrower: it is about **recoverability**, n
 Execute **ADR-037**: shrink the root LV, create the LUKS volume in the freed extents, establish the
 SSH unlock path, and make *degraded-until-unlocked* a tested state rather than an assumed one.
 
+**Status: Complete (2026-09-12).** Root shrunk to 64 GiB; a 128 GiB LUKS2 volume exists and opens
+with the passphrase; a real power-cut test passed with the volume locked and the bot still answering;
+a volume-dependent unit started while locked was skipped, not failed; **ADR-046 Accepted**, deciding
+the credentials-on-root gap ADR-037 §6 left open. `ADR-032`'s content gate is now discharged for this
+volume.
+
+- Handover: [`docs/handovers/18.1-encryption-execution-handover.md`](docs/handovers/18.1-encryption-execution-handover.md)
+- Guide: [`guide/18.1-encryption/`](guide/18.1-encryption/README.md)
+- Decisions: ADR-046 (new, Accepted)
+
 **Added 2026-09-11 (ADR-045).** A sub-phase of Phase 18 because it executes a decision Phase 18
 deferred — not a new concern.
 
