@@ -11,7 +11,8 @@
 #   an unattended reboot, and nothing told the owner. systemd's own timer is
 #   the trigger source (homelab-watchdog.timer); this script is what it runs.
 #
-# WHY DOWNTIME COMES FROM `last -x`, NOT A HEARTBEAT
+# WHY DOWNTIME COMES FROM `last -x`, NOT A HEARTBEAT -- AND A BLOCKING GAP
+# FOUND DURING EXECUTION, NOT PAPERED OVER
 #
 #   `last -x` reads /var/log/wtmp, where a clean shutdown/reboot writes a
 #   `shutdown` pseudo-entry timestamped at the moment it happened, and an
@@ -20,6 +21,22 @@
 #   12 brief §7.3). No daemon samples anything while the node is healthy,
 #   which is the "recovery-oriented, not real-time" scope decision on paper
 #   still holding in practice.
+#
+#   THIS NODE DOES NOT HAVE `last` INSTALLED. Verified during execution:
+#   `util-linux` 2.41.3 on Ubuntu 26.04 ("resolute") no longer ships
+#   /usr/bin/last or /usr/bin/utmpdump -- `dpkg -L util-linux` lists neither.
+#   The modern replacement is the separate `wtmpdb` package (candidate
+#   0.75.0-5ubuntu1, not installed), which the brief's §14 ("no package is
+#   installed beyond what the node already has") did not anticipate needing.
+#   A from-scratch substitute -- grepping the previous boot's last few journal
+#   lines for a clean-shutdown marker -- was tried and DISPROVEN against this
+#   node's own known-clean boot -1->0 transition (Phase 18.1's rescue reboot):
+#   the tail of that boot's journal carries no shutdown-sequence text at all,
+#   so that heuristic would misclassify a clean reboot as unplanned. Rather
+#   than ship a classifier proven wrong on the one real case available, this
+#   script fails loudly (see the `command -v last` check below) instead of
+#   guessing. See the Phase 12 execution stage report for the full finding;
+#   this is recorded as a decision for the orchestrator, not resolved here.
 #
 # WHY THIS DOES NOT CALL `systemctl is-active` -- A DEVIATION FROM THE BRIEF'S
 # OWN §7.4 TABLE
@@ -67,6 +84,8 @@ NOTIFY="/usr/local/sbin/homelab-notify.sh"
 CRYPTTAB="/etc/crypttab"
 MOUNT="/srv/homelab"
 
+die() { printf 'homelab-watchdog: %s\n' "$*" >&2; exit 1; }
+
 # --- §7.3: duration parsing --------------------------------------------
 #
 # `last`'s own printed span looks like "(01:04)" (HH:MM) or "(3+01:04)"
@@ -90,6 +109,14 @@ duration_to_minutes() {
 # reason, never an exact figure).
 classify_boot() {
     local hist line1 line2 type1 type2 dur prev_ts now_boot down_seconds
+
+    # Fail loudly rather than silently default to "unplanned reboot" when the
+    # tool is simply missing -- see the header note. A wrong-but-confident
+    # classification is worse than this unit landing in `failed` and paging
+    # the owner via homelab-notify@watchdog.service with the real reason in
+    # its last journal lines.
+    command -v last >/dev/null 2>&1 \
+        || die "'last' is not installed on this node (util-linux dropped it; wtmpdb is its replacement and is also not installed). Cannot classify the prior stop as clean or unplanned -- see the Phase 12 execution stage report."
 
     hist="$(last -x -n 4 reboot shutdown --time-format=iso 2>/dev/null)" || hist=""
     line1="$(printf '%s\n' "$hist" | sed -n '1p')"
