@@ -72,6 +72,13 @@ These mirror the numbered project roadmap.
   question asked properly — what it protects against, three premises that turned out to be wrong,
   and why reaffirming a decision is a decision. *(Complete 2026-09-11. Four scripting bugs are
   written up as the most useful part of the chapter.)*
+- [`12-scheduling-monitoring-notifications`](12-scheduling-monitoring-notifications/README.md) —
+  the node tells you it is back, and tells you when a service dies: one timer, one oneshot, `OnFailure=`
+  drop-ins, and a shared notifier that borrows the bot's token without copying it. Why the previous
+  stop is classified from PID 1's journal rather than `last -x` (this Ubuntu ships no `last`), why
+  `_PID=1` is mandatory, why the model helper is unreachable at the kernel and must stay so, and two
+  `pipefail` traps that misclassify silently. *(Complete 2026-09-12. Clean reboot and power cut both
+  tested live; the first version's "disproof" of its own heuristic is written up as the lesson.)*
 - [`09-model-executor`](09-model-executor/README.md) — asking a model a question without giving the
   bot a credential. Why the bot cannot just run `claude -p`, why the access rule belongs in the
   socket unit rather than in Python, what leaves the machine on every call and why logs do not,
