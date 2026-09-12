@@ -104,7 +104,11 @@ classify_boot() {
     journalctl -b "$prev" -n 1 -q --no-pager >/dev/null 2>&1 \
         || die "no journal for boot $prev; cannot classify the prior stop as clean or unplanned"
 
-    if journalctl -b "$prev" -q --no-pager _PID=1 | grep -qF 'Shutting down.'; then
+    # journalctl's own -g, not `| grep -q`: grep -q closing the pipe early
+    # would SIGPIPE journalctl, and inside `if` that 141 reads as "no marker"
+    # -- a clean reboot silently reported unplanned. Same trap as the
+    # --list-boots note below. -g exits 1 when nothing matches.
+    if journalctl -b "$prev" -q --no-pager _PID=1 -g 'Shutting down\.' >/dev/null; then
         CLASS="clean reboot"
     else
         CLASS="unplanned reboot"
