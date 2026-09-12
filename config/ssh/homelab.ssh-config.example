@@ -43,16 +43,38 @@ Host homelab
     # than something you are tempted to skip. On Linux, delete this line.
     UseKeychain yes
 
-    # Phase 18.2: the Workbench binds loopback on the node; this is the only door.
-    # Both ends are 127.0.0.1 on purpose: the node side because server.py
-    # refuses anything else (ADR-036 §5), the MacBook side so nothing on the
-    # MacBook's LAN can reach the forwarded port. Open http://127.0.0.1:8765/
-    # while "ssh homelab" is connected.
+    # Phase 18.2: deliberately NO LocalForward here. The Workbench tunnel lives
+    # on its own alias below. A forward on this alias, with
+    # ExitOnForwardFailure, made every scripted "ssh homelab" from the MacBook
+    # fail while an interactive session held the port -- backup-node.sh,
+    # verify-node-backup.sh, scp, VS Code Remote SSH, git over SSH (observed
+    # 2026-09-12, S3 row 16). This alias stays plain so all of those keep
+    # working regardless of what else is open.
+
+# ---------------------------------------------------------------------------
+# The Workbench door -- same host, plus the tunnel.
+# ---------------------------------------------------------------------------
+# The Workbench binds 127.0.0.1:8765 on the node and nothing else (ADR-036 §5,
+# ADR-038 §2). This alias is the only way to reach it: "ssh homelab-workbench",
+# then http://127.0.0.1:8765/ in the browser while that session is open.
+# Open ONE of these at a time; a second one cannot bind the same local port
+# and, by design, refuses to connect rather than warn (below).
+Host homelab-workbench
+    HostName homelab.CHANGE-ME.ts.net
+    User aleix
+    IdentityFile ~/.ssh/id_ed25519_homelab
+    IdentitiesOnly yes
+    AddKeysToAgent yes
+    UseKeychain yes
+
+    # Both ends 127.0.0.1 on purpose: the node side because server.py refuses
+    # anything else, the MacBook side so nothing on the MacBook's LAN can
+    # reach the forwarded port.
     LocalForward 127.0.0.1:8765 127.0.0.1:8765
-    # A forward that fails (port already taken on the MacBook, say) would
-    # otherwise be a warning line scrolling past, and the symptom -- browser
-    # says connection refused -- looks exactly like a Workbench that is down.
-    # Fail the whole connection instead, so the cause is where you are looking.
+    # A forward that fails (port already taken on the MacBook) would otherwise
+    # be a warning line scrolling past, and the symptom -- browser says
+    # connection refused -- looks exactly like a Workbench that is down. Fail
+    # the whole connection instead, so the cause is where you are looking.
     ExitOnForwardFailure yes
 
 # ---------------------------------------------------------------------------
@@ -61,9 +83,9 @@ Host homelab
 # Kept deliberately. If Tailscale is down, misconfigured, or the node key has
 # expired, this is how you get back in without walking to the machine — which
 # matters more once the monitor has been removed. No LocalForward here, on
-# purpose (Phase 18.2 §7.7): a broken forward line must never take the
-# fallback route with it. Add "-L 127.0.0.1:8765:127.0.0.1:8765" by hand if
-# you need the Workbench over the LAN route. Verified at 192.168.1.57 on
+# purpose: a broken forward line must never take the fallback route with it.
+# Add "-L 127.0.0.1:8765:127.0.0.1:8765" by hand if you need the Workbench
+# over the LAN route. Verified at 192.168.1.57 on
 # 2026-09-09, but there is no DHCP reservation, so it can move.
 Host homelab-lan
     HostName 192.168.1.57
