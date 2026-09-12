@@ -11,8 +11,8 @@
 #   homelab-bot may restart chrony.service. Nothing else, by any route.
 #
 #   One user, one unit, one verb. No wildcards. A wildcard would reach ssh,
-#   tailscaled and systemd-networkd -- every service whose loss costs access to
-#   this console-less machine.
+#   tailscaled and systemd-networkd -- every service whose loss costs remote
+#   access, leaving only the console and a physical visit (ADR-041).
 #
 # WHY POLKIT RATHER THAN THE SUDOERS RULE THE BRIEF SPECIFIED
 #
