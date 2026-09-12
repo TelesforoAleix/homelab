@@ -23,9 +23,23 @@
   model routing. **Reshaped 2026-09-11 by ADR-045**: every layer now names exactly one owning phase,
   the five gaps have homes — including **Phase 24, web research, which had no phase anywhere** —
   Phase 23 is split into 23.0–23.3, Phase 12 is repurposed rather than absorbed, and Phase 11 is
-  superseded. **Phase 18.1 — encryption execution — is first and needs the owner at the machine.**
-  See [`constraint-review.md`](constraint-review.md), which produced ADR-037 – ADR-044.
-- **Current phase:** 20.0 — Minimal Factory Workbench (**complete**, 2026-09-11). **Factory
+  superseded. **Phase 18.1 — encryption execution — was first and needed the owner at the machine.
+  Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
+  ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
+  recorded and did not close.
+- **Current phase:** 18.1 — Encryption execution (**complete**, 2026-09-12). **ADR-037 is true on the
+  machine, not only on paper.** Root shrunk to 64 GiB; a 128 GiB LUKS2 volume (`ubuntu-vg/data` →
+  `homelab-data` → `/srv/homelab`) exists in the freed extents, opens with the passphrase, refuses
+  without it; **11,116 extents (43.42 GiB) deliberately left free** in the volume group, closing the
+  zero-free-extents item Phase 02 found; a real power-cut test passed — the node returned unattended,
+  reachable, locked, and the bot answered `/status` while it was; a volume-dependent unit started
+  while locked was skipped, not failed, with the reason in the journal; nothing regressed (`1.3 OK`,
+  `id homelab-bot` unchanged, 6 listeners). **ADR-046** (Accepted) decides the gap ADR-037 §6 left
+  open: the credentials still on root stay there, an accepted risk, constrained so none of them can
+  open the volume. **ADR-032's content gate is discharged for this volume** — Phase 18.2 and Phase 10
+  may now put knowledge and project content there; the unencrypted root still may not hold it. Handover:
+  [`18.1-encryption-execution-handover.md`](../handovers/18.1-encryption-execution-handover.md).
+- **Previously:** 20.0 — Minimal Factory Workbench (**complete**, 2026-09-11). **Factory
   Workbench executes.** The deliverable is in the public `factory` repository — the first phase whose
   code lands outside this one. A CLI write engine, a loopback-only server in front of it, and the
   existing read-only dashboard turned writable. Proved from a **clean clone with no homelab
@@ -372,9 +386,9 @@ every install.
   mirrors. `/var/lib/tailscale` and `/etc/ssh/ssh_host_*` are deliberately excluded, with reasons.
   **The backup is secret material** — it contains the credentials named below — and the card is
   treated accordingly.
-- **The volume group has no free extents.** The root LV consumes all 235.4 G, so storage cannot be
-  grown by `lvextend`. Found in Phase 02. **Owned by Phase 18.1** since ADR-045 — the answer is the
-  **shrink** (ADR-037 §1), not another disk.
+- ~~**The volume group has no free extents.**~~ **Closed 2026-09-12 by Phase 18.1.** The root LV was
+  shrunk to 64 GiB (ADR-037 §1); the volume group now holds **11,116 free extents = 43.42 GiB**,
+  deliberately unallocated so either side can grow online later without repeating the shrink.
 - **Docker consumes the root LV.** Logs are bounded by `/etc/docker/daemon.json`, and Phase 05
   finished with Docker inventory at zero, but images, containers, volumes and build cache all land on
   the root filesystem.
@@ -453,9 +467,12 @@ every install.
   — proved by SSH host-key comparison — and no auto-forwarding protocol is available.
 - No encryption at rest on **root** (ADR-015), which compounds with the cleartext Wi-Fi passphrase
   (ADR-016). Phase 13 should treat these together.
-  **Partly addressed 2026-09-11:** ADR-032 revisited ADR-015 and **ADR-037 executes it** — a separate
-  LUKS volume will hold knowledge and project content, unlocked over SSH after boot. **Root stays
-  unencrypted**, so the credentials named above remain at rest in the clear. Not yet built.
+  **Built 2026-09-12 by Phase 18.1:** a separate 128 GiB LUKS2 volume (`ubuntu-vg/data`) now holds
+  knowledge and project content, unlocked over SSH after boot — proved to open with the passphrase,
+  refuse without it, and survive a real power cut locked and unattended. **Root stays unencrypted**,
+  so the credentials named above remain at rest in the clear; **ADR-046 (Accepted)** decides that
+  deliberately rather than leaving it implied — each is revocable in minutes and none can open the
+  volume.
 - ~~**Phase 10 must not silently inherit ADR-015.**~~ **Resolved.** The decision was taken rather than
   inherited: ADR-032 made the premise an explicit gate, and ADR-037 discharges it for an encrypted
   volume. Phase 10 stores real data **in that volume**, not on root.
@@ -617,7 +634,7 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Tailnet | `100.71.62.71`; node key expiry disabled |
 | Admin user | `aleix`, sudo-capable; **`sudo` requires a password — no `NOPASSWD`** |
 | Docker access | `aleix` is in `docker` group `983`; this is root-equivalent (ADR-022) |
-| Storage | LVM, 232 GB root, 8.9 GB used, 212 GB available (5%), **unencrypted — ADR-037 decided, not yet executed**; zero free extents |
+| Storage | LVM. Root shrunk to **64 GiB** ext4 (62.4 G, 8.9 G used, 50.7 G available), **unencrypted by decision (ADR-046)**. A **128 GiB LUKS2 volume** (`ubuntu-vg/data` → mapper `homelab-data` → ext4, 126 G usable, 120 G available) mounted at `/srv/homelab`, unlocked over SSH (`data-volume.sh unlock`), `--allow-discards`. **11,116 extents (43.42 GiB) free** in the VG, deliberately unallocated (Phase 18.1, 2026-09-12) |
 | Health | `systemctl is-system-running` → `running`, no failed units |
 | Tooling | `tmux` 3.6, `htop`, `jq`, `git`, `vim`, `nano`, `less`, `lsof`, `tree`, `ncdu`, `ripgrep`, Docker 29.8.0, Compose v5.5.1, containerd 2.3.5, Claude Code 2.1.236, Codex CLI 0.153.4, `bubblewrap` 0.11.1 |
 | AI authentication | Claude `claude.ai` / first-party / Pro; Codex `Logged in using ChatGPT`; relevant API-key variables unset |
@@ -633,8 +650,8 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Listening | **6 sockets, unchanged — but `:22` is now FILTERED on the shared Wi-Fi.** `ufw` is active and enabled at boot: default deny inbound, allow on `tailscale0`, plus UDP 41641 on `wlp1s0` for Tailscale direct connections. sshd still *binds* `0.0.0.0:22`; ufw drops the packets before they reach it. **Proved 2026-09-10** — LAN SSH times out while ICMP to the same address succeeds |
 | Swappiness | `vm.swappiness = 10` |
 | Boot | **27.9s** (was 24.4s). Firmware POST rose 10.97s → 13.81s when the fTPM was enabled |
-| **Console** | **Attached and login-tested 2026-09-11 (Phase 18).** A display is connected on `card1-DP-1`, `getty@tty1` is active, and a console session was authenticated at `seat0`/`tty1` — the login, not the prompt, was the test, since key-only SSH meant the account password had never been exercised. **It is Phase 18's chosen "second way in"**, over a second SSH key, because it survives network, firewall, SSH and Tailscale failure alike. Earlier text said `None`; that was wrong, and the monitor had only ever been unplugged |
-| **TPM** | **2.0** since 2026-09-10 (Intel PTT / Firmware TPM; was discrete 1.2). `/dev/tpmrm0` present. Two prerequisites before it can unlock LUKS: `libtss2-rc0` missing, and only the SHA-1 PCR bank is allocated |
+| **Console** | **Attached and login-tested 2026-09-11 (Phase 18).** A display is connected on `card1-DP-1`, `getty@tty1` is active. **It is Phase 18's chosen "second way in"**, over a second SSH key, because it survives network, firewall, SSH and Tailscale failure alike. Session 29 (the Phase 18 login test) was **closed deliberately 2026-09-12** at Phase 18.1's step B1, per the rule it established: log out before walking away. No console session was left open at Phase 18.1's close; monitor and keyboard were detached again after its power-cut test |
+| **TPM** | **2.0** since 2026-09-10 (Intel PTT / Firmware TPM; was discrete 1.2). `/dev/tpmrm0` present. **Removed from the encryption design by ADR-037 §3** — the data volume unlocks over SSH, not the TPM, which would only have bound to the weaker SHA-1 PCR bank. Handed to Phase 13 as `systemd-creds`'s cheapest narrowing of ADR-046's accepted risk, not adopted |
 
 Reproduce with `scripts/server/verify-install.sh` (Phase 01 base) and
 `scripts/server/verify-remote-access.sh` (Phase 03 posture; run under `sudo` for a complete report).

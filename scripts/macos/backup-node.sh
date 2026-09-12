@@ -101,6 +101,14 @@ NODE_PATHS=(
     # asking how a restore would actually work rather than assuming it would.
     /home/aleix/.ssh
     /etc/netplan
+    # Phase 18.1 (ADR-037): boot-class files for the encrypted data volume.
+    # Without noauto in both of these, a restored node hangs at a passphrase
+    # prompt nobody is there to answer.
+    /etc/crypttab
+    /etc/fstab
+    /etc/systemd/system/homelab-data.target
+    /etc/systemd/system/homelab-data-probe.service
+    /usr/local/sbin/data-volume.sh
 )
 
 # DELIBERATELY NOT BACKED UP, so that these are decisions rather than omissions:
@@ -120,6 +128,17 @@ NODE_PATHS=(
 # removable media, which is a different thing, but it is why the card must be
 # treated as secret material and why the passphrase lives in a password
 # manager and never on the card itself.
+#
+#   /srv/homelab (the data volume's contents) and the LUKS header -- neither
+#       is this script's job. This script backs up node *state*; the volume
+#       exists precisely to keep its *content* off media this weekly, routine
+#       backup would otherwise put it on (ADR-037 Sec7) -- and that content
+#       already gets its own backup path, a git remote, which is how the
+#       repositories inside it are recovered (Phase 18.2 decides whether that
+#       is enough). The LUKS header is a one-time artefact taken by hand
+#       straight to the card, age-encrypted (Phase 18.1 step C6), never
+#       staged on the node's tmpfs or the Mac's disk the way everything else
+#       here is.
 
 # ~/.codex is 366 MB, of which 365 MB reinstalls from the network. Excluding
 # those three directories takes it to ~236 KB while keeping auth.json, the

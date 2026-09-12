@@ -248,3 +248,13 @@ were decided as one, and several only make sense together.
   spanning five layers cannot write one brief or hand over. Five gaps get homes, including
   **Phase 24 — Web Research**, which had no phase anywhere. **Phase 11 is superseded** — ADR-034 and
   Phase 20.0 answered its question by building the thing.
+
+- **[ADR-046](ADR-046-service-credentials-on-root.md) — Service credentials stay on the unencrypted
+  root: an accepted risk** (2026-09-12, Phase 18.1). **Accepted.** Closes the gap ADR-037 §6 recorded
+  and explicitly did not close: five credentials — two OAuth logins, the Telegram bot token, the Wi-Fi
+  passphrase, and the Tailscale node identity — stay on root rather than moving into the newly
+  encrypted volume, because the bot token in particular is *how the node reports for duty* after an
+  unattended reboot, and moving it would make the node come back silent. The acceptance holds only so
+  long as nothing on root can open the volume — no keyfile, no TPM enrolment, no cached passphrase,
+  the header backup kept off the node — which is a rule, not a preference, and a five-step loss
+  procedure exists for if the disk or machine is ever lost.
