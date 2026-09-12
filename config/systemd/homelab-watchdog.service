@@ -45,8 +45,8 @@
 #
 # WHY SupplementaryGroups=systemd-journal
 #
-#   §7.3's downtime computation reads `journalctl -b -1` on an unplanned
-#   reboot. Journal files are root:systemd-journal by default. This grants
+#   §7.3's classification and downtime both read the previous boot's journal
+#   (`journalctl -b -1`). Journal files are root:systemd-journal by default. This grants
 #   read access to THIS UNIT's own processes via the unit file -- the same
 #   place ADR-025 puts access control -- rather than by adding homelab-bot to
 #   the group in /etc/group, which would be a permanent, account-wide

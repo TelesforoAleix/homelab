@@ -11,32 +11,31 @@
 #   an unattended reboot, and nothing told the owner. systemd's own timer is
 #   the trigger source (homelab-watchdog.timer); this script is what it runs.
 #
-# WHY DOWNTIME COMES FROM `last -x`, NOT A HEARTBEAT -- AND A BLOCKING GAP
-# FOUND DURING EXECUTION, NOT PAPERED OVER
+# WHY CLEAN-VS-UNPLANNED COMES FROM THE JOURNAL, NOT A HEARTBEAT
 #
-#   `last -x` reads /var/log/wtmp, where a clean shutdown/reboot writes a
-#   `shutdown` pseudo-entry timestamped at the moment it happened, and an
-#   unclean one (a power cut) writes none -- the next `reboot` entry simply
-#   appears with nothing before it. That absence is the entire signal (Phase
-#   12 brief §7.3). No daemon samples anything while the node is healthy,
-#   which is the "recovery-oriented, not real-time" scope decision on paper
-#   still holding in practice.
+#   On a clean stop PID 1 logs exactly one "Shutting down." line as its last
+#   act; on a power cut it logs nothing, because it never ran. That absence is
+#   the entire signal -- the Phase 12 brief's §7.3 logic, ported from wtmp to
+#   the journal. Downtime is (first entry of this boot) - (last entry of the
+#   previous boot), read from `journalctl --list-boots`, by the same
+#   mechanism in both branches. No daemon samples
+#   anything while the node is healthy: "recovery-oriented, not real-time"
+#   still holds in practice.
 #
-#   THIS NODE DOES NOT HAVE `last` INSTALLED. Verified during execution:
-#   `util-linux` 2.41.3 on Ubuntu 26.04 ("resolute") no longer ships
-#   /usr/bin/last or /usr/bin/utmpdump -- `dpkg -L util-linux` lists neither.
-#   The modern replacement is the separate `wtmpdb` package (candidate
-#   0.75.0-5ubuntu1, not installed), which the brief's §14 ("no package is
-#   installed beyond what the node already has") did not anticipate needing.
-#   A from-scratch substitute -- grepping the previous boot's last few journal
-#   lines for a clean-shutdown marker -- was tried and DISPROVEN against this
-#   node's own known-clean boot -1->0 transition (Phase 18.1's rescue reboot):
-#   the tail of that boot's journal carries no shutdown-sequence text at all,
-#   so that heuristic would misclassify a clean reboot as unplanned. Rather
-#   than ship a classifier proven wrong on the one real case available, this
-#   script fails loudly (see the `command -v last` check below) instead of
-#   guessing. See the Phase 12 execution stage report for the full finding;
-#   this is recorded as a decision for the orchestrator, not resolved here.
+#   Match PID 1 ONLY (`_PID=1`). A user manager ending a login session logs
+#   "Reached target shutdown.target" from its own PID inside a boot that was
+#   later power-cut; matching on shutdown text without the PID filter would
+#   call that power cut clean.
+#
+#   RECORD (PROJECT.md §11): the brief specified `last -x`, which this node
+#   does not have -- util-linux 2.41.3 on Ubuntu 26.04 no longer ships it and
+#   the wtmpdb replacement is not installed (§14: no package added). The first
+#   version of this script concluded the journal heuristic was DISPROVED,
+#   because it was tested against the boot -1 -> 0 transition believed to be
+#   Phase 18.1's rescue reboot; that transition was in fact 18.1's power-cut
+#   test. Re-run against both real transitions, the heuristic is correct: the
+#   clean reboot (-2 -> -1) carries the PID-1 marker, the power cut (-1 -> 0)
+#   carries none and boot 0 shows ext4 orphan cleanup on root.
 #
 # WHY THIS DOES NOT CALL `systemctl is-active` -- A DEVIATION FROM THE BRIEF'S
 # OWN §7.4 TABLE
@@ -86,70 +85,46 @@ MOUNT="/srv/homelab"
 
 die() { printf 'homelab-watchdog: %s\n' "$*" >&2; exit 1; }
 
-# --- §7.3: duration parsing --------------------------------------------
-#
-# `last`'s own printed span looks like "(01:04)" (HH:MM) or "(3+01:04)"
-# (days+HH:MM). Converts either form to whole minutes. `10#` forces base-10
-# so a leading zero (e.g. "08") is never read as an invalid octal digit.
-duration_to_minutes() {
-    local dur="$1" days=0 hh mm
-    if [[ "$dur" == *+* ]]; then
-        days="${dur%%+*}"
-        dur="${dur#*+}"
-    fi
-    hh="${dur%%:*}"
-    mm="${dur##*:}"
-    printf '%d\n' $(( 10#$days * 1440 + 10#$hh * 60 + 10#$mm ))
-}
-
 # --- §7.3: was the prior stop clean, and how long was the node down? -------
 #
 # Sets CLASS ("clean reboot" | "unplanned reboot") and DOWN_MIN (integer
 # minutes, approximate -- the message says "~N minutes" for exactly that
 # reason, never an exact figure).
+#
+# Takes the previous boot's journal offset as an optional parameter (default
+# -1, i.e. the boot before this one) so the clean branch can be proven on a
+# real past transition without rebooting. Production never passes one.
 classify_boot() {
-    local hist line1 line2 type1 type2 dur prev_ts now_boot down_seconds
+    local prev="${1:--1}" cur prev_last cur_first down_seconds
+    cur=$(( prev + 1 ))
 
-    # Fail loudly rather than silently default to "unplanned reboot" when the
-    # tool is simply missing -- see the header note. A wrong-but-confident
-    # classification is worse than this unit landing in `failed` and paging
-    # the owner via homelab-notify@watchdog.service with the real reason in
-    # its last journal lines.
-    command -v last >/dev/null 2>&1 \
-        || die "'last' is not installed on this node (util-linux dropped it; wtmpdb is its replacement and is also not installed). Cannot classify the prior stop as clean or unplanned -- see the Phase 12 execution stage report."
+    # No previous boot in the journal at all: fail loudly. The unit landing in
+    # `failed` and paging the owner via homelab-notify@watchdog.service with
+    # this line in its journal is the honest outcome; inventing a class is not.
+    journalctl -b "$prev" -n 1 -q --no-pager >/dev/null 2>&1 \
+        || die "no journal for boot $prev; cannot classify the prior stop as clean or unplanned"
 
-    hist="$(last -x -n 4 reboot shutdown --time-format=iso 2>/dev/null)" || hist=""
-    line1="$(printf '%s\n' "$hist" | sed -n '1p')"
-    line2="$(printf '%s\n' "$hist" | sed -n '2p')"
-    type1="$(awk '{print $1}' <<< "$line1")" || type1=""
-    type2="$(awk '{print $1}' <<< "$line2")" || type2=""
-
-    if [ "$type1" = "reboot" ] && [ "$type2" = "shutdown" ]; then
+    if journalctl -b "$prev" -q --no-pager _PID=1 | grep -qF 'Shutting down.'; then
         CLASS="clean reboot"
-        dur="$(grep -oE '\(([0-9]+\+)?[0-9]+:[0-9]+\)' <<< "$line2" | tail -1 | tr -d '()')" || dur=""
-        if [ -n "$dur" ]; then
-            DOWN_MIN="$(duration_to_minutes "$dur")"
-        else
-            # last's own printed span was unparseable -- approximate, per §7.3.
-            DOWN_MIN=0
-        fi
     else
         CLASS="unplanned reboot"
-        # No `shutdown` entry between the two most recent `reboot` entries:
-        # compute downtime from what the previous boot last logged before it
-        # stopped, per §7.3's exact mechanism.
-        prev_ts="$(journalctl -b -1 -n 1 --output=short-iso --no-pager 2>/dev/null | awk '{print $1}')" || prev_ts=""
-        now_boot="$(uptime -s 2>/dev/null)" || now_boot=""
-        if [ -n "$prev_ts" ] && [ -n "$now_boot" ] && date -d "$prev_ts" >/dev/null 2>&1; then
-            down_seconds=$(( $(date -d "$now_boot" +%s) - $(date -d "$prev_ts" +%s) ))
-            [ "$down_seconds" -ge 0 ] || down_seconds=0
-            DOWN_MIN=$(( down_seconds / 60 ))
-        else
-            # No prior boot's journal to compute from (e.g. journal not
-            # persisted across this gap, or the very first boot) --
-            # approximate as 0 rather than fail the whole run over one number.
-            DOWN_MIN=0
-        fi
+    fi
+
+    # Both endpoints from one `--list-boots` row each (fields: index, id,
+    # first-entry day/date/time/tz, last-entry day/date/time/tz). Not
+    # `journalctl -b N | head -1`: under pipefail, head closing the pipe kills
+    # journalctl with SIGPIPE and the whole script exits 141 -- observed.
+    prev_last="$(journalctl --list-boots -q --no-pager | awk -v i="$prev" '$1 == i { print $8, $9, $10 }')"
+    cur_first="$(journalctl --list-boots -q --no-pager | awk -v i="$cur" '$1 == i { print $4, $5, $6 }')"
+    if [ -n "$prev_last" ] && [ -n "$cur_first" ] \
+        && date -d "$prev_last" >/dev/null 2>&1 && date -d "$cur_first" >/dev/null 2>&1; then
+        down_seconds=$(( $(date -d "$cur_first" +%s) - $(date -d "$prev_last" +%s) ))
+        [ "$down_seconds" -ge 0 ] || down_seconds=0
+        DOWN_MIN=$(( down_seconds / 60 ))
+    else
+        # Timestamps unparseable -- approximate as 0 rather than fail the
+        # whole run over one number, per §7.3.
+        DOWN_MIN=0
     fi
 }
 
