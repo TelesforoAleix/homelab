@@ -1,19 +1,32 @@
 {
-  "providers": ["claude", "codex"],
+  "_format": "Phase 15.0 registry. Copy to /etc/homelab-model-helper/config.json (root:root 0644). The helper REFUSES the Phase 09 shape (providers as a list) rather than guessing.",
 
-  "claude": {
-    "bin": "/home/aleix/.local/bin/claude",
-    "model": "haiku"
+  "providers": {
+    "claude": {
+      "bin": "/home/aleix/.local/bin/claude",
+      "unattended": true,
+      "models": {
+        "haiku": { "id": "haiku", "note": "cheapest tier on Claude Pro; alias undocumented in --help but functional" }
+      }
+    },
+    "codex": {
+      "bin": "/home/aleix/.local/bin/codex",
+      "unattended": true,
+      "models": {
+        "mini": { "id": "gpt-5.6-luna", "note": "the subscription's mini tier; gpt-5.4-mini is refused on a ChatGPT account" }
+      }
+    }
   },
 
-  "codex": {
-    "bin": "/home/aleix/.local/bin/codex",
-    "model": "gpt-5.6-luna"
+  "routes": {
+    "owner-interactive": ["claude/haiku", "codex/mini"]
   },
+  "default_route": "owner-interactive",
 
   "caps": {
     "per_hour": 6,
-    "per_day": 30
+    "per_day": 30,
+    "owner_reserve": { "per_hour": 3, "per_day": 15 }
   },
 
   "state_file": "/var/lib/homelab-model-helper/calls.json",
