@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fixture tests for the model helper — Phase 15.0.
+Fixture tests for the model helper — Phase 15.0, extended by Phase 15.1.
 
 WHAT THIS PROVES, AND WHAT IT DELIBERATELY CANNOT
 -------------------------------------------------
@@ -44,6 +44,13 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
+import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from providers import CHAT_ENVELOPE_TOKEN_ALLOWANCE  # noqa: E402
+from spend import SpendGovernor, maximum_cost  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 HELPER = os.path.join(HERE, "helper.py")
@@ -65,6 +72,59 @@ printf 'STUB-ANSWER\\n'
 QUESTION = "fixture question"
 
 results: list[tuple[str, str]] = []
+
+
+class FakeGateway:
+    """Local HTTP endpoint. It never opens a connection off this machine."""
+
+    def __init__(self) -> None:
+        outer = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):  # noqa: N802
+                n = int(self.headers.get("Content-Length", "0"))
+                raw = self.rfile.read(n)
+                try:
+                    body = json.loads(raw)
+                except ValueError:
+                    body = None
+                outer.requests.append(body)
+                status = outer.status
+                payload = outer.payload
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(payload).encode("utf-8"))
+
+            def log_message(self, _format, *_args):
+                return
+
+        self.requests: list[dict] = []
+        self.status = 200
+        self.payload = {
+            "id": "fake-generation",
+            "choices": [{"message": {"role": "assistant", "content": "FAKE-GATEWAY-ANSWER"}}],
+            "usage": {
+                "prompt_tokens": 20,
+                "completion_tokens": 5,
+                "total_tokens": 25,
+                "prompt_tokens_details": {"cached_tokens": 3},
+                "cache_creation_input_tokens": 2,
+                "cost": 0.0000094,
+            },
+        }
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    @property
+    def endpoint(self) -> str:
+        return f"http://127.0.0.1:{self.server.server_port}/v1/chat/completions"
+
+    def close(self) -> None:
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=2)
 
 
 def report(status: str, name: str, note: str = "") -> None:
@@ -91,24 +151,33 @@ def same_shape(a, b, path: str = "") -> list[str]:
 class Bench:
     """One temp directory: stub binary, fixture configs, counter file."""
 
-    def __init__(self) -> None:
+    def __init__(self, gateway: FakeGateway) -> None:
         self.dir = tempfile.mkdtemp(prefix="homelab-p150-fixture-")
         self.stub = os.path.join(self.dir, "stub-cli")
         with open(self.stub, "w", encoding="utf-8") as fh:
             fh.write(STUB)
         os.chmod(self.stub, stat.S_IRWXU)
+        self.credentials = os.path.join(self.dir, "credentials")
+        os.mkdir(self.credentials, 0o700)
+        with open(os.path.join(self.credentials, "gateway-key"), "w", encoding="utf-8") as fh:
+            fh.write("fixture-only-not-a-real-key\n")
+        os.chmod(os.path.join(self.credentials, "gateway-key"), 0o400)
         with open(EXAMPLE, encoding="utf-8") as fh:
             self.example = json.load(fh)
+        self.gateway = gateway
 
     def config(self, name: str, *, unattended: bool | None = None,
-               caps: dict | None = None) -> str:
+               caps: dict | None = None, initialize_spend: bool = True) -> str:
         cfg = copy.deepcopy(self.example)
         cfg.pop("_format", None)
         for entry in cfg["providers"].values():
-            entry["bin"] = self.stub
+            if "bin" in entry:
+                entry["bin"] = self.stub
             if unattended is not None:
                 entry["unattended"] = unattended
+        cfg["providers"]["gateway"]["endpoint"] = self.gateway.endpoint
         cfg["state_file"] = os.path.join(self.dir, f"calls-{name}.json")
+        cfg["spend"]["state_file"] = os.path.join(self.dir, f"spend-{name}.json")
         if caps is not None:
             cfg["caps"] = caps
         # The shape assertion. `_format` is documentation, not format.
@@ -120,6 +189,8 @@ class Bench:
         path = os.path.join(self.dir, f"config-{name}.json")
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(cfg, fh, indent=2)
+        if initialize_spend:
+            SpendGovernor.initialize(cfg["spend"]["state_file"])
         return path
 
     def counter(self, config_path: str) -> dict:
@@ -138,7 +209,8 @@ class Bench:
 
 def ask(config_path: str, req: dict) -> tuple[dict, str]:
     """Drive helper.py exactly as systemd does: one line in, one line out."""
-    env = dict(os.environ, HOMELAB_MODEL_HELPER_CONFIG=config_path)
+    env = dict(os.environ, HOMELAB_MODEL_HELPER_CONFIG=config_path,
+               CREDENTIALS_DIRECTORY=os.path.join(os.path.dirname(config_path), "credentials"))
     proc = subprocess.run(
         [sys.executable, HELPER],
         input=json.dumps(req) + "\n",
@@ -158,7 +230,8 @@ def base_ask(**extra) -> dict:
 
 
 def main() -> int:
-    b = Bench()
+    gateway = FakeGateway()
+    b = Bench(gateway)
     print(f"bench {b.dir}")
     print(f"example {EXAMPLE}")
 
@@ -293,6 +366,230 @@ def main() -> int:
     else:
         report("FAIL", "test 5: owner ask from the reserve", f"reply={reply}")
 
+    # ---- Phase 15.1 brief §8 rows 1--8: fake gateway + governor ---------
+    def read_cfg(path: str) -> dict:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def write_cfg(path: str, cfg: dict) -> None:
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(cfg, fh, indent=2)
+
+    def utility(*, unattended: bool = False) -> dict:
+        return base_ask(role="utility", unattended=unattended,
+                        request_id="1" * 32)
+
+    # Rows 1 and 2. Each target window is the first low ceiling in the fixed
+    # hour -> day -> week -> month check order; the positive control raises
+    # only that ceiling and sends the identical request.
+    for unattended in (False, True):
+        kind = "unattended" if unattended else "attended"
+        for window in ("hour", "day", "week", "month"):
+            path = b.config(f"row-{1 if not unattended else 2}-{window}")
+            cfg = read_cfg(path)
+            for w in ("hour", "day", "week", "month"):
+                cfg["spend"]["budgets"][kind][w] = "1.00"
+            cfg["spend"]["budgets"][kind][window] = "0"
+            write_cfg(path, cfg)
+            before = len(gateway.requests)
+            refused, _ = ask(path, utility(unattended=unattended))
+            no_call = len(gateway.requests) == before
+            named = window in " ".join(refused.get("detail", []) or [])
+            cfg["spend"]["budgets"][kind][window] = "1.00"
+            write_cfg(path, cfg)
+            passed, _ = ask(path, utility(unattended=unattended))
+            if refused.get("ok") is False and no_call and named and passed.get("ok"):
+                report("ok", f"row {1 if not unattended else 2}: {kind} {window} refusal + positive control",
+                       f"refusal={refused.get('detail')} raised ceiling -> ok")
+            else:
+                report("FAIL", f"row {1 if not unattended else 2}: {kind} {window}",
+                       f"refused={refused} no_call={no_call} passed={passed}")
+
+    # Row 3: the two money budgets are independent.
+    independent = b.config("row-3")
+    cfg = read_cfg(independent)
+    cfg["spend"]["budgets"]["unattended"]["hour"] = "0"
+    write_cfg(independent, cfg)
+    denied, _ = ask(independent, utility(unattended=True))
+    owner, _ = ask(independent, utility(unattended=False))
+    if denied.get("ok") is False and owner.get("ok"):
+        report("ok", "row 3: unattended exhausted; attended call passes",
+               f"unattended={denied.get('detail')} attended={owner.get('cost')}")
+    else:
+        report("FAIL", "row 3: budget independence", f"unattended={denied} attended={owner}")
+
+    # Row 4: absence, malformed JSON and unreadable state each refuse before
+    # the fake gateway. The positive claim is the request count, not an error.
+    row4_cases = []
+    for case in ("absent", "malformed", "unreadable"):
+        path = b.config(f"row-4-{case}", initialize_spend=False)
+        state = read_cfg(path)["spend"]["state_file"]
+        if case == "malformed":
+            with open(state, "w", encoding="utf-8") as fh:
+                fh.write("not-json\n")
+        elif case == "unreadable":
+            SpendGovernor.initialize(state)
+            os.chmod(state, 0)
+        before = len(gateway.requests)
+        reply, _ = ask(path, utility())
+        if case == "unreadable":
+            os.chmod(state, 0o600)
+        row4_cases.append(reply.get("kind") == "governor_unavailable"
+                          and len(gateway.requests) == before)
+    if all(row4_cases):
+        report("ok", "row 4: absent/malformed/unreadable ledger fail closed",
+               "kind=governor_unavailable each; fake requests +0")
+    else:
+        report("FAIL", "row 4: ledger failures", f"cases={row4_cases}")
+
+    # Row 5: persist a reservation without settling (the helper-kill state),
+    # prove it blocks, age it beyond RuntimeMaxSec, then prove automatic release.
+    persisted = b.config("row-5")
+    cfg = read_cfg(persisted)
+    model = cfg["providers"]["gateway"]["models"]["luna"]
+    amount = maximum_cost(len("Context:\nfixture\n\nQuestion:\nfixture question".encode())
+                          + CHAT_ENVELOPE_TOKEN_ALLOWANCE,
+                          model["max_output_tokens"], model["price"])
+    for w in cfg["spend"]["budgets"]["attended"]:
+        cfg["spend"]["budgets"]["attended"][w] = str(amount)
+    write_cfg(persisted, cfg)
+    gov = SpendGovernor(cfg["spend"]["state_file"],
+                        cfg["spend"]["budgets"],
+                        cfg["spend"]["reservation_timeout_seconds"])
+    reserved = gov.reserve(route="utility", provider="gateway", model="luna",
+                           unattended=False, amount=amount, request_id="2" * 32)
+    before = len(gateway.requests)
+    blocked, _ = ask(persisted, utility())
+    ledger = json.load(open(cfg["spend"]["state_file"], encoding="utf-8"))
+    ledger["calls"][0]["ts"] = time.time() - 271
+    with open(cfg["spend"]["state_file"], "w", encoding="utf-8") as fh:
+        json.dump(ledger, fh)
+    passed, err = ask(persisted, utility())
+    if reserved[0] and blocked.get("ok") is False and len(gateway.requests) == before + 1 \
+            and passed.get("ok") and "stale reservation released" in err:
+        report("ok", "row 5: reservation persists and stale reservation releases",
+               "fresh blocked with fake +0; aged reservation logged; next call passed")
+    else:
+        report("FAIL", "row 5: persistent reservation", f"blocked={blocked} passed={passed} err={err}")
+
+    # Row 6: config-load refusal names both the model and missing/bad field.
+    bad_price = b.config("row-6-price")
+    cfg = read_cfg(bad_price)
+    del cfg["providers"]["gateway"]["models"]["luna"]["price"]["cache_write"]
+    write_cfg(bad_price, cfg)
+    reply, err = ask(bad_price, utility())
+    price_named = (not reply.get("ok") and "models.luna.price.cache_write" in err)
+    bad_vendor = b.config("row-6-vendor")
+    cfg = read_cfg(bad_vendor)
+    cfg["providers"]["gateway"]["models"]["luna"]["id"] = "not-approved/model"
+    write_cfg(bad_vendor, cfg)
+    reply, err = ask(bad_vendor, utility())
+    vendor_named = (not reply.get("ok") and "models.luna.id vendor" in err)
+    if price_named and vendor_named:
+        report("ok", "row 6: incomplete price and unapproved vendor fail config load",
+               "both errors name gateway/luna and the failing field")
+    else:
+        report("FAIL", "row 6: registry validation",
+               f"price_named={price_named} vendor_named={vendor_named}")
+
+    # Row 7: an HTTP 429 is exhausted, and neither reservation remains.
+    row7 = b.config("row-7")
+    gateway.status = 429
+    before = len(gateway.requests)
+    reply, _ = ask(row7, utility())
+    cfg = read_cfg(row7)
+    spend_state = json.load(open(cfg["spend"]["state_file"], encoding="utf-8"))
+    count_state = b.counter(row7)
+    released = (spend_state["calls"] and spend_state["calls"][-1]["status"] == "released")
+    count_released = not count_state.get("gateway")
+    if reply.get("kind") == "exhausted" and len(gateway.requests) == before + 1 \
+            and released and count_released:
+        report("ok", "row 7: HTTP 429 releases count and money reservations",
+               "kind=exhausted; ledger status=released; count entry absent")
+    else:
+        report("FAIL", "row 7: reservation release",
+               f"reply={reply} released={released} count={count_state}")
+
+    row7_auth = b.config("row-7-auth")
+    gateway.status = 401
+    reply, _ = ask(row7_auth, utility())
+    cfg = read_cfg(row7_auth)
+    auth_state = json.load(open(cfg["spend"]["state_file"], encoding="utf-8"))
+    if reply.get("kind") == "provider_error" \
+            and auth_state["calls"][-1]["status"] == "released":
+        report("ok", "provider errors: HTTP 401 is distinct from HTTP 429",
+               "401 kind=provider_error; 429 kind=exhausted; both released")
+    else:
+        report("FAIL", "provider errors: HTTP 401 distinction", f"reply={reply}")
+
+    row7_uncertain = b.config("row-7-uncertain")
+    gateway.status = 500
+    reply, _ = ask(row7_uncertain, utility())
+    cfg = read_cfg(row7_uncertain)
+    uncertain_state = json.load(open(cfg["spend"]["state_file"], encoding="utf-8"))
+    uncertain_count = b.counter(row7_uncertain)
+    if reply.get("kind") == "error" \
+            and uncertain_state["calls"][-1]["status"] == "settled" \
+            and uncertain_state["calls"][-1]["settled_usd"] \
+            == uncertain_state["calls"][-1]["reserved_usd"] \
+            and uncertain_count.get("gateway"):
+        report("ok", "uncertain HTTP failure retains count and settles maximum",
+               "HTTP 500 kind=error; reservation settled at maximum")
+    else:
+        report("FAIL", "uncertain HTTP failure settlement",
+               f"reply={reply} ledger={uncertain_state} count={uncertain_count}")
+
+    # Authorized S2 diagnostic: retain only the gateway's bounded type/code
+    # identifiers. Neither free-text message nor param may reach the journal.
+    diagnostic = b.config("gateway-error-diagnostic")
+    success_payload = gateway.payload
+    message_sentinel = "SYNTHETIC-MESSAGE-MUST-NOT-REACH-JOURNAL"
+    param_sentinel = "SYNTHETIC-PARAM-MUST-NOT-REACH-JOURNAL"
+    gateway.status = 403
+    gateway.payload = {
+        "error": {
+            "type": "access_denied",
+            "code": "insufficient_credits",
+            "message": message_sentinel,
+            "param": param_sentinel,
+        }
+    }
+    reply, err = ask(diagnostic, utility())
+    safe_metadata = "gateway_error_type=access_denied" in err \
+        and "gateway_error_code=insufficient_credits" in err
+    content_absent = message_sentinel not in err and param_sentinel not in err \
+        and message_sentinel not in json.dumps(reply) \
+        and param_sentinel not in json.dumps(reply)
+    if reply.get("kind") == "error" and safe_metadata and content_absent:
+        report("ok", "gateway error diagnostic logs only type/code",
+               "synthetic message and param absent from journal and reply")
+    else:
+        report("FAIL", "gateway error diagnostic redaction",
+               f"reply={reply} safe_metadata={safe_metadata} content_absent={content_absent}")
+
+    # Row 8: exact request-body capture. Luna's reasoning=none is represented
+    # by omitting the optional reasoning object; no provider/model is caller data.
+    gateway.status = 200
+    gateway.payload = success_payload
+    gateway.requests.clear()
+    row8 = b.config("row-8")
+    reply, _ = ask(row8, utility())
+    captured = gateway.requests[-1] if gateway.requests else {}
+    fields_exact = set(captured) == {
+        "model", "messages", "max_tokens", "providerOptions"
+    }
+    pin_exact = captured.get("providerOptions") == {
+        "gateway": {"only": ["openai"]}
+    }
+    serialized = json.dumps(captured).lower()
+    host_data_absent = not any(x in serialized for x in
+                               ("/etc/", "/home/", ".service", "hostname"))
+    if reply.get("ok") and fields_exact and pin_exact and host_data_absent:
+        report("ok", "row 8: fake gateway request body captured exactly",
+               json.dumps(captured, separators=(",", ":")))
+    else:
+        report("FAIL", "row 8: request body", f"reply={reply} body={captured}")
+
     # ---- Old config format is refused, not guessed ------------------------
     old = os.path.join(b.dir, "config-phase09.json")
     with open(old, "w", encoding="utf-8") as fh:
@@ -308,6 +605,7 @@ def main() -> int:
     else:
         report("FAIL", "Phase 09 config shape", f"reply={reply}")
 
+    gateway.close()
     failed = [n for s, n in results if s != "ok"]
     print()
     if failed:

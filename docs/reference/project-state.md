@@ -27,7 +27,21 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 13.1 — Agent operator access (**complete**, 2026-09-13). **The executor runs
+- **Current phase:** 15.1 — The metered provider and the spend governor (**complete**, 2026-09-13).
+  **Metered access exists and costs are no longer zero.** The Vercel AI Gateway is reached by
+  `GatewayProvider` with a key under `LoadCredential=` (root, `0600`, revocable in one click —
+  revoked and replaced during the phase); one route, `utility` → `openai/gpt-5.6-luna`; `/ask` and
+  the endpoint's `execution-agent` route stay on the subscriptions, free. **The governor exists and
+  is proved on the node**: refusal before egress in every window, attended/unattended independent,
+  fail-closed twice for real (a 403 and a 400 each settled at the reserved maximum), persistent,
+  releasing on provider refusal. **Reconciled to the dashboard to nine decimals: $0.0000422** for
+  four provider-reaching calls; the ledger's fail-closed total (`$0.002615850`) is shown beside it.
+  ADR-033's holding check re-run and passing; ADR-046 row 7 OBSERVED; ADR-049 §4 amended — *a step
+  that spends money is OWNER-fired even when AGENT-runnable* (the permission layer refused the
+  executor's paying call; the owner fired the staged script). Debts to Phase 15 by name: the 400
+  mapping, price drift. **Phase 23.1 is next** (ADR-045 order). Handover:
+  [`15.1-gateway-and-spend-governor-handover.md`](../handovers/15.1-gateway-and-spend-governor-handover.md).
+- **Previous phase:** 13.1 — Agent operator access (**complete**, 2026-09-13). **The executor runs
   the node's routine steps itself.** `homelab-agent` (uid 994): its own key, `ssh homelab-agent`,
   `/bin/bash`, no password, own group only, `AllowUsers aleix homelab-agent`; `/etc/sudoers.d/homelab-agent`
   is a `NOPASSWD` **list** of 172 entries — sudo-rs allows no wildcard inside an argument, which the
@@ -36,9 +50,9 @@
   and credential path denied by name. Sixteen rows OBSERVED; **row 12 by the executor in its own
   session**, including the refused `cat gateway-key`. Backup PASS with the two new paths. Runbooks
   are now AGENT/OWNER (`service-security-baseline.md` §7); landing a sudoers file has its own row in
-  `safe-changes-headless.md`. **Phase 15.1 resumes at S3**, its runbook rewritten in that form.
+  `safe-changes-headless.md`. Phase 15.1 resumed at S3 with its runbook rewritten in that form.
   Handover: [`13.1-agent-operator-access-handover.md`](../handovers/13.1-agent-operator-access-handover.md).
-- **Previous phase:** 23.0 — The endpoint (**complete**, 2026-09-13). `homelab-harness.service` — its
+- **Before that:** 23.0 — The endpoint (**complete**, 2026-09-13). `homelab-harness.service` — its
   own account on `127.0.0.1:8766`, the eighth socket, score 1.3, up after a locked reboot. Layer 1
   attaches origin and refuses identity claims by name; layer 2 classifies deterministically into four
   classes and serves one; layer 9 forwards with `role` as the only routing key and writes a

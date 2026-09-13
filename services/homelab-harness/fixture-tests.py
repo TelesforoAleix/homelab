@@ -179,7 +179,8 @@ class Bench:
         cfg = copy.deepcopy(self.helper_example)
         cfg.pop("_format", None)
         for entry in cfg["providers"].values():
-            entry["bin"] = self.stub_cli
+            if "bin" in entry:
+                entry["bin"] = self.stub_cli
             if unattended is not None:
                 entry["unattended"] = unattended
         cfg["state_file"] = os.path.join(self.dir, f"calls-{name}.json")

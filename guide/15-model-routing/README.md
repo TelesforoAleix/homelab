@@ -4,6 +4,13 @@
 the closing sections after the live tests. Brief:
 [`docs/handovers/15.0-model-registry.md`](../../docs/handovers/15.0-model-registry.md).
 
+## Phase 15.1 — metered provider and spend governor
+
+Lives in its own guide: [`guide/15.1-gateway-and-spend-governor/`](../15.1-gateway-and-spend-governor/README.md)
+— the approved serving-provider control, the governor and the tests that proved it on the node,
+`/spend`, weekly reconciliation, key rotation, and what the first metered calls cost. Complete
+2026-09-13.
+
 ## What we are trying to achieve
 
 Today the model helper knows exactly two models, one per provider, both hardcoded in

@@ -1,10 +1,13 @@
 {
-  "_format": "Phase 15.0 registry. Copy to /etc/homelab-model-helper/config.json (root:root 0644). The helper REFUSES the Phase 09 shape (providers as a list) rather than guessing.",
+  "_format": "Phase 15.1 registry. Copy to /etc/homelab-model-helper/config.json (root:root 0644). Models and prices are configuration; callers select only a route. A route's summed provider timeouts plus 30 seconds must not exceed RuntimeMaxSec=270.",
+
+  "providers_approved": ["anthropic-cli", "openai-cli", "vercel-ai-gateway:openai"],
 
   "providers": {
     "claude": {
       "bin": "/home/aleix/.local/bin/claude",
       "unattended": true,
+      "metered": false,
       "models": {
         "haiku": { "id": "haiku", "note": "cheapest tier on Claude Pro; alias undocumented in --help but functional" }
       }
@@ -12,22 +15,60 @@
     "codex": {
       "bin": "/home/aleix/.local/bin/codex",
       "unattended": true,
+      "metered": false,
       "models": {
         "mini": { "id": "gpt-5.6-luna", "note": "the subscription's mini tier; gpt-5.4-mini is refused on a ChatGPT account" }
+      }
+    },
+    "gateway": {
+      "endpoint": "https://ai-gateway.vercel.sh/v1/chat/completions",
+      "credential": "gateway-key",
+      "unattended": true,
+      "metered": true,
+      "timeout_seconds": 60,
+      "models": {
+        "luna": {
+          "id": "openai/gpt-5.6-luna",
+          "reasoning": "none",
+          "max_output_tokens": 1024,
+          "price": { "input": "0.20", "output": "1.20", "cache_read": "0.02", "cache_write": "0.25" },
+          "price_observed": "2026-09-13",
+          "note": "utility route; published OpenAI serving-provider rates per million tokens"
+        },
+        "sol": {
+          "id": "openai/gpt-5.6-sol",
+          "reasoning": "high",
+          "max_output_tokens": 1024,
+          "price": { "input": "2.00", "output": "10.00", "cache_read": "0.20", "cache_write": "2.50" },
+          "price_observed": "2026-09-13",
+          "note": "registered but not routed; published OpenAI serving-provider rates per million tokens, matching the per-request provider pin"
+        }
       }
     }
   },
 
   "routes": {
-    "owner-interactive": ["claude/haiku", "codex/mini"]
+    "owner-interactive": ["claude/haiku", "codex/mini"],
+    "execution-agent": ["claude/haiku", "codex/mini"],
+    "utility": ["gateway/luna"]
   },
   "default_route": "owner-interactive",
 
-  "_caps": "Per provider, keyed on the provider name, one count each (Phase 09). owner_reserve is the floor of ADR-026 §6: unattended calls stop at per_x - owner_reserve.per_x of the SAME per-provider count; the last owner_reserve calls belong to the owner. Half, by choice: tune here, not in code.",
+  "_caps": "Per subscription provider, one count each. owner_reserve is the ADR-026 owner floor: unattended calls stop at per_x - owner_reserve.per_x of the same count.",
   "caps": {
     "per_hour": 6,
     "per_day": 30,
     "owner_reserve": { "per_hour": 3, "per_day": 15 }
+  },
+
+  "_spend": "USD rolling windows, attended and unattended independently. The ledger must be explicitly initialized by the installer; a missing or malformed ledger fails closed.",
+  "spend": {
+    "state_file": "/var/lib/homelab-model-helper/spend.json",
+    "reservation_timeout_seconds": 270,
+    "budgets": {
+      "attended": { "hour": "0.25", "day": "1.00", "week": "4.00", "month": "8.00" },
+      "unattended": { "hour": "0.10", "day": "0.40", "week": "1.50", "month": "3.00" }
+    }
   },
 
   "state_file": "/var/lib/homelab-model-helper/calls.json",

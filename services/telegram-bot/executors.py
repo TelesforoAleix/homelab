@@ -139,6 +139,28 @@ def _uptime(_args: list[str]) -> str:
     return f"uptime: {host_uptime()}\nload:   {host_load()}"
 
 
+def _spend(_args: list[str], user_id: int) -> str:
+    reply = model_client.spend(user_id)
+    if not reply.get("ok"):
+        return f"Could not read spend: {reply.get('message', 'the model helper failed')}"
+    snapshot = reply.get("spend")
+    if not isinstance(snapshot, dict):
+        return "Could not read spend: malformed helper reply"
+    lines = ["Metered spend (USD, rolling windows):"]
+    try:
+        for kind in ("attended", "unattended"):
+            lines.append(f"{kind}:")
+            for window in ("hour", "day", "week", "month"):
+                item = snapshot[kind][window]
+                lines.append(
+                    f"  {window:<5} ${item['spent_usd']} / ${item['ceiling_usd']}"
+                )
+        lines.append(f"metered calls this week: {snapshot['week_ledger_count']}")
+    except (KeyError, TypeError):
+        return "Could not read spend: malformed helper reply"
+    return "\n".join(lines)
+
+
 # --------------------------------------------------------------------------
 # PRIVILEGED executor
 # --------------------------------------------------------------------------
@@ -333,6 +355,9 @@ def register_all(router, *, allowed_units: set[str], log) -> None:
                              "root filesystem usage"))
     router.register(Executor("/uptime", Capability.READ, _uptime,
                              "uptime and load average"))
+    router.register(Executor("/spend", Capability.READ, _spend,
+                             "metered spend and ceilings",
+                             wants_user=True))
     router.register(make_restart(allowed_units, log))
     # /ask carries wants_user because the audit record of a call that spends
     # the owner's subscription allowance must name who asked for it, and

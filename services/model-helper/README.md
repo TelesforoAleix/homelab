@@ -12,9 +12,10 @@ over a UNIX socket.
 
 | File | Role |
 |---|---|
-| `helper.py` | The socket handler. Two operations: `ping`, `ask`. Not a shell. |
-| `providers.py` | The provider abstraction plus Claude and Codex implementations |
-| `limits.py` | Per-hour and per-day call caps, file-backed, `flock`-protected; the owner reserve (15.0) |
+| `helper.py` | The socket handler. Three operations: `ping`, `ask`, `spend`. Not a shell. |
+| `providers.py` | The provider abstraction plus Claude, Codex and AI Gateway implementations |
+| `limits.py` | Per-hour and per-day call caps, file-backed, `flock`-protected; releasable reservations |
+| `spend.py` | Four-window attended/unattended money governor and content-free ledger |
 | `config.example.json` | The registry. Copy to `/etc/homelab-model-helper/config.json` |
 | `fixture-tests.py` | Proves the refusals against a fixture and a stub CLI; no allowance spent (15.0) |
 
@@ -48,8 +49,9 @@ Request — one JSON object, one line, then EOF:
 Since Phase 15.0, `ask` also accepts — all optional, all validated —
 `role` (the routing key; absent means the config's `default_route`),
 `unattended` (default `false`), `summary` (≤ 200 chars, logged as a length),
-and the hints `priority`, `severity`, `complexity` (closed enums, logged,
-never selecting). **Any other field is refused by name.**
+the hints `priority`, `severity`, `complexity` (closed enums, logged, never
+selecting), and a 32-hex `request_id` minted by the endpoint for correlation.
+**Any other field is refused by name.**
 
 Response — one JSON object, one line:
 
@@ -64,6 +66,10 @@ Response — one JSON object, one line:
 `op: "ping"` proves the socket works **without making a model call**, so the
 install-time connectivity check costs no allowance.
 
+`op: "spend"` reads the governor through the helper. It returns hour, day,
+week and month totals and ceilings for both attended and unattended budgets,
+plus the metered-call count for the rolling week. It makes no model call.
+
 Note what the caller cannot say: it cannot name a provider, a model, a binary,
 a file or a path. All of those come from the root-owned config file. The only
 thing on the wire that selects anything is `role`, and it is a lookup key into
@@ -76,6 +82,40 @@ and it receives the key alone.
 |---|---|---|
 | Claude | `haiku` | Cheapest tier. Works on Claude Pro; the alias is undocumented in `--help` but functional |
 | Codex | `gpt-5.6-luna` | The subscription's mini tier. The binary's own catalogue records it as the replacement for **GPT-5.4 Mini** |
+| Gateway | `openai/gpt-5.6-luna` | The only `utility` route; metered and governed before every call |
+
+`openai/gpt-5.6-sol` is also registered, with a complete price entry, but no
+route reaches it in Phase 15.1. Adding a registered model does not make it
+callable; a route is the sole selector.
+
+## Metered calls and the ledger
+
+The order is shape → route → eligibility → count reservation → money
+reservation → provider. A count refusal never touches money. A money refusal
+releases its count reservation. HTTP 429 and 401 are provider refusals and
+release both; an ambiguous transport failure settles at the reserved maximum
+because the provider might have completed the billed work.
+
+`spend.json` is created only by an explicit installer step. Missing, unreadable
+or malformed state refuses with `kind: governor_unavailable`; the helper never
+recreates it and silently resets a window. Each item in `calls` has this schema:
+
+```text
+ts, reservation_id, request_id, route, provider, model, budget,
+usage.{input,output,cache_read,cache_write}, reserved_usd, settled_usd,
+status, completed_ts, window_totals_after
+```
+
+Optional fields are `gateway_cost_usd`, `release_reason`, and `settle_note`.
+There is no question, context, answer, credential, hostname, path or unit name.
+Money is stored as decimal strings to nine places.
+
+The maximum reservation charges the UTF-8 byte length of the exact message plus
+a 256-token allowance for the provider-created chat envelope, at the dearer of
+input/cache-read/cache-write rates, then adds all configured output tokens at
+the output rate. Actual usage settles uncached input, output, cache read and
+cache write independently. A response missing usage settles at the reserved
+maximum and emits a warning.
 
 `gpt-5.4-mini` is in the CLI's embedded model catalogue but is **rejected** on a
 ChatGPT account: *"The 'gpt-5.4-mini' model is not supported when using Codex

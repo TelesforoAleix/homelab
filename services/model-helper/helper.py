@@ -22,7 +22,8 @@ access to /home/aleix. `id homelab-bot` is unchanged by this phase.
 
 The socket is the entire attack surface, so it is deliberately tiny:
 
-  IT IS NOT A SHELL. Two operations, `ping` and `ask`. `ask` takes a string and
+  IT IS NOT A SHELL. Three operations: `ping`, `ask`, and the read-only
+  `spend`. `ask` takes a string and
   returns a string. There is no operation that names a file, a command, a model,
   a provider or a path -- the caller cannot choose ANY of those. Everything the
   CLI is invoked with comes from a root-owned config file, never from the wire.
@@ -71,11 +72,14 @@ import os
 import re
 import sys
 import time
+from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from limits import Limiter          # noqa: E402
 from providers import BY_NAME       # noqa: E402
+from spend import (GovernorUnavailable, SpendGovernor, maximum_cost, money,
+                   money_text)      # noqa: E402
 
 CONFIG = os.environ.get("HOMELAB_MODEL_HELPER_CONFIG",
                         "/etc/homelab-model-helper/config.json")
@@ -107,7 +111,9 @@ MAX_SUMMARY_CHARS = 200
 # wire protocol is exactly where "the caller cannot name a program" would be
 # lost by accident, and a rejected field is louder than an ignored one.
 ASK_FIELDS = frozenset({"v", "op", "user_id", "question", "context",
-                        "role", "unattended", "summary", *HINTS})
+                        "role", "unattended", "summary", "request_id", *HINTS})
+REQUEST_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+PRICE_FIELDS = ("input", "output", "cache_read", "cache_write")
 
 
 def load_config() -> dict:
@@ -134,19 +140,14 @@ def load_config() -> dict:
             raise ValueError(f"config: unknown provider {name!r} (adding a provider is code)")
         if not isinstance(entry, dict):
             raise ValueError(f"config: providers.{name} must be an object")
-        if not entry.get("bin") or not os.path.isabs(str(entry["bin"])):
-            raise ValueError(f"config: providers.{name}.bin must be an absolute path")
+        BY_NAME[name].validate_entry(name, entry)
         if not isinstance(entry.get("unattended"), bool):
             raise ValueError(f"config: providers.{name}.unattended must be true or false")
-        # Reserved for Phase 15.1. Their PRESENCE is refused: the governor that
-        # makes a metered provider safe (ADR-033 §5) does not exist here, and a
-        # field that appears to work and does nothing is how a paid call
-        # happens without one. 15.1 removes this in the commit that ships the
-        # governor, not before.
-        for reserved in ("metered", "credential"):
-            if reserved in entry:
-                raise ValueError(f"config: providers.{name}.{reserved} is not supported "
-                                 "before Phase 15.1 (no spend governor exists)")
+        if not isinstance(entry.get("metered", False), bool):
+            raise ValueError(f"config: providers.{name}.metered must be true or false")
+        timeout = entry.get("timeout_seconds", cfg.get("timeout_seconds", 120))
+        if not isinstance(timeout, int) or isinstance(timeout, bool) or timeout <= 0:
+            raise ValueError(f"config: providers.{name}.timeout_seconds must be a positive integer")
         models = entry.get("models")
         if not isinstance(models, dict) or not models:
             raise ValueError(f"config: providers.{name}.models must be a non-empty object")
@@ -156,6 +157,55 @@ def load_config() -> dict:
             if not isinstance(model, dict) or not isinstance(model.get("id"), str) \
                     or not model["id"].strip():
                 raise ValueError(f"config: providers.{name}.models.{key}.id must be a string")
+            if entry.get("metered"):
+                price = model.get("price")
+                if not isinstance(price, dict):
+                    raise ValueError(f"config: providers.{name}.models.{key}.price must be an object")
+                for field in PRICE_FIELDS:
+                    if field not in price:
+                        raise ValueError(
+                            f"config: providers.{name}.models.{key}.price.{field} is required")
+                    try:
+                        money(price[field])
+                    except ValueError as exc:
+                        raise ValueError(
+                            f"config: providers.{name}.models.{key}.price.{field} "
+                            "must be a non-negative decimal") from exc
+                observed = model.get("price_observed")
+                try:
+                    date.fromisoformat(observed)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f"config: providers.{name}.models.{key}.price_observed "
+                        "must be a real YYYY-MM-DD date") from exc
+                maximum = model.get("max_output_tokens")
+                if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum <= 0:
+                    raise ValueError(
+                        f"config: providers.{name}.models.{key}.max_output_tokens "
+                        "must be a positive integer")
+                if model.get("reasoning") not in (
+                        None, "none", "provider-default", "minimal", "low", "medium", "high"):
+                    raise ValueError(
+                        f"config: providers.{name}.models.{key}.reasoning is not supported")
+
+    approved = cfg.get("providers_approved")
+    if not isinstance(approved, list) or not approved \
+            or any(not isinstance(v, str) or not v for v in approved) \
+            or len(set(approved)) != len(approved):
+        raise ValueError("config: providers_approved must be a non-empty list of unique strings")
+    for name, entry in providers.items():
+        if entry.get("metered"):
+            for key, model in entry["models"].items():
+                vendor, sep, _ = model["id"].partition("/")
+                required = f"vercel-ai-gateway:{vendor}" if sep else ""
+                if not required or required not in approved:
+                    raise ValueError(
+                        f"config: providers.{name}.models.{key}.id vendor is not approved; "
+                        f"providers_approved requires {required or 'a namespaced vendor'}")
+        else:
+            required = {"claude": "anthropic-cli", "codex": "openai-cli"}.get(name)
+            if required and required not in approved:
+                raise ValueError(f"config: provider {name!r} is not in providers_approved")
 
     routes = cfg.get("routes")
     if not isinstance(routes, dict) or not routes:
@@ -189,6 +239,17 @@ def load_config() -> dict:
 
     if not isinstance(cfg.get("state_file"), str) or not os.path.isabs(cfg["state_file"]):
         raise ValueError("config: 'state_file' must be an absolute path")
+    if any(entry.get("metered") for entry in providers.values()):
+        spend = cfg.get("spend")
+        if not isinstance(spend, dict):
+            raise ValueError("config: 'spend' must be an object when a provider is metered")
+        if not isinstance(spend.get("state_file"), str) \
+                or not os.path.isabs(spend["state_file"]):
+            raise ValueError("config: spend.state_file must be an absolute path")
+        stale = spend.get("reservation_timeout_seconds")
+        if not isinstance(stale, int) or isinstance(stale, bool) or stale <= 0:
+            raise ValueError("config: spend.reservation_timeout_seconds must be a positive integer")
+        SpendGovernor(spend["state_file"], spend.get("budgets"), stale)
     return cfg
 
 
@@ -209,8 +270,14 @@ def resolve_route(cfg: dict, key: str | None) -> tuple[str, list[tuple[str, str]
 
 def build_provider(cfg: dict, pname: str, mkey: str):
     entry = cfg["providers"][pname]
-    timeout = int(cfg.get("timeout_seconds", 120))
-    return BY_NAME[pname](entry["bin"], entry["models"][mkey]["id"], timeout)
+    timeout = int(entry.get("timeout_seconds", cfg.get("timeout_seconds", 120)))
+    return BY_NAME[pname](entry, entry["models"][mkey], timeout)
+
+
+def build_governor(cfg: dict) -> SpendGovernor:
+    spend = cfg["spend"]
+    return SpendGovernor(spend["state_file"], spend["budgets"],
+                         spend["reservation_timeout_seconds"])
 
 
 def read_request() -> dict:
@@ -273,6 +340,10 @@ def handle_ask(req: dict, cfg: dict) -> dict:
         if value not in allowed:
             return _bad(f"bad {hint}")
         hints.append(f"{hint}={value}")
+    request_id = req.get("request_id", "")
+    if request_id != "" and (not isinstance(request_id, str)
+                             or not REQUEST_ID_RE.match(request_id)):
+        return _bad("bad request_id")
     # Logged, and that is the whole of what the hints do. The summary is the
     # caller's prose and is logged as a length, like the question.
     tags = " ".join(hints + [f"summary_len={len(summary)}"])
@@ -311,12 +382,46 @@ def handle_ask(req: dict, cfg: dict) -> dict:
 
     spent: list[str] = []
     for pname, mkey in entries:
-        provider = build_provider(cfg, pname, mkey)
-        allowed, note = limiter.check_and_reserve(provider.name, unattended=unattended)
+        try:
+            provider = build_provider(cfg, pname, mkey)
+        except Exception as exc:  # credential refusal happens before either reservation
+            log(f"ask user={user} route={route} provider={pname} outcome=provider_unavailable "
+                f"reason={type(exc).__name__}")
+            return {"ok": False, "kind": "provider_error",
+                    "provider": pname, "message": "provider unavailable"}
+        allowed, note, count_reservation = limiter.check_and_reserve(
+            provider.name, unattended=unattended)
         if not allowed:
             log(f"ask user={user} route={route} provider={provider.name} outcome=capped")
             spent.append(note)
             continue
+
+        governor = None
+        money_reservation = ""
+        model_cfg = cfg["providers"][pname]["models"][mkey]
+        if cfg["providers"][pname].get("metered"):
+            governor = build_governor(cfg)
+            reserve_amount = maximum_cost(
+                provider.input_token_bound(question, context),
+                model_cfg["max_output_tokens"], model_cfg["price"])
+            try:
+                money_allowed, money_note, money_reservation, stale = governor.reserve(
+                    route=route, provider=pname, model=mkey, unattended=unattended,
+                    amount=reserve_amount, request_id=request_id)
+            except GovernorUnavailable as exc:
+                limiter.release(provider.name, count_reservation)
+                log(f"ask user={user} route={route} provider={pname} "
+                    f"outcome=governor_unavailable reason={exc}")
+                return {"ok": False, "kind": "governor_unavailable",
+                        "message": "spend governor unavailable"}
+            for stale_id in stale:
+                log(f"spend stale reservation released id={stale_id}")
+            if not money_allowed:
+                limiter.release(provider.name, count_reservation)
+                log(f"ask user={user} route={route} provider={pname} outcome=spend_capped")
+                spent.append(money_note)
+                continue
+            note = f"{note}; {money_note}"
 
         started = time.monotonic()
         answer = provider.ask(question, context)
@@ -324,15 +429,67 @@ def handle_ask(req: dict, cfg: dict) -> dict:
 
         # The question itself is NOT logged. It is the owner's own text and the
         # journal is not the place for it; the length is enough to debug with.
+        ledger = None
+        if governor is not None:
+            try:
+                gateway_cost = answer.gateway_cost
+                if gateway_cost is not None:
+                    try:
+                        money(gateway_cost)
+                    except ValueError:
+                        log(f"WARNING gateway cost malformed reservation={money_reservation}; "
+                            "using local token calculation only")
+                        gateway_cost = None
+                if answer.ok and answer.usage is not None:
+                    ledger = governor.settle(money_reservation, answer.usage,
+                                             model_cfg["price"], gateway_cost)
+                    if gateway_cost is not None:
+                        local = money(ledger["settled_usd"])
+                        remote = money(gateway_cost)
+                        if remote and abs(local - remote) / remote > money("0.10"):
+                            log(f"WARNING spend price drift reservation={money_reservation} "
+                                f"local=${money_text(local)} gateway=${money_text(remote)}")
+                elif answer.ok:
+                    log(f"WARNING gateway usage missing reservation={money_reservation}; "
+                        "settling at reserved maximum")
+                    ledger = governor.settle_reserved_maximum(
+                        money_reservation, "successful response missing usage")
+                elif answer.kind in ("exhausted", "provider_error"):
+                    ledger = governor.release(money_reservation,
+                                              f"provider refusal: {answer.kind}")
+                    limiter.release(provider.name, count_reservation)
+                elif answer.usage is not None:
+                    ledger = governor.settle(money_reservation, answer.usage,
+                                             model_cfg["price"], gateway_cost,
+                                             reason="provider response had no usable answer")
+                else:
+                    ledger = governor.settle_reserved_maximum(
+                        money_reservation, "call outcome or charge uncertain")
+            except GovernorUnavailable as exc:
+                log(f"ask user={user} route={route} provider={pname} "
+                    f"outcome=governor_unavailable_after_call reason={exc}")
+                return {"ok": False, "kind": "governor_unavailable",
+                        "message": "spend governor could not settle the call"}
+        elif answer.kind == "exhausted":
+            limiter.release(provider.name, count_reservation)
+
+        gateway_error = ""
+        if answer.gateway_error_type:
+            gateway_error += f" gateway_error_type={answer.gateway_error_type}"
+        if answer.gateway_error_code:
+            gateway_error += f" gateway_error_code={answer.gateway_error_code}"
         log(f"ask user={user} route={route} unattended={str(unattended).lower()} {tags} "
             f"provider={answer.provider} model={answer.model} "
             f"qlen={len(question)} took={took:.1f}s "
-            f"outcome={'ok' if answer.ok else answer.kind} {note}")
+            f"outcome={'ok' if answer.ok else answer.kind}{gateway_error} {note}")
 
         if answer.ok:
             max_a = int(cfg.get("max_answer_chars", 3000))
-            return {"ok": True, "provider": answer.provider,
-                    "model": answer.model, "text": answer.text[:max_a]}
+            result = {"ok": True, "provider": answer.provider,
+                      "model": answer.model, "text": answer.text[:max_a]}
+            if ledger is not None:
+                result["cost"] = ledger["settled_usd"]
+            return result
 
         if answer.kind == "exhausted":
             hint = f" (retry at {answer.retry_hint})" if answer.retry_hint else ""
@@ -340,7 +497,7 @@ def handle_ask(req: dict, cfg: dict) -> dict:
             continue
 
         # A real error is not a reason to spend the other subscription too.
-        return {"ok": False, "kind": "error", "provider": answer.provider,
+        return {"ok": False, "kind": answer.kind or "error", "provider": answer.provider,
                 "message": answer.detail}
 
     return {"ok": False, "kind": "exhausted",
@@ -373,6 +530,22 @@ def main() -> int:
     if op == "ask":
         reply(handle_ask(req, cfg))
         return 0
+    if op == "spend":
+        unknown = set(req) - {"v", "op", "user_id"}
+        if unknown:
+            reply(_bad(f"unknown field {sorted(unknown)[0]!r}"))
+            return 1
+        try:
+            snapshot, stale = build_governor(cfg).snapshot()
+            for stale_id in stale:
+                log(f"spend stale reservation released id={stale_id}")
+            reply({"ok": True, "op": "spend", "spend": snapshot})
+            return 0
+        except (KeyError, GovernorUnavailable) as exc:
+            log(f"spend outcome=governor_unavailable reason={exc}")
+            reply({"ok": False, "kind": "governor_unavailable",
+                   "message": "spend governor unavailable"})
+            return 1
 
     reply({"ok": False, "kind": "error", "message": f"unknown op {op!r}"})
     return 1

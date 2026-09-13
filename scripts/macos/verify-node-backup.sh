@@ -239,6 +239,11 @@ CRITICAL=(
     etc/systemd/system/homelab-harness.service.d/onfailure.conf
     etc/homelab-harness/config.json
     etc/systemd/system/homelab-model-helper@.service.d/runtime.conf
+    # Phase 15.1: the paid credential is intentionally inside this encrypted
+    # secret-material archive; spend.json preserves rolling-window state.
+    etc/homelab-model-helper/gateway-key
+    var/lib/homelab-model-helper/spend.json
+    etc/systemd/system/homelab-model-helper@.service.d/credential.conf
     # Phase 13: matches backup-node.sh, same commit.
     etc/ssh/sshd_config.d/10-homelab-hardening.conf
     etc/ufw/after.rules

@@ -94,6 +94,10 @@ NODE_PATHS=(
     /etc/homelab-model-helper
     /etc/polkit-1/rules.d/50-homelab-bot.rules
     /var/lib/homelab-model-helper
+    # Phase 15.1: those two directory entries now deliberately include
+    # /etc/homelab-model-helper/gateway-key (secret, usable off-node) and
+    # /var/lib/homelab-model-helper/spend.json (governor state). Losing the
+    # latter resets rolling windows, so a restore records its backup time.
     /home/aleix/.claude
     /home/aleix/.codex
     # Without these two a restored node has no network and no way for the owner
@@ -138,6 +142,7 @@ NODE_PATHS=(
     /etc/homelab-harness
     /var/lib/homelab-harness
     /etc/systemd/system/homelab-model-helper@.service.d/runtime.conf
+    /etc/systemd/system/homelab-model-helper@.service.d/credential.conf
     # Phase 13: every /etc file the hardening phase created or changed, plus
     # two that had never been captured -- the Phase 03 sshd drop-in and ufw's
     # rule files (a restored node came back with password auth and no

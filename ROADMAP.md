@@ -368,8 +368,9 @@ runbook convention written into the standard. **Status: Complete (2026-09-13).**
 rows OBSERVED, row 12 by the executor over `ssh homelab-agent`. The grant is an explicit list —
 sudo-rs allows no wildcard inside an argument, which the installer's pre-landing `visudo` proved
 by refusing the first draft before anything landed. The last phase run by owner-paste; from here
-runbooks are AGENT/OWNER. **Phase 15.1 resumes at S3.** Handover:
-`docs/handovers/13.1-agent-operator-access-handover.md`.
+runbooks are AGENT/OWNER. Handover: `docs/handovers/13.1-agent-operator-access-handover.md`.
+**Phase 15.1 resumed at S3 and completed the same day** — see its row under Phase 15 and
+`docs/handovers/15.1-gateway-and-spend-governor-handover.md`. **Phase 23.1 is next.**
 
 ## Phase 14 — Reproducibility / Infrastructure as Code
 
@@ -399,8 +400,8 @@ pieces, in running order:
 | | Scope |
 |---|---|
 | **15.0** | Model registry as configuration; `unattended` eligibility enforced structurally. **Complete 2026-09-13** — refusal proved against a positive control on the node; owner floor; hints logged, never selecting; `/ask` unchanged. Cost nothing. Handover: `docs/handovers/15.0-model-registry-handover.md` |
-| **15.1** | Metered provider integration **and the spend governor, together** — ADR-033 §5 says they ship together or not at all. No metered call is possible before it. **Next after 23.0** (ADR-045 order). **Dependency, stated:** the owner creates the Vercel AI Gateway account and key **before its brief is written** — it is the first phase with money behind it and the key's ADR-046 row is part of its S1. **Inherits from 23.0:** the endpoint's calls count against the caps and will count against the governor; the reservation is not released when a provider returns `exhausted` (a cap slot spent on a non-answer — the governor must release or not reserve); nothing in the endpoint names a provider |
-| **15** | Routing proper: deterministic first, deterministic retained as the fallback, AI-assisted as the target rather than this phase's completion criterion |
+| **15.1** | Metered provider integration **and the spend governor, together** — ADR-033 §5 says they ship together or not at all. **Complete 2026-09-13** — governor proved on the node in every window, fail-closed twice for real, key revoked and replaced, reconciled to the dashboard to nine decimals; **$0.0000422** for the phase. Handover: `docs/handovers/15.1-gateway-and-spend-governor-handover.md`. Debts to 15 by name: map the gateway's pre-inference `invalid_request_error` to a release once its codes are catalogued; price drift. ~~**Next after 23.0** (ADR-045 order).~~ **Dependency, stated:** the owner creates the Vercel AI Gateway account and key **before its brief is written** — it is the first phase with money behind it and the key's ADR-046 row is part of its S1. **Inherits from 23.0:** the endpoint's calls count against the caps and will count against the governor; the reservation is not released when a provider returns `exhausted` (a cap slot spent on a non-answer — the governor must release or not reserve); nothing in the endpoint names a provider |
+| **15** | Routing proper: deterministic first, deterministic retained as the fallback, AI-assisted as the target rather than this phase's completion criterion. **Inherits from 15.1:** the registry with two gateway models and an owner-signed approved-vendor list (each new vendor is a signed line plus a derived pin); the ledger fields for evaluation; the overshoot bound (one reservation, ~$0.0013); the 400-mapping debt; price drift as the standing control gap |
 
 **Cloud inference** is a provider question and belongs here rather than in Phase 16, which is about
 local GPU hardware.
@@ -1013,8 +1014,8 @@ reachable as a system. **It also resolves Phase 20.0's unproved adapter interfac
 second implementation. **Complete 2026-09-13; the interface is proved.**
 
 **6. Phase 15.1 — Gateway and spend governor.** Together, per ADR-033 §5. The first real money.
-**Next.** Before its brief: the owner creates the Vercel AI Gateway account and key (the key's
-ADR-046 row is part of its S1).
+**Complete 2026-09-13.** $0.0000422; the governor proved by refusal, by breaking it, and by
+reconciliation to nine decimals. **23.1 is next.**
 
 **7. Phase 23.1 — Decomposition and service routing.** Where ADR-044's client exposure becomes code.
 

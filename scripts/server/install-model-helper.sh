@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # install-model-helper.sh — Phase 09, ADR-025. Phase 15.0: registry, fixture.
+# Phase 15.1: metered provider, spend governor and editor-entered credential.
 # Phase 23.0 / ADR-048: the socket's consumers are the group homelab-model.
 #
 # Installs the model helper: the service that makes model calls on the bot's
@@ -26,9 +27,8 @@
 #   - homelab-bot's group membership is exactly its own group plus
 #     homelab-model (Phase 09 said "unchanged"; ADR-048 widened it by one,
 #     deliberately, and this is where that is checked)
-#   - (15.0) the eligibility refusal, the unknown-key refusal and the
-#     hints-do-not-select check pass against a fixture, as the helper's own
-#     account, spending no allowance (fixture-tests.py)
+#   - (15.0/15.1) the registry checks and fake-gateway governor rows pass as
+#     the helper's own account, spending no allowance (fixture-tests.py)
 #
 # The sandbox part matters. ProtectSystem=strict mounts / read-only, /run
 # included, and whether connect(2) to a socket on a read-only mount is permitted
@@ -64,7 +64,7 @@ info() { echo "      $*"; }
 
 usage() {
     cat <<'USAGE'
-Usage: install-model-helper.sh <install|verify|group>
+Usage: install-model-helper.sh <install|verify|group|credential>
 
   install   deploy code, config and units, then prove the boundary
   verify    re-run every check without changing anything
@@ -73,10 +73,15 @@ Usage: install-model-helper.sh <install|verify|group>
             SocketGroup=homelab-model, restart the socket AND the bot (a
             running process's groups are fixed at exec), then verify.
             Idempotent. Run this BEFORE install-homelab-harness.sh.
+  credential
+            Open root's editor on a mode-0600 temporary file, then install it
+            as /etc/homelab-model-helper/gateway-key. The key is typed only
+            into the editor: never argv, script stdin or an environment value.
 
 Expects the helper source files in $SRC (default /tmp/homelab-phase09):
-  helper.py providers.py limits.py socket-probe.py fixture-tests.py
+  helper.py providers.py limits.py spend.py socket-probe.py fixture-tests.py
   config.example.json homelab-model-helper.socket homelab-model-helper@.service
+  credential.conf
 
 Phase 15.0: an existing /etc/homelab-model-helper/config.json in the Phase 09
 shape is NOT migrated by this script -- see guide/15-model-routing/s2-runbook.md.
@@ -229,8 +234,49 @@ check_code_not_writable_by_runtime_user() {
     return $bad
 }
 
+check_gateway_credential() {
+    local path="${CONF_DIR}/gateway-key" spec
+    if [[ ! -f "$path" ]]; then
+        echo "UNKNOWN  ${path} does not exist; run '$0 credential' before any gateway call"
+        return 1
+    fi
+    spec=$(stat -c '%U:%G:%a' "$path")
+    if [[ "$spec" == "root:root:600" && -s "$path" ]]; then
+        ok "gateway credential exists, is non-empty and is root:root 0600 (content not read)"
+    else
+        echo "FAIL  gateway credential metadata is ${spec}; expected root:root:600 and non-empty"
+        return 1
+    fi
+    if systemctl show 'homelab-model-helper@probe.service' -p Environment --value \
+            | grep -q 'AI_GATEWAY_API_KEY'; then
+        echo "FAIL  AI_GATEWAY_API_KEY appears in the helper unit environment"
+        return 1
+    fi
+    ok "helper unit environment contains no AI_GATEWAY_API_KEY"
+}
+
+check_spend_ledger() {
+    local path="${STATE_DIR}/spend.json" spec
+    if [[ ! -f "$path" ]]; then
+        echo "UNKNOWN  ${path} does not exist; the governor will fail closed"
+        return 1
+    fi
+    spec=$(stat -c '%U:%G:%a' "$path")
+    if [[ "$spec" != "${OWNER}:${OWNER}:600" ]]; then
+        echo "FAIL  spend ledger is ${spec}, expected ${OWNER}:${OWNER}:600"
+        return 1
+    fi
+    if setpriv --reuid="$OWNER" --regid="$OWNER" --clear-groups \
+         /usr/bin/python3 -c "import json;d=json.load(open('${path}'));assert d.get('version') == 1 and isinstance(d.get('calls'), list)"; then
+        ok "spend ledger schema is readable by ${OWNER} and valid"
+    else
+        echo "FAIL  spend ledger is malformed or unreadable by ${OWNER}"
+        return 1
+    fi
+}
+
 check_fixture_tests() {
-    # Phase 15.0. The eligibility check permits every real call today, so the
+    # Phase 15.0/15.1. The eligibility check permits every subscription call today, so the
     # refusal is proved against a fixture provider set unattended:false, next
     # to a positive control. Run as the helper's own account, from the
     # installed code, with a stub in place of both CLIs: no allowance spent.
@@ -250,8 +296,11 @@ check_fixture_tests() {
     set -e
     rm -rf "$tmp"
     if [[ $rc -eq 0 ]] && grep -q "^All .* checks passed" <<<"$out"; then
-        ok "fixture tests passed as ${OWNER} (refusal, control, no cap, hints, unknown key)"
-        grep -E '^ok +test (1|2|3|11|12):' <<<"$out" | sed 's/ --.*//; s/^/      /'
+        ok "fixture tests passed as ${OWNER} (Phase 15.0 plus Phase 15.1 rows 1-8)"
+        # Print the evidence, not only a summary: S2 must show all fake-gateway
+        # rows on the node before the first paid call is even attempted.
+        grep -E '^ok +(test (1|2|3|11|12):|row [1-8]:|provider errors:|uncertain HTTP)|^All ' \
+            <<<"$out" | sed 's/^/      /'
         return 0
     fi
     if grep -qE '^(ok|FAIL) ' <<<"$out"; then
@@ -292,7 +341,7 @@ check_no_new_listener() {
 
 run_verify() {
     local rc=0
-    echo "=== Model helper — verification (Phase 09 + 15.0) ==="
+    echo "=== Model helper — verification (Phase 09 + 15.0 + 15.1) ==="
     echo
     check_socket_permissions            || rc=1
     check_bot_can_reach_socket          || rc=1
@@ -301,6 +350,8 @@ run_verify() {
     check_model_group                   || rc=1
     check_code_not_writable_by_runtime_user || rc=1
     check_config_is_registry            || rc=1
+    check_gateway_credential            || rc=1
+    check_spend_ledger                  || rc=1
     check_fixture_tests                 || rc=1
     check_no_new_listener
     echo
@@ -315,9 +366,9 @@ run_verify() {
 
 run_install() {
     local f
-    for f in helper.py providers.py limits.py socket-probe.py fixture-tests.py \
+    for f in helper.py providers.py limits.py spend.py socket-probe.py fixture-tests.py \
              config.example.json homelab-model-helper.socket \
-             'homelab-model-helper@.service'; do
+             'homelab-model-helper@.service' credential.conf; do
         [[ -f "${SRC}/${f}" ]] || fail "missing ${SRC}/${f} — scp the helper files first"
     done
 
@@ -344,7 +395,7 @@ run_install() {
     # config.example.json goes beside the code too: fixture-tests.py derives
     # its fixture from it (OBSERVED 2026-09-13: without it, verify said
     # UNKNOWN, correctly). It is the format reference, not the live config.
-    for f in helper.py providers.py limits.py socket-probe.py fixture-tests.py \
+    for f in helper.py providers.py limits.py spend.py socket-probe.py fixture-tests.py \
              config.example.json; do
         install -o root -g root -m 0644 "${SRC}/${f}" "${CODE_DIR}/${f}"
     done
@@ -362,11 +413,22 @@ run_install() {
     # per-connection; creating it here means the first request does not race.
     install -d -o "$OWNER" -g "$OWNER" -m 0700 "$STATE_DIR"
     ok "state directory ${STATE_DIR} owned by ${OWNER}"
+    if [[ ! -e "${STATE_DIR}/spend.json" ]]; then
+        setpriv --reuid="$OWNER" --regid="$OWNER" --clear-groups \
+            /usr/bin/python3 -c "import sys;sys.path.insert(0,'${CODE_DIR}');from spend import SpendGovernor;SpendGovernor.initialize('${STATE_DIR}/spend.json')"
+        ok "initialized empty spend ledger explicitly at ${STATE_DIR}/spend.json"
+    else
+        info "${STATE_DIR}/spend.json exists — left alone"
+    fi
 
     install -o root -g root -m 0644 "${SRC}/homelab-model-helper.socket" \
         "${UNIT_DIR}/homelab-model-helper.socket"
     install -o root -g root -m 0644 "${SRC}/homelab-model-helper@.service" \
         "${UNIT_DIR}/homelab-model-helper@.service"
+    install -d -o root -g root -m 0755 \
+        "${UNIT_DIR}/homelab-model-helper@.service.d"
+    install -o root -g root -m 0644 "${SRC}/credential.conf" \
+        "${UNIT_DIR}/homelab-model-helper@.service.d/credential.conf"
 
     systemctl daemon-reload
 
@@ -387,6 +449,29 @@ run_install() {
     ok "socket unit enabled and started"
     echo
     run_verify
+}
+
+run_credential() {
+    local target="${CONF_DIR}/gateway-key" tmp bak editor
+    install -d -o root -g root -m 0755 "$CONF_DIR"
+    bak="${target}.bak-$(date +%F)"
+    if [[ -f "$target" && ! -f "$bak" ]]; then
+        cp -p "$target" "$bak"
+        ok "previous credential kept at ${bak} (secret material; root-only)"
+    fi
+    tmp=$(mktemp "${CONF_DIR}/.gateway-key.XXXXXX")
+    chmod 0600 "$tmp"
+    chown root:root "$tmp"
+    trap 'rm -f "$tmp"' EXIT
+    editor="${SUDO_EDITOR:-${EDITOR:-nano}}"
+    echo "--> opening ${editor} for the gateway key"
+    echo "    Paste the key into the editor, save, and exit. Do not type it into this script."
+    "$editor" "$tmp"
+    [[ -s "$tmp" ]] || fail "editor left the credential empty; existing credential unchanged"
+    install -o root -g root -m 0600 "$tmp" "$target"
+    rm -f "$tmp"
+    trap - EXIT
+    ok "credential installed at ${target}; content was not printed"
 }
 
 ensure_model_group() {
@@ -444,5 +529,6 @@ case "${1:-}" in
     install) run_install ;;
     verify)  run_verify ;;
     group)   run_group ;;
+    credential) run_credential ;;
     *)       usage; exit 1 ;;
 esac

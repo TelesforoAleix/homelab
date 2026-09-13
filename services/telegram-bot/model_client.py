@@ -109,6 +109,12 @@ def ping(*, socket_path: str = SOCKET_PATH) -> dict:
     return request({"v": 1, "op": "ping"}, socket_path=socket_path, timeout=10.0)
 
 
+def spend(user_id: int, *, socket_path: str = SOCKET_PATH) -> dict:
+    """Read the governor through the helper; the bot gets no ledger path."""
+    return request({"v": 1, "op": "spend", "user_id": user_id},
+                   socket_path=socket_path, timeout=10.0)
+
+
 def ask(question: str, context: str, user_id: int, *,
         socket_path: str = SOCKET_PATH) -> dict:
     return request({"v": 1, "op": "ask", "user_id": user_id,

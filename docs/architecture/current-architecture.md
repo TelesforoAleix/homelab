@@ -118,6 +118,16 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
         StateDirectory on ROOT (audit.jsonl, no content); WantedBy=multi-user.target — up while locked
         LISTENS on 127.0.0.1:8766 only; AF_UNIX for the helper's socket (# WHY); score 1.3 OK
         ──socket──▶ homelab-model-helper as one more capped consumer; holds no credential
+    homelab-model-helper@ — the provider tree since Phase 15.1 (ADR-033 §3):
+        claude/haiku, codex/mini — subscription CLIs, unmetered, count-capped (limits.py)
+        gateway/luna (route `utility` only), gateway/sol (unrouted) — METERED, OUTBOUND HTTPS to
+            ai-gateway.vercel.sh, pinned to the OpenAI serving provider on every request
+        credential: /etc/homelab-model-helper/gateway-key root:root 0600 → LoadCredential=gateway-key
+            (drop-in; score 3.8 unchanged); bot, harness and homelab-agent all denied; revocable in one click
+        ledger: /var/lib/homelab-model-helper/spend.json aleix:aleix 0600 — the spend governor (spend.py):
+            8 rolling windows (hour/day/week/month × attended/unattended), reserve-at-max before egress,
+            settle-at-actual after, FAILS CLOSED when unreadable; proved on the node, reconciled to 9 decimals
+        /spend (Telegram, owner) reads it through op: spend; nothing else reads it over the wire
     homelab-agent (uid 994) — the executor agent's OPERATOR account (Phase 13.1, ADR-049)
         /bin/bash, no password, own group only, runs no unit, holds no credential
         reached by its own key + `ssh homelab-agent` (BatchMode, no tty); sshd AllowUsers aleix homelab-agent
@@ -149,6 +159,7 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | **Escalation grant** | **Active** — polkit, one user / one unit / one verb, plus a second allowlist inside the bot. Zero sudoers entries; `NoNewPrivileges` retained |
 | **Telegram status bot** | **Active** — `homelab-telegram-bot.service`, the project's first service. Read-only, standard library only, never forks a process. Long polling means **no listening socket**; isolation proved by attempted access (ADR-023) |
 | **Model helper** | **Active** — `homelab-model-helper.socket` + templated service. Runs as `aleix` because it must reach the credentials the bot cannot; **cannot see `~/.ssh`** (`InaccessiblePaths`, Phase 13; score 3.8, syscall filter declined after SIGSYS); socket-activated, one process per connection, so nothing holds an OAuth token between requests. Access control is the socket's group and mode, not code (ADR-025). **Since Phase 23.0 the group is `homelab-model`** (ADR-048): members `homelab-bot`, `homelab-harness`; `getent group homelab-model` is the access list. `RuntimeMaxSec=270` via drop-in (the 15.0 debt) |
+| **Metered provider + spend governor** | **Active** — Phase 15.1 (2026-09-13). `GatewayProvider` reaches the Vercel AI Gateway with `urllib`/`ssl` and a key under `LoadCredential=` (`root:root 0600`, not sealed by decision, ADR-046 row 7 — **revoked and replaced end to end**; a deleted key answers 400, not 401). One route, `utility` → `openai/gpt-5.6-luna`; `/ask` and `execution-agent` stay on the subscriptions. The governor (`spend.py`, `spend.json`) reserves at maximum before egress across eight rolling windows, settles at actual usage, keeps attended/unattended apart, persists under `flock`, **fails closed** (twice for real: 403, 400 → settled at maximum). Approved serving providers are an owner-signed list; every request carries `providerOptions.gateway.only`. **Costs are no longer zero: $0.0000422 for the phase**, reconciled to the dashboard to nine decimals. The `homelab-agent` account can replace `config.json` (a ceiling path); the key's $10/week is the backstop |
 | **Model executor** | **Active** — `/ask`, two providers with independent usage limits and automatic fallback, cheapest model by default. **Phase 15.0:** models are a registry in root-owned `config.json` (`providers → models`, `routes`, `default_route`); the caller asks by routing key (`role`, absent → `owner-interactive`), unknown key refused; `unattended` eligibility per provider refused before the cap reservation (proved by fixture); an owner floor on every provider; hints (`priority`, `severity`, `complexity`, `summary`) logged, never selecting; any other field refused by name. The model gets **no tools** (verified with a canary), and its output is never dispatched |
 | **Encrypted data volume** | **Active, locked at boot** — `ubuntu-vg/data` (LUKS2, 128 GiB) → mapper `homelab-data` → ext4, mounted at `/srv/homelab`. Unlocked manually over SSH via `data-volume.sh unlock`; `noauto` in `/etc/crypttab` and `/etc/fstab` keeps boot from waiting on it (ADR-037, Phase 18.1) |
 | **Watchdog / notifier** | **Active** — token via `LoadCredentialEncrypted=` (TPM2-sealed, Phase 13) in both, as in the bot; `homelab-watchdog.timer` (`OnBootSec=90s`, `WantedBy=timers.target`) → `homelab-watchdog.service` (oneshot, `User=homelab-bot`, `SupplementaryGroups=systemd-journal`, `LoadCredential=` on the bot's token, `RestrictAddressFamilies=AF_INET AF_INET6`). Classifies the previous stop from PID 1's journal (`Shutting down.` present → clean, absent → unplanned), computes downtime from `journalctl --list-boots`, reads lock state from `/etc/crypttab` + `findmnt`. `homelab-notify@.service` is the single send primitive and the `OnFailure=` target for the bot (drop-in), the model helper (drop-in) and the watchdog; it has no `OnFailure=` of its own. Three boots observed 2026-09-12: enable, clean reboot, power cut — all reported correctly (Phase 12) |
@@ -193,8 +204,9 @@ as an **accepted judgement with its reasoning**, not as resolved.
 - knowledge/RAG services (Phase 10)
 - ~~automation (Phase 12)~~ — **the scheduler exists** (Phase 12, 2026-09-12) as a systemd timer that
   triggers one oneshot unit; it **cannot reach a model** (`RestrictAddressFamilies` omits `AF_UNIX`)
-  until Phase 15.1's governor lands and a new ADR names it a client (ADR-044 §4). Autonomous model
-  calls are normal in principle (ADR-040); the budget control that makes them safe does not exist yet
+  until a new ADR names it a client (ADR-044 §4). Autonomous model calls are normal in principle
+  (ADR-040); **the budget control that makes them safe exists since Phase 15.1** (the spend
+  governor, proved on the node) — what remains is the client decision
 - voice input (Phase 17 — moved out of Phase 09, see `ROADMAP.md`)
 - ~~alerting or metrics on any service (nothing reports the bot dying)~~ — **closed by Phase 12**
   (2026-09-12): `OnFailure=` on the bot, the model helper and the watchdog pages Telegram on a real
