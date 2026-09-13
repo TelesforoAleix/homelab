@@ -420,8 +420,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
+        # One request per connection. A too_large refusal leaves the body
+        # unread; keeping the connection open would hand the next request a
+        # stream positioned inside the last one. Closing is the simple truth.
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(data)
+        self.close_connection = True
 
     # --- GET: health, no request accepted ---------------------------------
     def do_GET(self) -> None:  # noqa: N802
