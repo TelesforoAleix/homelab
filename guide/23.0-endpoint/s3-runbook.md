@@ -99,8 +99,9 @@ sudo journalctl -u 'homelab-model-helper@*' --since '-10 min' --no-pager -o cat 
 echo "== the question text is in neither audit file (expect 0 and 0) =="
 sudo grep -c 'socket unit and a service unit' /var/lib/homelab-harness/audit.jsonl
 grep -c 'socket unit and a service unit' "$SCRATCH/homelab/ops/audit/audit.jsonl"
-echo "== ...but IS on the run record, where the client put it (expect 1) =="
-grep -c 'socket unit and a service unit' "$SCRATCH/homelab/ops/runs/RUN-2026-0001.json"
+echo "== ...but IS on the client's records: the question on the ticket, the answer on the run (expect 1 and 1) =="
+grep -c 'socket unit and a service unit' "$SCRATCH/homelab/ops/tickets/TICKET-2026-9001.yaml"
+grep -c 'socket unit' "$SCRATCH/homelab/ops/runs/RUN-2026-0001.json"
 echo "== nothing failed =="; systemctl --failed; systemctl is-system-running
 }
 ```
