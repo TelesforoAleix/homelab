@@ -235,21 +235,29 @@ distinctive word from the printed answer and `sudo grep -c '<word>' /var/lib/hom
 
 ## 7 — Row 13: the start limit and the alert (S1, phone)
 
-`Restart=on-failure`, `RestartSec=5`, `StartLimitBurst=5` in 300 s. Five SIGKILLs seven seconds
-apart exhaust the burst; the sixth start is refused, the unit enters `failed`, `OnFailure=` fires.
+`Restart=on-failure`, `RestartSec=5`, `StartLimitBurst=5` in 300 s. **Six** SIGKILLs seven seconds
+apart: the burst allows five restarts, the sixth is refused, the unit enters `failed` with
+`start-limit-hit`, `OnFailure=` fires. (First run used five — OBSERVED 10:58: five alerts, one per
+kill, and the unit came back on its own; five kills is exactly the burst, not over it.)
+
+**What to expect on the phone:** one alert per kill, not one per outage. `OnFailure=` fires on every
+transition into `failed`, and with `Restart=` each crash is one — so a real crash loop pages up to
+six times in ~40 s and then stops, because the start limit stops the restarts. Phase 12 observed the
+same shape on the bot.
 
 ```bash
-# S1 — prints each kill; ~40 s in total
-echo "== killing homelab-harness 5x, 7 s apart (each one restarts until the limit) =="
-for i in 1 2 3 4 5; do
+# S1 — prints each kill; ~45 s in total
+echo "== killing homelab-harness 6x, 7 s apart (the 6th restart hits the limit) =="
+for i in 1 2 3 4 5 6; do
   echo "kill $i at $(date +%T)"; sudo systemctl kill -s SIGKILL homelab-harness.service; sleep 7
 done
 echo "== state (expect: failed, Result: start-limit-hit) =="
-systemctl status homelab-harness.service --no-pager -l | sed -n '1,12p'
+systemctl status homelab-harness.service --no-pager -l | sed -n '1,8p'
+systemctl show -p Result,NRestarts homelab-harness.service
 ```
 
-**Phone:** a Telegram message `Home Lab alert: homelab-harness.service failed.` with five journal
-lines. **Row 13.**
+**Phone:** six `Home Lab alert: homelab-harness.service failed.` messages; the last one's journal
+lines say `start request repeated too quickly` / `Failed with result 'start-limit-hit'`. **Row 13.**
 
 ```bash
 # S1 — recover, and prove the recovery
