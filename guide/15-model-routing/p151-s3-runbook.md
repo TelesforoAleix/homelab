@@ -1,302 +1,449 @@
-# Phase 15.1 — S3 runbook (governor proof and reconciliation)
+# Phase 15.1 — S3 runbook (governor proof and reconciliation), AGENT/OWNER form
 
-One owner session. Every command prints before it can wait. sudo -v is the first sudo operation; there is no piped sudo prompt. This runbook never prints, pastes, or passes the gateway credential. It changes only helper configuration and the local spend ledger, both backed up before mutation and restored at the end.
+Rewritten 2026-09-13 under ADR-049 before it runs. Two blocks, fixed vocabulary
+(`guide/13.1-agent-operator-access/README.md`):
 
-**Class:** ordinary user-space service/configuration work only: no network, remote-access, authentication, boot, firewall, admin-account, volume, reboot, or second-session change.
+- **AGENT** — the executor, over `ssh homelab-agent` (BatchMode, no tty, no password ever). It runs
+  the command, reads its own output, and reports it OBSERVED with the raw lines. The default.
+- **OWNER** — aleix at the keyboard, only for: the ledger and the credential (aleix's file and the
+  editor-opened secret), the Vercel dashboard (read figures; revoke/create the key), and Telegram
+  `/spend`. The executor prints exactly what to do and stops until the paste arrives.
 
-**Real-call budget:** at most **four** real endpoint attempts occur in S3: (1) attended-hour refusal, (2) unattended-hour refusal, (3) revoked-key 401, (4) new-key success. Calls 1 and 2 must be refused before a provider request; calls 3 and 4 can reach the provider. Call 4 deliberately runs with synthetic unattended exhaustion in place, so it also proves attended/unattended independence. All other exercises use the fake-gateway fixture, local config/ledger operations, or /spend; they make no provider request. Record every endpoint attempt below before continuing.
+Anything not on `sudo -l -U homelab-agent` (pasted verbatim in the 13.1 guide) is an OWNER step; the
+agent does not try it. This runbook never prints, pastes, or passes the gateway credential; it
+changes only the helper's `config.json` and the spend ledger, both backed up and both restored.
 
-Terminals: **S1** = ssh homelab; **Phone** = Telegram; **Browser** = AI Gateway dashboard (observation plus owner key revoke/create only).
+**Class:** ordinary user-space service/configuration work — no network, remote-access,
+authentication, boot, firewall, admin-account, volume, reboot, or second-session change.
 
-## 0 — Baseline, rollback, and call ledger (S1, Browser)
+## Names fixed by the grant and by the S2/13.1 state
 
-Browser: record dashboard request count and actual spend before S3. Do not paste a key, account/team identifier, token-bearing URL, or a screenshot containing personal data.
+| Name | Value | Who may touch it |
+|---|---|---|
+| Alias | `ssh homelab-agent` | AGENT |
+| Staging dir | `/tmp/homelab-agent/` (cleared at boot; `mkdir -p` per session) | AGENT |
+| Staged config | `/tmp/homelab-agent/model-helper-config.json` → `sudo -n install -m 644 -o root -g root … /etc/homelab-model-helper/config.json` | AGENT |
+| Helper unit | `homelab-model-helper.socket` — `stop` / `start` / `restart` / `is-active`, one unit per call | AGENT |
+| Agent ledger copy | `/var/lib/homelab-model-helper/spend.json.bak` (`sudo -n cp -p` there; `sudo -n mv` back consumes it) | AGENT |
+| `S3LEDBAK` | `/var/lib/homelab-model-helper/spend.json.bak-2026-09-13-p151-s3` — `aleix:aleix 600`, 1017 bytes, mtime 14:26Z; the pristine post-S2 ledger (two lines), made by the owner at 16:32Z from the draft | OWNER (aleix owns it; no sudo) |
+| `S3CFGBAK` | `/etc/homelab-model-helper/config.json.bak-2026-09-13-p151-s3` — `root:root 644`, 3056 bytes; byte-equal to the repo's `services/model-helper/config.example.json` (OBSERVED: the live file differs from the repo file only in the two hour ceilings) | AGENT restores by installing the repo file |
+| Helper source on the node | `/tmp/homelab-p151/helper/` (S2 staging, still present) — used only by the OWNER credential step | OWNER |
+| Endpoint | `http://127.0.0.1:8766/v1/request`, header `X-Homelab-Client` | AGENT (curl on the node) |
+| Ledger reads | `spend.json` is `aleix:aleix 600`; the agent cannot read it — `/spend` and one OWNER python dump at §9 are the reads | OWNER |
 
-~~~bash
-[ "$(hostname)" = homelab ] || { echo "STOP: not on the node"; false; }
-echo "== refreshing sudo (password prompt follows) =="
-sudo -v
-echo "== baseline health =="
-systemctl --failed
-systemctl is-system-running
-systemctl is-active homelab-model-helper.socket homelab-telegram-bot.service homelab-harness.service
-S3STAMP=$(date +%F)-p151-s3
-S3CFGBAK=/etc/homelab-model-helper/config.json.bak-$S3STAMP
-S3LEDBAK=/var/lib/homelab-model-helper/spend.json.bak-$S3STAMP
-echo "== refusing overwrite of S3 rollback copies =="
-for p in "$S3CFGBAK" "$S3LEDBAK"; do
-  if sudo test -e "$p"; then echo "STOP: already exists: $p"; false; fi
-done
-echo "== stop helper before consistent ledger copy; no request =="
-sudo systemctl stop homelab-model-helper.socket
-sudo systemctl is-active homelab-model-helper.socket && { echo "STOP: socket still active"; false; } || true
-sudo cp -p /etc/homelab-model-helper/config.json "$S3CFGBAK"
-sudo cp -p /var/lib/homelab-model-helper/spend.json "$S3LEDBAK"
-sudo stat -c '%n %U:%G %a %s bytes' "$S3CFGBAK" "$S3LEDBAK"
-echo "== restart helper after backup =="
-sudo systemctl start homelab-model-helper.socket
-systemctl is-active homelab-model-helper.socket
-echo "== PHONE NOW: send /spend; paste all eight figures and standing ceilings =="
-~~~
+**Ledger edits, how.** The orchestrator fixed: helper stopped (AGENT), edit as aleix with no sudo
+(OWNER), agent verifies owner/mode after. The ledger is one compact JSON line; inserting a record
+into it by hand in `nano` is the kind of slip that costs an attempt, so each OWNER edit below is
+the equivalent `python3` heredoc **run as aleix, no sudo, writing the same file in place** (inode,
+owner and mode unchanged). `nano /var/lib/homelab-model-helper/spend.json` remains available to
+the owner for the same edit; the record to insert is the one in the heredoc.
 
-Stop if any unit is failed, either backup cannot be made, or /spend does not show standing figures.
+## State found before this run (OBSERVED 2026-09-13, sudo and helper journals)
+
+The draft of this runbook was run by the owner at 16:32–16:44Z, before 13.1 landed:
+
+- §0 backups exist (`S3CFGBAK`, `S3LEDBAK` above).
+- §1 `verify` ran four times (16:34:35Z, 16:44:14Z, 16:44:21Z, 16:44:27Z); the orchestrator holds
+  rows 1–8 OBSERVED on the node (36/36) — **recorded, not repeated**.
+- §2 lowered **both** hour ceilings to `0.001` (`sudoedit` 16:35Z and 16:37Z); the live config is
+  the repo `config.example.json` with only those two values changed.
+- §3 made three endpoint attempts, all refused on the node, **none** left it:
+
+| Prior attempt | Time (UTC) | Client label | Result |
+|---|---|---|---|
+| P1 | 16:39:48 | `p151-s3-attended-hour` | helper `outcome=spend_capped`; endpoint `outcome=exhausted stage=helper` |
+| P2 | 16:41:28 | `p151-s3-unattended-hour` | `role=utility-unattended` → `outcome=unknown_role` (the draft's bad role; refused before any route or reservation) |
+| P3 | 16:43:03 | `p151-s3-unattended-hour` | `role=utility` → `spend_capped` / `exhausted stage=helper`; whether `"unattended": true` was set is only in the endpoint's audit line (OWNER reads it in §0) |
+
+- §4's three restore+`verify` cycles at 16:44Z left the ledger byte-identical to `S3LEDBAK`. No
+  synthetic record is present. `calls.json` mtime 16:43Z (count reservations released).
+
+**Consequence for the budget:** P1 is call 1 if its refusal names the attended hour; P3 is call 2 if
+its audit line shows `"unattended": true` and the refusal names the unattended hour. Otherwise the
+missing one is re-run **once**. Every attempt, prior or new, is in the table below.
+
+## Attempt ledger (fill as you go)
+
+Provider-reaching calls: **at most 4** — (1) attended-hour refusal, (2) unattended-hour refusal,
+(3) revoked-key 401, (4) new-key success with synthetic unattended exhaustion present. (1), (2) and
+3a are expected to be refused by the governor before any request leaves; they are counted anyway.
+No fifth provider-reaching attempt for any reason.
 
 ~~~text
-S3 real endpoint calls (maximum 4)
-1. attended-hour refusal: [time, result, dashboard unchanged]
-2. unattended-hour refusal: [time, result, dashboard unchanged]
-3. revoked homelab key: [time, 401/provider_error type+code, dashboard result]
-4. new homelab key / attended independence: [time, ok, dashboard result]
+P1  16:39:48Z  attended hour       refused locally (spend_capped)            provider requests 0
+P2  16:41:28Z  bad role            refused locally (unknown_role)            provider requests 0
+P3  16:43:03Z  unattended hour(?)  refused locally (spend_capped)            provider requests 0
+1   attended-hour refusal:      [time, detail line, dashboard count unchanged]   (= P1 if accepted)
+2   unattended-hour refusal:    [time, detail line, dashboard count unchanged]   (= P3 if accepted)
+3a  day refusal (synthetic):    [time, detail line, dashboard count unchanged]
+3   revoked key:                [time, kind/provider_error, type+code, dashboard]
+4   new key + independence:     [time, ok, cost, dashboard +1]
 ~~~
 
-## 1 — Fake proof for rows 1–8 (S1)
+---
 
-The installed fixture is the no-cost proof for reservation, release on 429 (row 7), persist/restart and stale release (row 5), malformed/unreadable ledger refusal, registry validation, and request pin/body restriction. It makes no external call.
+## 0 — Baseline, prior-attempt evidence, dashboard baseline
+
+**AGENT**
 
 ~~~bash
-echo "== node fake-gateway fixture; no external calls =="
-sudo env SRC=/tmp/homelab-p151/helper \
-  bash /tmp/homelab-p151/helper/install-model-helper.sh verify
+ssh homelab-agent 'mkdir -p /tmp/homelab-agent
+hostname; id
+sudo -n systemctl is-system-running
+sudo -n systemctl --failed
+for u in homelab-model-helper.socket homelab-harness.service homelab-telegram-bot.service; do
+  printf "%s " "$u"; sudo -n systemctl is-active "$u"; done
+sudo -n stat -c "%n %U:%G %a %s bytes mtime=%y" \
+  /etc/homelab-model-helper/config.json \
+  /etc/homelab-model-helper/config.json.bak-2026-09-13-p151-s3 \
+  /var/lib/homelab-model-helper/spend.json \
+  /var/lib/homelab-model-helper/spend.json.bak-2026-09-13-p151-s3 \
+  /etc/homelab-model-helper/gateway-key
+sudo -n cat /etc/homelab-model-helper/config.json | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d[\"spend\"][\"budgets\"])); print(d[\"routes\"][\"utility\"])"
+sudo -n journalctl -u "homelab-model-helper@*" --since "2026-09-13 16:30" --no-pager -o short-iso | grep "outcome="
+sudo -n journalctl -u homelab-harness.service --since "2026-09-13 16:30" --no-pager -o short-iso | grep "client=p151-s3"'
 ~~~
 
-Stop unless the verifier passes all its governor checks. It is the proof for row 5 and row 7 without consuming the real-call budget.
+Also, on the Mac: `ssh homelab-agent 'sudo -n cat /etc/homelab-model-helper/config.json' | diff - services/model-helper/config.example.json` → expected: exactly the two `hour` lines.
 
-## 2 — Lower only hour ceilings via backed-up config (S1)
+Stop if any unit is not `active`, the system is not `running`, or `S3LEDBAK`'s size/mtime differ
+from `spend.json`'s.
 
-Show the fields first. In the editor, preserve providers, prices, routes, approved vendor list, and all day/week/month figures. Lower only attended-hour and unattended-hour monetary ceilings below already-accounted ledger spend; record old and temporary values.
+**OWNER** (Browser, Phone, one `ssh homelab` as aleix)
+
+1. Browser: the dashboard's request count and total spend as of now (S2 left: 2 requests,
+   `$0.00001`). Paste both numbers; no key, account id, token-bearing URL, or screenshot.
+2. Phone: `/spend`. Paste all nine lines.
+3. Terminal, as aleix (one sudo, the harness audit file is not aleix's):
+   ~~~bash
+   sudo grep -E '"client_declared": ?"p151-s3-' /var/lib/homelab-harness/audit.jsonl
+   ~~~
+   Paste the three lines (they carry `unattended`, `outcome`, `request_id`; no question text).
+
+## 1 — Rows 1–8: record only
+
+OBSERVED on the node 2026-09-13 16:34Z and 16:44Z ×3, `install-model-helper.sh verify`, 36/36,
+external calls 0 (S2 report + the sudo journal). Not repeated; the fixture command is not on the
+agent's list and the orchestrator has recorded it.
+
+## 2 — Hour ceilings are already lowered
+
+OBSERVED in §0: `attended.hour = 0.001`, `unattended.hour = 0.001`, everything else standing. No
+edit. Note what this proves: the reserve amount for one `utility` call is `$0.001310300` (dearer
+input class + `max_output_tokens`), so with a `$0.001` ceiling the governor refuses at `$0` used —
+`used + amount > ceiling` — which is the same comparison the standing ceilings use at the edge.
+
+## 3 — Calls 1 and 2 (hour, attended then unattended), then standing config back
+
+Decide from §0's audit lines:
+
+- P1's line shows `"role": "utility"`, `"unattended": false`, `"outcome": "exhausted"` → **call 1 =
+  P1**, OBSERVED. The refusal text lives in the helper's `spend_capped` line and the endpoint's
+  `detail`; the endpoint body was not captured then. If the orchestrator wants the `detail` line
+  verbatim, run the AGENT block for call 1 once — it is refused locally and reaches nothing.
+- P3's line shows `"unattended": true` → **call 2 = P3**, OBSERVED, same caveat. If it shows
+  `false`, P3 was a second attended refusal; run the call-2 AGENT block once.
+
+**AGENT — call 1 (only if not accepted from P1)**
 
 ~~~bash
-echo "== show candidate ceiling fields; values only, no credential =="
-sudo python3 -c '
-import json
-d=json.load(open("/etc/homelab-model-helper/config.json"))
-def walk(x,p=""):
-    if isinstance(x,dict):
-        for k,v in x.items(): walk(v,p+"."+k if p else k)
-    elif isinstance(x,list):
-        for i,v in enumerate(x): walk(v,f"{p}[{i}]")
-    elif any(w in p.lower() for w in ("ceiling","limit","hour","attended","unattended")):
-        print(f"{p} = {x!r}")
-walk(d)
-'
-echo "== editor opens next: lower attended-hour and unattended-hour only =="
-sudoedit /etc/homelab-model-helper/config.json
-echo "== parse edited config; no request =="
-sudo python3 -m json.tool /etc/homelab-model-helper/config.json >/dev/null && echo "json syntax ok"
-echo "== restart helper to load temporary hour ceilings =="
-sudo systemctl restart homelab-model-helper.socket
-systemctl is-active homelab-model-helper.socket
-echo "== PHONE NOW: send /spend; confirm temp hour values and unchanged day/week/month =="
+ssh homelab-agent 'M=/tmp/homelab-agent/p151-s3-call1.done; [ -e "$M" ] && { echo "STOP: call 1 already attempted this session"; exit 2; }
+date -u +%FT%TZ | tee "$M"
+curl -sS --max-time 300 -H "X-Homelab-Client: p151-s3-attended-hour" -H "Content-Type: application/json" \
+  -d "{\"v\":1,\"kind\":\"question\",\"role\":\"utility\",\"question\":\"Reply with exactly S3-HOUR-ATTENDED.\"}" \
+  http://127.0.0.1:8766/v1/request; echo
+sudo -n journalctl -u "homelab-model-helper@*" -n 3 --no-pager -o short-iso | grep outcome='
 ~~~
 
-Stop if /spend does not visibly confirm this exact scope.
+Expected: `"ok": false, "kind": "exhausted", "stage": "helper"`, `detail` = `attended hour spend
+ceiling reached ($… + $0.001310300 > $0.001000000)`; helper `outcome=spend_capped`.
 
-## 3 — Two real hour refusals (S1, Phone, Browser)
-
-Record dashboard count/spend before each. Each local endpoint attempt counts as a real call even though the expected governor refusal prevents a provider request. Do not retry either command.
+**AGENT — call 2 (only if not accepted from P3)**
 
 ~~~bash
-echo "== REAL CALL 1 OF 4: attended hour; expect governor refusal, no provider request =="
-curl -sS --max-time 300 \
-  -H 'X-Homelab-Client: p151-s3-attended-hour' \
-  -H 'Content-Type: application/json' \
-  -d '{"v":1,"kind":"question","role":"utility","question":"Reply with exactly S3-HOUR-ATTENDED."}' \
-  http://127.0.0.1:8766/v1/request
-echo
-echo "== STOP: record call 1, refresh dashboard once, then send /spend =="
+ssh homelab-agent 'M=/tmp/homelab-agent/p151-s3-call2.done; [ -e "$M" ] && { echo "STOP: call 2 already attempted this session"; exit 2; }
+date -u +%FT%TZ | tee "$M"
+curl -sS --max-time 300 -H "X-Homelab-Client: p151-s3-unattended-hour" -H "Content-Type: application/json" \
+  -d "{\"v\":1,\"kind\":\"question\",\"role\":\"utility\",\"unattended\":true,\"question\":\"Reply with exactly S3-HOUR-UNATTENDED.\"}" \
+  http://127.0.0.1:8766/v1/request; echo
+sudo -n journalctl -u "homelab-model-helper@*" -n 3 --no-pager -o short-iso | grep outcome='
 ~~~
 
-Expected: refusal names attended hour and its figures; dashboard count/spend unchanged; no new provider cost.
+Expected: `detail` = `unattended hour spend ceiling reached ($0 + $0.001310300 > $0.001000000)`.
+
+**OWNER** after each new call: Browser once — request count unchanged from §0. Paste the number.
+
+**AGENT — standing config back** (rows 1–2's positive control on the node is the standing ceiling
+admitting call 4 later; the day/week/month steps need the hour window open)
 
 ~~~bash
-echo "== REAL CALL 2 OF 4: unattended hour; expect governor refusal, no provider request =="
-curl -sS --max-time 300 \
-  -H 'X-Homelab-Client: p151-s3-unattended-hour' \
-  -H 'Content-Type: application/json' \
-  -d '{"v":1,"kind":"question","role":"utility-unattended","question":"Reply with exactly S3-HOUR-UNATTENDED."}' \
-  http://127.0.0.1:8766/v1/request
-echo
-echo "== STOP: record call 2, refresh dashboard once, then send /spend =="
+scp services/model-helper/config.example.json homelab-agent:/tmp/homelab-agent/model-helper-config.json
+ssh homelab-agent 'sudo -n install -m 644 -o root -g root /tmp/homelab-agent/model-helper-config.json /etc/homelab-model-helper/config.json
+sudo -n stat -c "%n %U:%G %a %s bytes" /etc/homelab-model-helper/config.json
+sudo -n cat /etc/homelab-model-helper/config.json | sha256sum
+sudo -n systemctl restart homelab-model-helper.socket; sudo -n systemctl is-active homelab-model-helper.socket'
+sha256sum services/model-helper/config.example.json
 ~~~
 
-Expected: refusal names unattended hour figures, attended figures unchanged, dashboard unchanged. Stop on ok, any dashboard increment, or unexpected error.
+Expected: `root:root 644 3056 bytes`, the two hashes equal, socket `active`.
 
-## 4 — Day/week/month synthetic ledger refusals (S1)
+**OWNER** Phone: `/spend` → ceilings `0.25 / 1.00 / 4.00 / 8.00` and `0.10 / 0.40 / 1.50 / 3.00`.
+Paste.
 
-These are **synthetic ledger tests, not real calls**. For each window separately, stop helper, restore the pristine S3 ledger backup, edit a prior **settled** total above that window's ceiling in the correct bucket and rolling time, label it p151-s3-synthetic-window, start helper, and prove refusal/raised-ceiling positive control with the fake fixture. Never carry synthetic entries forward.
+## 4 — Day, week, month: synthetic ledger (attended)
+
+Synthetic, labelled, never carried forward. Each record is `status: settled` in the **attended**
+budget with `ts` placed **outside the hour window and inside the target window**, and
+`settled_usd` equal to that window's ceiling, so the governor's first exceeded window is the
+target one. Between windows the ledger goes back to `S3LEDBAK` (aleix's `cp -p`, no sudo).
+
+**Day — proved two ways:** `/spend` shows the day window at/over its ceiling, AND one real
+endpoint attempt (`role: utility`, attended) is refused naming the day window — **attempt 3a,
+refused locally, no provider request, dashboard count unchanged.**
+
+**AGENT** stop the helper:
 
 ~~~bash
-echo "== SYNTHETIC DAY: helper stopped before ledger edit; no request =="
-sudo systemctl stop homelab-model-helper.socket
-sudo cp -p "$S3LEDBAK" /var/lib/homelab-model-helper/spend.json
-echo "== editor opens: add only p151-s3-synthetic-day above day ceiling =="
-sudoedit /var/lib/homelab-model-helper/spend.json
-sudo chown aleix:aleix /var/lib/homelab-model-helper/spend.json
-sudo chmod 0600 /var/lib/homelab-model-helper/spend.json
-sudo systemctl start homelab-model-helper.socket
-systemctl is-active homelab-model-helper.socket
-echo "== fake day refusal and raised-ceiling control; external calls 0 =="
-sudo env SRC=/tmp/homelab-p151/helper bash /tmp/homelab-p151/helper/install-model-helper.sh verify
-
-echo "== SYNTHETIC WEEK: stop, restore, edit only p151-s3-synthetic-week above week ceiling =="
-sudo systemctl stop homelab-model-helper.socket
-sudo cp -p "$S3LEDBAK" /var/lib/homelab-model-helper/spend.json
-sudoedit /var/lib/homelab-model-helper/spend.json
-sudo chown aleix:aleix /var/lib/homelab-model-helper/spend.json
-sudo chmod 0600 /var/lib/homelab-model-helper/spend.json
-sudo systemctl start homelab-model-helper.socket
-systemctl is-active homelab-model-helper.socket
-echo "== fake week refusal and raised-ceiling control; external calls 0 =="
-sudo env SRC=/tmp/homelab-p151/helper bash /tmp/homelab-p151/helper/install-model-helper.sh verify
-
-echo "== SYNTHETIC MONTH: stop, restore, edit only p151-s3-synthetic-month above month ceiling =="
-sudo systemctl stop homelab-model-helper.socket
-sudo cp -p "$S3LEDBAK" /var/lib/homelab-model-helper/spend.json
-sudoedit /var/lib/homelab-model-helper/spend.json
-sudo chown aleix:aleix /var/lib/homelab-model-helper/spend.json
-sudo chmod 0600 /var/lib/homelab-model-helper/spend.json
-sudo systemctl start homelab-model-helper.socket
-systemctl is-active homelab-model-helper.socket
-echo "== fake month refusal and raised-ceiling control; external calls 0 =="
-sudo env SRC=/tmp/homelab-p151/helper bash /tmp/homelab-p151/helper/install-model-helper.sh verify
+ssh homelab-agent 'sudo -n systemctl stop homelab-model-helper.socket; sudo -n systemctl is-active homelab-model-helper.socket; echo rc=$?'
 ~~~
 
-For each window record its synthetic label, total, ceiling, refusal, and positive control. Stop if the edit is unclear; synthetic local totals are never provider spend.
+Expected `inactive`, `rc=3`.
 
-## 5 — Synthetic unattended exhaustion; rows 4 and 6 make no request (S1)
-
-Restore the real backup, then create a labelled synthetic unattended-hour exhaustion only. Leave attended capacity and all other windows below standing ceilings; it will remain for call 4.
+**OWNER** as aleix, no sudo — restore the pristine ledger and add the day record:
 
 ~~~bash
-echo "== SYNTHETIC unattended exhaustion for independence; no request =="
-sudo systemctl stop homelab-model-helper.socket
-sudo cp -p "$S3LEDBAK" /var/lib/homelab-model-helper/spend.json
-echo "== editor opens: add only p151-s3-synthetic-unattended-hour above unattended hour; leave attended capacity =="
-sudoedit /var/lib/homelab-model-helper/spend.json
-sudo chown aleix:aleix /var/lib/homelab-model-helper/spend.json
-sudo chmod 0600 /var/lib/homelab-model-helper/spend.json
-sudo systemctl start homelab-model-helper.socket
-systemctl is-active homelab-model-helper.socket
-
-echo "== ROW 4: unreadable ledger; fake governor_unavailable proof; NO REQUEST =="
-sudo chmod 000 /var/lib/homelab-model-helper/spend.json
-sudo env SRC=/tmp/homelab-p151/helper bash /tmp/homelab-p151/helper/install-model-helper.sh verify
-sudo chmod 0600 /var/lib/homelab-model-helper/spend.json
-sudo chown aleix:aleix /var/lib/homelab-model-helper/spend.json
-echo "== ROW 6: fake incomplete-price/unapproved-vendor config-load refusal; NO REQUEST =="
-sudo env SRC=/tmp/homelab-p151/helper bash /tmp/homelab-p151/helper/install-model-helper.sh verify
+cp -p /var/lib/homelab-model-helper/spend.json.bak-2026-09-13-p151-s3 /var/lib/homelab-model-helper/spend.json
+python3 - <<'EOF'
+import json, time
+p = "/var/lib/homelab-model-helper/spend.json"
+d = json.load(open(p)); now = time.time(); label = "p151-s3-synthetic-day"
+d["calls"].append({"ts": now - 2*3600, "completed_ts": now - 2*3600,
+  "reservation_id": label, "request_id": label, "route": "utility", "provider": "gateway",
+  "model": "luna", "budget": "attended", "usage": None,
+  "reserved_usd": "1.000000000", "settled_usd": "1.000000000", "status": "settled",
+  "synthetic": label})
+with open(p, "w") as fh: json.dump(d, fh, separators=(",", ":")); fh.write("\n")
+print("calls:", len(d["calls"]), "last:", d["calls"][-1]["synthetic"])
+EOF
 ~~~
 
-Row 4 must show kind governor_unavailable and zero fake requests. Row 6 must name the model and missing price field (or vendor rejection). Neither may call the live endpoint or dashboard.
+Paste the `calls:` line.
 
-## 6 — Revocation rehearsal and key rotation (Browser, S1)
-
-Browser, owner only: revoke **only** the homelab key. Confirm revocation and record dashboard count/spend.
+**AGENT** verify owner/mode, start, then attempt 3a:
 
 ~~~bash
-echo "== REAL CALL 3 OF 4: revoked homelab key; expect 401 provider_error, no cost =="
-curl -sS --max-time 300 \
-  -H 'X-Homelab-Client: p151-s3-revoked-key' \
-  -H 'Content-Type: application/json' \
-  -d '{"v":1,"kind":"question","role":"utility","question":"Reply with exactly S3-REVOKED."}' \
-  http://127.0.0.1:8766/v1/request
-echo
-echo "== STOP: record call 3; refresh dashboard once; retain only validated error type/code =="
+ssh homelab-agent 'sudo -n stat -c "%n %U:%G %a %s bytes" /var/lib/homelab-model-helper/spend.json
+sudo -n systemctl start homelab-model-helper.socket; sudo -n systemctl is-active homelab-model-helper.socket'
 ~~~
 
-Expected: HTTP 401 surfaced as kind provider_error with provider error type and code logged, no cost. Never log error message, param, question text, or key material. Record the dashboard observation; do not assume a 401 is invisible there.
+**OWNER** Phone: `/spend` → `attended: day $1.001320700 / $1.000000000`, hour `$0…`. Paste.
 
-Browser, owner only: create a replacement key called homelab, with the same **$10/week** budget. Verify scope/budget before installation. On S1, use the installer editor only:
+**AGENT — attempt 3a**
 
 ~~~bash
-echo "== editor opens: replace only revoked key with new homelab key =="
-sudo env SRC=/tmp/homelab-p151/helper \
-  bash /tmp/homelab-p151/helper/install-model-helper.sh credential
-echo "== metadata only; no credential content =="
-sudo stat -c '%n %U:%G %a %s bytes' /etc/homelab-model-helper/gateway-key
-echo "== restart helper after rotation =="
-sudo systemctl restart homelab-model-helper.socket
-systemctl is-active homelab-model-helper.socket
+ssh homelab-agent 'M=/tmp/homelab-agent/p151-s3-call3a.done; [ -e "$M" ] && { echo "STOP: 3a already attempted"; exit 2; }
+date -u +%FT%TZ | tee "$M"
+curl -sS --max-time 300 -H "X-Homelab-Client: p151-s3-synthetic-day" -H "Content-Type: application/json" \
+  -d "{\"v\":1,\"kind\":\"question\",\"role\":\"utility\",\"question\":\"Reply with exactly S3-DAY.\"}" \
+  http://127.0.0.1:8766/v1/request; echo
+sudo -n journalctl -u "homelab-model-helper@*" -n 3 --no-pager -o short-iso | grep outcome='
 ~~~
 
-Stop unless credential remains root:root 600, non-zero bytes, and dashboard confirms $10/week for the new key.
+Expected: `detail` = `attended day spend ceiling reached ($1.001320700 + $0.001310300 > $1.000000000)`.
 
-## 7 — Post-rotation success and independence (S1, Browser, Phone)
+**OWNER** Browser once: request count unchanged. Paste.
 
-Synthetic unattended exhaustion remains present; attended capacity remains available. This one success proves both row 13 replacement-key path and row 3 independence.
+**Week and month — `/spend` display only, no attempt.** For each: AGENT stops the helper; OWNER
+restores from `S3LEDBAK` and runs the heredoc above with these three substitutions; AGENT stats
+and starts; OWNER pastes `/spend`.
+
+| Window | `label` | `ts` / `completed_ts` | `reserved_usd` = `settled_usd` | `/spend` expected |
+|---|---|---|---|---|
+| week | `p151-s3-synthetic-week` | `now - 2*86400` | `"4.000000000"` | `attended: week $4.001320700 / $4.000000000`, day `$0.001320700` |
+| month | `p151-s3-synthetic-month` | `now - 10*86400` | `"8.000000000"` | `attended: month $8.001320700 / $8.000000000`, week `$0.001320700` |
+
+Then: AGENT stop → OWNER `cp -p` from `S3LEDBAK` (no edit) → AGENT stat + start. The ledger is
+pristine again before §5.
+
+## 5 — Synthetic unattended-hour exhaustion (stays until §8)
+
+The record sits in the **unattended** budget at `ts = now`, `settled_usd` = the unattended hour
+ceiling `0.10`. It exhausts the unattended hour only (`0.10 < 0.40` day). Call 4 (attended) must
+run **within 60 minutes** of this edit or the record ages out of the hour window; §7 checks by
+`/spend` and, if it aged out, this step is repeated (AGENT stop → OWNER heredoc → AGENT start).
+
+**AGENT** stop (as in §4). **OWNER** as aleix:
 
 ~~~bash
-echo "== REAL CALL 4 OF 4: new key attended route; expect ok and one provider request =="
-curl -sS --max-time 300 \
-  -H 'X-Homelab-Client: p151-s3-new-key-attended-independence' \
-  -H 'Content-Type: application/json' \
-  -d '{"v":1,"kind":"question","role":"utility","question":"Reply with exactly S3-ROTATED-OK."}' \
-  http://127.0.0.1:8766/v1/request
-echo
-echo "== STOP: record call 4, refresh dashboard once, then send /spend =="
+python3 - <<'EOF'
+import json, time
+p = "/var/lib/homelab-model-helper/spend.json"
+d = json.load(open(p)); now = time.time(); label = "p151-s3-synthetic-unattended-hour"
+assert not any("synthetic" in c for c in d["calls"]), "a synthetic record is still present"
+d["calls"].append({"ts": now, "completed_ts": now,
+  "reservation_id": label, "request_id": label, "route": "utility", "provider": "gateway",
+  "model": "luna", "budget": "unattended", "usage": None,
+  "reserved_usd": "0.100000000", "settled_usd": "0.100000000", "status": "settled",
+  "synthetic": label})
+with open(p, "w") as fh: json.dump(d, fh, separators=(",", ":")); fh.write("\n")
+print("calls:", len(d["calls"]), "synthetic ts:", int(now))
+EOF
 ~~~
 
-Expected: ok; dashboard increments exactly once from its call-4 baseline; /spend settles the call. No fifth real call is authorized for any reason.
+**AGENT** stat + start. **OWNER** Phone `/spend` → `unattended: hour $0.100000000 / $0.100000000`,
+attended hour `$0.000000000 / $0.250000000`. Paste.
 
-## 8 — Rows 14–18 and restoration (S1, Phone)
+Rows 4 and 6 (unreadable ledger → `governor_unavailable`, no request; incomplete price /
+unapproved vendor → config load fails naming the field) are OBSERVED on the node by the §1
+fixture runs (36/36). A live `chmod 000` attempt is not on the orchestrator's attempt list and is
+not made.
 
-These make no gateway request. For row 17, retain the S2 observed proof that Telegram /ask and endpoint execution-agent were free and ledger-unchanged; do not repeat them after exhausting the S3 four-call allowance.
+## 6 — Revocation rehearsal and rotation (row 13)
+
+**OWNER** Browser: revoke **only** the `homelab` key. Confirm it shows revoked. Paste the request
+count and spend as of now.
+
+**AGENT — call 3**
 
 ~~~bash
-echo "== row 14: credential boundary, content suppressed =="
-sudo -u homelab-bot cat /etc/homelab-model-helper/gateway-key >/dev/null 2>&1 && { echo "FAIL: bot read key"; false; } || echo "ok: bot denied"
-sudo -u homelab-harness cat /etc/homelab-model-helper/gateway-key >/dev/null 2>&1 && { echo "FAIL: harness read key"; false; } || echo "ok: harness denied"
-sudo stat -c '%n %U:%G %a' /etc/homelab-model-helper/gateway-key
-echo "== row 15: security score, expect <= 3.8 =="
-sudo systemd-analyze security 'homelab-model-helper@probe.service' --no-pager | grep -i 'overall exposure'
-echo "== row 16: no forbidden environment variable =="
-systemctl show 'homelab-model-helper@probe.service' -p Environment --value | grep -q 'AI_GATEWAY_API_KEY' && { echo "FAIL: forbidden variable"; false; } || echo "ok: no forbidden variable"
-echo "== PHONE NOW: owner sends /spend; record eight figures; test non-allowlisted refusal without forwarding =="
-echo "== stop helper and restore standing config =="
-sudo systemctl stop homelab-model-helper.socket
-sudo cp -p "$S3CFGBAK" /etc/homelab-model-helper/config.json
-echo "== restore real ledger source, then editor opens: retain only real settled call-4 record; delete every synthetic row =="
-sudo cp -p "$S3LEDBAK" /var/lib/homelab-model-helper/spend.json
-sudoedit /var/lib/homelab-model-helper/spend.json
-sudo chown aleix:aleix /var/lib/homelab-model-helper/spend.json
-sudo chmod 0600 /var/lib/homelab-model-helper/spend.json
-sudo systemctl start homelab-model-helper.socket
-systemctl is-active homelab-model-helper.socket
-echo "== PHONE NOW: final /spend; standing ceilings must be restored =="
+ssh homelab-agent 'M=/tmp/homelab-agent/p151-s3-call3.done; [ -e "$M" ] && { echo "STOP: call 3 already attempted"; exit 2; }
+date -u +%FT%TZ | tee "$M"
+curl -sS --max-time 300 -H "X-Homelab-Client: p151-s3-revoked-key" -H "Content-Type: application/json" \
+  -d "{\"v\":1,\"kind\":\"question\",\"role\":\"utility\",\"question\":\"Reply with exactly S3-REVOKED.\"}" \
+  http://127.0.0.1:8766/v1/request; echo
+sudo -n journalctl -u "homelab-model-helper@*" -n 4 --no-pager -o short-iso | grep -E "outcome=|spend"'
 ~~~
 
-Stop if final /spend does not show standing ceilings. The final ledger contains only real S2/S3 accounting; preserve both .bak files until S4.
+Expected: `"kind": "provider_error", "stage": "helper"`; helper journal `outcome=provider_error
+gateway_error_type=… gateway_error_code=…` (type/code only — never message/param); the ledger
+line for it is `released` (`provider refusal: provider_error`), `$0`. Do not retry.
 
-## 9 — Reconciliation and paste-back (Browser, S1)
+**OWNER** Browser once: whether the 401 appears as a request (record either way; do not assume it
+is invisible), total spend unchanged. Then create the replacement key named `homelab` with the
+same **$10/week** budget; confirm the budget on screen.
 
-Reconcile explicitly as **dashboard total vs ledger-minus-fail-closed-entries**. Fail-closed/uncertain local settlements are conservative budget state, not claimed provider charges; show their value separately. Compare to cents and state unrounded figures and rounding rule.
+**OWNER** Terminal as aleix — the installer's editor step, the only way the key enters the node
+(never a command line, never stdin):
 
 ~~~bash
-echo "== final health =="
-systemctl --failed
-systemctl is-system-running
-systemctl is-active homelab-model-helper.socket homelab-telegram-bot.service homelab-harness.service
-echo "== final ledger metadata only =="
-sudo stat -c '%n %U:%G %a %s bytes' /var/lib/homelab-model-helper/spend.json
-echo "== reconciliation fields only: ids/status/totals, never question or credential =="
-sudo python3 -c '
+sudo env SRC=/tmp/homelab-p151/helper bash /tmp/homelab-p151/helper/install-model-helper.sh credential
+~~~
+
+Paste the key into the editor, save, exit. The installer keeps the revoked key at
+`gateway-key.bak-2026-09-13` (root-only; revoked; delete at S4 close). Say "done".
+
+**AGENT**
+
+~~~bash
+ssh homelab-agent 'sudo -n stat -c "%n %U:%G %a %s bytes mtime=%y" /etc/homelab-model-helper/gateway-key
+sudo -n systemctl restart homelab-model-helper.socket; sudo -n systemctl is-active homelab-model-helper.socket'
+~~~
+
+Expected `root:root 600`, non-zero bytes, mtime now, `active`.
+
+## 7 — Call 4: new key, attended, with unattended exhausted (rows 13 and 3)
+
+**OWNER** Phone `/spend` first: `unattended: hour $0.100000000 / $0.100000000` must still show
+(else repeat §5). Paste.
+
+**AGENT — call 4**
+
+~~~bash
+ssh homelab-agent 'M=/tmp/homelab-agent/p151-s3-call4.done; [ -e "$M" ] && { echo "STOP: call 4 already attempted"; exit 2; }
+date -u +%FT%TZ | tee "$M"
+curl -sS --max-time 300 -H "X-Homelab-Client: p151-s3-new-key-attended-independence" -H "Content-Type: application/json" \
+  -d "{\"v\":1,\"kind\":\"question\",\"role\":\"utility\",\"question\":\"Reply with exactly S3-ROTATED-OK.\"}" \
+  http://127.0.0.1:8766/v1/request; echo
+sudo -n journalctl -u "homelab-model-helper@*" -n 4 --no-pager -o short-iso | grep -E "outcome=|spend"'
+~~~
+
+Expected: `"ok": true`, `provider: gateway`, `model: openai/gpt-5.6-luna`, `cost` ≈ `0.0000104`;
+helper `outcome=ok … attended reserved $0.001310300`. **No fifth attempt for any reason.**
+
+**OWNER** Browser once: request count +1 from §6's figure, the new request's tokens and cost.
+Phone `/spend`: attended hour shows the settled cost; unattended hour still `0.10 / 0.10`. Paste
+both.
+
+## 8 — Rows 14–18 and restoration
+
+**AGENT** (rows 15, 16, 14's mode)
+
+~~~bash
+ssh homelab-agent 'sudo -n systemd-analyze security homelab-model-helper@probe.service --no-pager | grep -i "overall exposure"
+systemctl show homelab-model-helper@probe.service -p Environment --value | grep -c AI_GATEWAY_API_KEY
+sudo -n stat -c "%n %U:%G %a" /etc/homelab-model-helper/gateway-key
+sudo -n cat /etc/homelab-model-helper/config.json | sha256sum'
+~~~
+
+Expected `≤ 3.8`, `0`, `root:root 600`, the repo file's hash (standing config already installed
+at §3).
+
+**OWNER** as aleix (row 14's two denials; two sudo):
+
+~~~bash
+sudo -u homelab-bot cat /etc/homelab-model-helper/gateway-key >/dev/null 2>&1 && echo "FAIL: bot read key" || echo "ok: bot denied"
+sudo -u homelab-harness cat /etc/homelab-model-helper/gateway-key >/dev/null 2>&1 && echo "FAIL: harness read key" || echo "ok: harness denied"
+~~~
+
+**AGENT** stop the helper. **OWNER** as aleix — restore the ledger keeping the real S3 lines
+(call 3's `released` line and call 4's `settled` line), the orchestrator's "copy out, cp, re-add":
+
+~~~bash
+python3 -c 'import json; d=json.load(open("/var/lib/homelab-model-helper/spend.json")); real=[c for c in d["calls"][2:] if "synthetic" not in c]; json.dump(real, open("/home/aleix/p151-s3-real-lines.json","w")); print("kept", len(real), "real S3 lines:", [c["status"] for c in real])'
+cp -p /var/lib/homelab-model-helper/spend.json.bak-2026-09-13-p151-s3 /var/lib/homelab-model-helper/spend.json
+python3 -c '
+import json; p="/var/lib/homelab-model-helper/spend.json"; d=json.load(open(p))
+d["calls"] += json.load(open("/home/aleix/p151-s3-real-lines.json"))
+assert not any("synthetic" in c for c in d["calls"])
+fh=open(p,"w"); json.dump(d, fh, separators=(",",":")); fh.write("\n"); fh.close()
+print("ledger calls:", len(d["calls"]), [c["status"] for c in d["calls"]])'
+~~~
+
+Expected `ledger calls: 4 ['settled', 'settled', 'released', 'settled']`.
+
+**AGENT** stat + start. **OWNER** Phone: final `/spend` — standing ceilings, attended totals = the
+two S2 lines + call 4, unattended all `$0`. Paste. Row 17: send `/ask 2+2` once; **AGENT** then
+`sudo -n stat -c "%y" /var/lib/homelab-model-helper/spend.json` — mtime unchanged by `/ask`.
+Row 18: `/spend` from a non-allowlisted Telegram id if one is at hand (refused); else S2's
+evidence stands and the row is PREDICTED from the bot's allowlist.
+
+Both `.bak-2026-09-13-p151-s3` files and `/home/aleix/p151-s3-real-lines.json` stay until S4.
+
+## 9 — Reconciliation and final health
+
+**OWNER** as aleix (content-free fields; no question text, no credential):
+
+~~~bash
+python3 -c '
 import json
 d=json.load(open("/var/lib/homelab-model-helper/spend.json"))
-for c in d.get("calls",[]):
- print({k:c.get(k) for k in ("request_id","status","reserved","settled","gateway_cost","cost","synthetic")})
-'
+for c in d["calls"]:
+    print({k: c.get(k) for k in ("request_id","budget","status","reserved_usd","settled_usd","gateway_cost","settle_note","release_reason","usage")})'
 ~~~
+
+Browser: the dashboard's final request count and total spend for the phase (all requests since
+S2's first), and the per-request cost column.
+
+**AGENT**
+
+~~~bash
+ssh homelab-agent 'sudo -n systemctl is-system-running; sudo -n systemctl --failed
+for u in homelab-model-helper.socket homelab-harness.service homelab-telegram-bot.service; do printf "%s " "$u"; sudo -n systemctl is-active "$u"; done
+sudo -n stat -c "%n %U:%G %a %s bytes" /var/lib/homelab-model-helper/spend.json /etc/homelab-model-helper/config.json
+ls -l /tmp/homelab-agent/'
+~~~
+
+Row 12, stated as **dashboard total vs ledger-minus-fail-closed-entries**, both figures:
 
 ~~~text
-S3 real endpoint calls: 4 (calls 1–4; no others)
-dashboard total actual spend: $...
-ledger total: $...
-fail-closed/uncertain ledger entries excluded: $...
-ledger minus fail-closed entries: $...
-reconciliation (dashboard total vs ledger-minus-fail-closed-entries): $... vs $...
-difference and rounding rule: ...
-synthetic day/week/month/unattended tests: removed before final state; no provider spend
-standing ceilings after restore (/spend): ...
+provider-reaching attempts in S3: 2 (calls 3, 4); locally refused: P1 P2 P3 [1] [2] 3a
+dashboard total actual spend (phase):            $…
+ledger sum, all settled lines:                   $…
+fail-closed entries excluded (S2 403 settlement): $0.001310300
+ledger minus fail-closed entries:                $…
+reconciliation:                                  $… vs $…  (rounding rule: dashboard shows 5 decimals; ledger 9)
+synthetic records: none remain; provider spend from them: $0
+standing ceilings after restore (/spend):        pasted
 ~~~
 
-Do not proceed to S4 here. This runbook ends after the evidence is captured.
+This runbook ends when §9's evidence is captured. S4 follows the orchestrator's review.
