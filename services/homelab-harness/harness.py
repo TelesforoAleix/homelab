@@ -108,7 +108,8 @@ CLIENT_HEADER = "X-Homelab-Client"
 ENDPOINT_KINDS = ("bad_request", "identity_in_body", "too_large",
                   "needs_decomposition", "not_a_request", "unclassifiable",
                   "helper_unavailable")
-HELPER_KINDS = ("unknown_role", "ineligible", "exhausted", "error")
+HELPER_KINDS = ("unknown_role", "ineligible", "exhausted", "provider_error",
+                "governor_unavailable", "error")
 
 # HTTP status per refusal kind. Clients read `kind`, not the status; the status
 # is for curl and for humans. Documented in README.md.
@@ -116,7 +117,8 @@ STATUS_FOR_KIND = {
     "bad_request": 400, "identity_in_body": 400, "too_large": 413,
     "needs_decomposition": 422, "not_a_request": 422, "unclassifiable": 422,
     "helper_unavailable": 503,
-    "unknown_role": 400, "ineligible": 422, "exhausted": 429, "error": 502,
+    "unknown_role": 400, "ineligible": 422, "exhausted": 429,
+    "provider_error": 502, "governor_unavailable": 503, "error": 502,
 }
 
 
@@ -376,7 +378,7 @@ def render_context(items: list[dict]) -> str:
     return "\n\n".join(parts)
 
 
-def helper_payload(req: dict, client_declared: str) -> dict:
+def helper_payload(req: dict, client_declared: str, request_id: str) -> dict:
     """
     The 15.0 wire request. Note what is here and what is not: `role`, the
     hints and `summary` pass through unchanged; `capabilities` and `kind` do
@@ -387,7 +389,8 @@ def helper_payload(req: dict, client_declared: str) -> dict:
     """
     payload = {"v": 1, "op": "ask", "user_id": f"harness:{client_declared}",
                "question": req["question"], "context": render_context(req["context"]),
-               "role": req["role"], "unattended": req["unattended"]}
+               "role": req["role"], "unattended": req["unattended"],
+               "request_id": request_id}
     if req["summary"]:
         payload["summary"] = req["summary"]
     for hint in HINTS:
@@ -538,7 +541,7 @@ class Harness(ThreadingHTTPServer):
 
             # --- forward (the only place a model is reached) -------------
             try:
-                answer = helper_call(self.cfg, helper_payload(req, client))
+                answer = helper_call(self.cfg, helper_payload(req, client, request_id))
             except HelperUnavailable as exc:
                 raise Refusal("helper_unavailable", str(exc)) from exc
 
@@ -549,7 +552,8 @@ class Harness(ThreadingHTTPServer):
                     raise Refusal("helper_unavailable", "helper reply had no text")
                 reply.update({"ok": True, "text": text, "provider": answer.get("provider"),
                               "model": answer.get("model")})
-                line.update({"outcome": "ok", "stage": None, "output_len": len(text)})
+                line.update({"outcome": "ok", "stage": None, "output_len": len(text),
+                             "cost": answer.get("cost")})
             else:
                 kind = answer.get("kind") if answer.get("kind") in HELPER_KINDS else "error"
                 extra = {}

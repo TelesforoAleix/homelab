@@ -38,10 +38,19 @@ than refuse -- which is why nothing here treats model output as fact.
 from __future__ import annotations
 
 import dataclasses
+import json
+import os
 import re
+import ssl
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
+
+MAX_GATEWAY_RESPONSE_BYTES = 256 * 1024
+CHAT_ENVELOPE_TOKEN_ALLOWANCE = 256
 
 
 def log(msg: str) -> None:
@@ -107,6 +116,9 @@ class Answer:
     retry_hint: str = ""
     provider: str = ""
     model: str = ""
+    usage: dict | None = None
+    gateway_cost: str | None = None
+    charge_uncertain: bool = False
 
 
 # Phrases that mean "your allowance is spent" rather than "something broke".
@@ -181,13 +193,21 @@ class Provider:
 
     name = ""
 
-    def __init__(self, binary: str, model: str, timeout: int) -> None:
-        self.binary = binary
-        self.model = model
+    @classmethod
+    def validate_entry(cls, name: str, entry: dict) -> None:
+        if not entry.get("bin") or not os.path.isabs(str(entry["bin"])):
+            raise ValueError(f"config: providers.{name}.bin must be an absolute path")
+
+    def __init__(self, entry: dict, model: dict, timeout: int) -> None:
+        self.binary = entry["bin"]
+        self.model = model["id"]
         self.timeout = timeout
 
     def ask(self, question: str, context: str) -> Answer:
         raise NotImplementedError
+
+    def input_token_bound(self, question: str, context: str) -> int:
+        return 0
 
     def _run(self, argv: list[str], cwd: str) -> tuple[int, str]:
         """
@@ -306,4 +326,147 @@ class CodexProvider(Provider):
         return _classify(out, self.name, self.model, code)
 
 
-BY_NAME = {"claude": ClaudeProvider, "codex": CodexProvider}
+class GatewayProvider(Provider):
+    """Vercel AI Gateway's OpenAI-compatible Chat Completions surface.
+
+    The credential name comes from root-owned configuration.  The value comes
+    only from systemd's credential tmpfs; there is no environment-variable or
+    file-path fallback.  Neither the credential nor urllib's request object is
+    logged, because both carry the bearer header.
+    """
+
+    name = "gateway"
+
+    @classmethod
+    def validate_entry(cls, name: str, entry: dict) -> None:
+        endpoint = entry.get("endpoint")
+        if not isinstance(endpoint, str):
+            raise ValueError(f"config: providers.{name}.endpoint must be a URL")
+        parsed = urllib.parse.urlparse(endpoint)
+        local_http = parsed.scheme == "http" and parsed.hostname in ("127.0.0.1", "localhost", "::1")
+        production_https = parsed.scheme == "https" \
+            and parsed.hostname == "ai-gateway.vercel.sh" and parsed.port is None
+        if not production_https and not local_http:
+            raise ValueError(
+                f"config: providers.{name}.endpoint must be the Vercel HTTPS endpoint "
+                "(or loopback http for fixtures)")
+        if parsed.username is not None or parsed.password is not None:
+            raise ValueError(f"config: providers.{name}.endpoint must not contain credentials")
+        if parsed.path != "/v1/chat/completions" or parsed.params or parsed.query or parsed.fragment:
+            raise ValueError(f"config: providers.{name}.endpoint must end exactly /v1/chat/completions")
+        credential = entry.get("credential")
+        if not isinstance(credential, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", credential):
+            raise ValueError(f"config: providers.{name}.credential must be a credential name")
+
+    def __init__(self, entry: dict, model: dict, timeout: int) -> None:
+        self.model = model["id"]
+        self.timeout = timeout
+        self.endpoint = entry["endpoint"]
+        self.max_output_tokens = model["max_output_tokens"]
+        self.reasoning = model.get("reasoning")
+        cred_dir = os.environ.get("CREDENTIALS_DIRECTORY")
+        if not cred_dir:
+            raise ValueError("gateway credential unavailable: CREDENTIALS_DIRECTORY is not set")
+        path = os.path.join(cred_dir, entry["credential"])
+        try:
+            with open(path, encoding="utf-8") as fh:
+                self._key = fh.read().strip()
+        except OSError as exc:
+            raise ValueError("gateway credential unavailable or unreadable") from exc
+        if not self._key:
+            raise ValueError("gateway credential is empty")
+
+    @staticmethod
+    def _usage(value) -> dict | None:
+        if not isinstance(value, dict):
+            return None
+        details = value.get("prompt_tokens_details")
+        details = details if isinstance(details, dict) else {}
+        raw = {
+            "input": value.get("prompt_tokens"),
+            "output": value.get("completion_tokens"),
+            "cache_read": details.get("cached_tokens", 0),
+            "cache_write": value.get("cache_creation_input_tokens", 0),
+        }
+        if any(isinstance(v, bool) or not isinstance(v, int) or v < 0 for v in raw.values()):
+            return None
+        return raw
+
+    def input_token_bound(self, question: str, context: str) -> int:
+        # One UTF-8 byte per token is deliberately conservative for text and
+        # includes the exact labels sent in the sole message. The API's prompt
+        # count also includes a provider-created chat envelope that is not in
+        # the content string, so reserve a deliberately generous fixed margin.
+        content_bytes = len(f"Context:\n{context}\n\nQuestion:\n{question}".encode("utf-8"))
+        return content_bytes + CHAT_ENVELOPE_TOKEN_ALLOWANCE
+
+    def ask(self, question: str, context: str) -> Answer:
+        content = f"Context:\n{context}\n\nQuestion:\n{question}"
+        body = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": self.max_output_tokens,
+        }
+        if self.reasoning not in (None, "none", "provider-default"):
+            body["reasoning"] = {"effort": self.reasoning}
+        request = urllib.request.Request(
+            self.endpoint,
+            data=json.dumps(body, separators=(",", ":")).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self._key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        try:
+            context_obj = ssl.create_default_context() if self.endpoint.startswith("https://") else None
+            with urllib.request.urlopen(request, timeout=self.timeout, context=context_obj) as response:
+                raw = response.read(MAX_GATEWAY_RESPONSE_BYTES + 1)
+                if len(raw) > MAX_GATEWAY_RESPONSE_BYTES:
+                    return Answer(ok=False, kind="error", provider=self.name, model=self.model,
+                                  detail="gateway response was too large", charge_uncertain=True)
+                payload = json.loads(raw)
+        except urllib.error.HTTPError as exc:
+            # Do not read or log the body: an upstream could echo request data.
+            if exc.code == 429:
+                return Answer(ok=False, kind="exhausted", provider=self.name,
+                              model=self.model, detail="gateway rate limit reached")
+            if exc.code == 401:
+                return Answer(ok=False, kind="provider_error", provider=self.name,
+                              model=self.model, detail="gateway authentication refused")
+            # Only the documented refusal states above are safe to release.
+            # A server/proxy error happened after the request left the node;
+            # the provider may have completed billable work before failing.
+            return Answer(ok=False, kind="error", provider=self.name,
+                          model=self.model, detail=f"gateway HTTP {exc.code}",
+                          charge_uncertain=True)
+        except (TimeoutError, urllib.error.URLError, OSError) as exc:
+            log(f"{self.name}/{self.model} transport failure: {type(exc).__name__}")
+            return Answer(ok=False, kind="error", provider=self.name, model=self.model,
+                          detail="gateway transport failed", charge_uncertain=True)
+        except ValueError:
+            return Answer(ok=False, kind="error", provider=self.name, model=self.model,
+                          detail="gateway returned unreadable JSON", charge_uncertain=True)
+
+        if not isinstance(payload, dict):
+            return Answer(ok=False, kind="error", provider=self.name, model=self.model,
+                          detail="gateway returned a malformed response", charge_uncertain=True)
+        usage = self._usage(payload.get("usage"))
+        gateway_cost = payload.get("usage", {}).get("cost") \
+            if isinstance(payload.get("usage"), dict) else None
+        try:
+            text = payload["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError):
+            text = None
+        if not isinstance(text, str) or not text.strip():
+            return Answer(ok=False, kind="error", provider=self.name, model=self.model,
+                          detail="gateway response carried no answer", usage=usage,
+                          gateway_cost=str(gateway_cost) if gateway_cost is not None else None,
+                          charge_uncertain=True)
+        return Answer(ok=True, text=text.strip(), provider=self.name, model=self.model,
+                      usage=usage,
+                      gateway_cost=str(gateway_cost) if gateway_cost is not None else None)
+
+
+BY_NAME = {"claude": ClaudeProvider, "codex": CodexProvider,
+           "gateway": GatewayProvider}

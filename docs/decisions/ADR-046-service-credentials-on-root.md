@@ -36,6 +36,7 @@ unencrypted filesystem, so nobody discovers a fifth later:
 | Wi-Fi passphrase | `/etc/netplan/`, `0600` | Join the home network | Change it on the router; re-run netplan on the node |
 | Tailscale node identity | `/var/lib/tailscale/tailscaled.state` | Present a machine as `homelab` on the tailnet until removed | Delete the node in the Tailscale admin console; re-authenticate |
 | **GitHub node key** (added 2026-09-13, Phase 13 — existed since 18.2) | `/home/aleix/.ssh/id_ed25519_github`, `0600 aleix:aleix`, **passphrase-less**, account-level, selected by `Host github.com` + `IdentitiesOnly yes` | Pull all five repositories; **push to `oncla`, `factory-ops`, `brain`** as the owner. Blast radius: those repositories' contents and history; not the node | GitHub → Settings → SSH and GPG keys → `homelab node — 2026-09-12` → Delete. Audited by title from the MacBook: `gh api user/keys` (one key, OBSERVED 2026-09-12). Not in the backup (`backup-node.sh` excludes it); a rebuilt node makes a new one |
+| **Vercel AI Gateway key** (drafted 2026-09-13, Phase 15.1 S1; installation PREDICTED until S2) | `/etc/homelab-model-helper/gateway-key`, `root:root 0600`, via `LoadCredential=gateway-key:…`; presented to each helper instance as `0400` under `$CREDENTIALS_DIRECTORY`; **not TPM-sealed by decision** | Spend AI Gateway credit up to the key's $10/week gateway-side backstop; choose any model the gateway account permits | Vercel dashboard → AI Gateway → API keys → `homelab` → revoke. Replacement is entered through `install-model-helper.sh credential`, which opens an editor; never argv, script stdin, environment, journal, git or chat |
 
 Two things are true of all five. **Each is revocable from the laptop in minutes**, and the revocation
 is complete — none is a durable secret whose exposure survives the revocation. And **none of them can
@@ -275,4 +276,3 @@ real backup of the token** (Phase 14 restore runbook).
 **Loss procedure (§Consequences) — one step changes:** step 2 stays `@BotFather → /revoke`; the
 replacement token is sealed with `p13-s3.sh creds-encrypt`, never written to `token` in plaintext
 except transiently on the way in.
-

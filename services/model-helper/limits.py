@@ -26,10 +26,11 @@ both decide there is room, and both call. The window for that is small and it
 would be invisible when it happened -- which is exactly the kind of bug that
 does not show up until the day it matters.
 
-The reservation is taken BEFORE the call, and it is not refunded if the provider
-turns out to be exhausted. An attempt is an attempt: it was made, it took time,
-and counting it is the honest accounting. A fallback that tries Claude and then
-Codex therefore spends one call from each -- which is what actually happened.
+The reservation is taken BEFORE the call. Phase 23.0 then observed that an
+``exhausted`` provider consumed a count despite producing no answer. Phase 15.1
+closes that debt: every new reservation has an id and ``release()`` removes that
+specific attempt after a provider-side refusal. Old float-only state remains
+readable so deploying this code does not reset the owner's existing caps.
 
 THE OWNER'S FLOOR -- Phase 15.0, ADR-026 §6
 --------------------------------------------
@@ -48,6 +49,7 @@ import fcntl
 import json
 import os
 import time
+import uuid
 
 HOUR = 3600
 DAY = 86400
@@ -78,9 +80,10 @@ class Limiter:
         return data if isinstance(data, dict) else {}
 
     def check_and_reserve(self, provider: str, *,
-                          unattended: bool = False) -> tuple[bool, str]:
+                          unattended: bool = False) -> tuple[bool, str, str]:
         """
-        Returns (allowed, message). On success the call is already counted.
+        Returns (allowed, message, reservation_id). On success the call is
+        already counted; the id permits an exact later release.
 
         `unattended` lowers the ceiling by the owner reserve. It does not
         change what is counted, only how much of the count this caller may use.
@@ -94,8 +97,9 @@ class Limiter:
             fcntl.flock(fh, fcntl.LOCK_EX)
             try:
                 data = self._load(fh)
-                stamps = [t for t in data.get(provider, [])
-                          if isinstance(t, (int, float)) and now - t < DAY]
+                records = data.get(provider, [])
+                stamps = [_stamp(t) for t in records]
+                stamps = [t for t in stamps if t is not None and now - t < DAY]
 
                 in_hour = sum(1 for t in stamps if now - t < HOUR)
                 in_day = len(stamps)
@@ -107,12 +111,12 @@ class Limiter:
                         return False, (
                             f"{provider}: unattended hourly budget reached "
                             f"({in_hour}/{cap_hour}, {self.reserve_hour} reserved for the owner)."
-                        )
+                        ), ""
                     if in_day >= cap_day:
                         return False, (
                             f"{provider}: unattended daily budget reached "
                             f"({in_day}/{cap_day}, {self.reserve_day} reserved for the owner)."
-                        )
+                        ), ""
 
                 if in_hour >= self.per_hour:
                     oldest = min(t for t in stamps if now - t < HOUR)
@@ -120,23 +124,49 @@ class Limiter:
                         f"{provider}: hourly cap reached "
                         f"({in_hour}/{self.per_hour}). "
                         f"Room again in {_mins(oldest + HOUR - now)}."
-                    )
+                    ), ""
                 if in_day >= self.per_day:
                     oldest = min(stamps)
                     return False, (
                         f"{provider}: daily cap reached "
                         f"({in_day}/{self.per_day}). "
                         f"Room again in {_mins(oldest + DAY - now)}."
-                    )
+                    ), ""
 
-                stamps.append(now)
-                data[provider] = stamps
+                reservation_id = uuid.uuid4().hex
+                kept = [t for t in records
+                        if _stamp(t) is not None and now - _stamp(t) < DAY]
+                kept.append({"ts": now, "reservation_id": reservation_id})
+                data[provider] = kept
                 fh.seek(0)
                 fh.truncate()
                 json.dump(data, fh)
                 fh.flush()
                 os.fsync(fh.fileno())
-                return True, f"{provider}: {in_hour + 1}/{self.per_hour} this hour"
+                return True, f"{provider}: {in_hour + 1}/{self.per_hour} this hour", reservation_id
+            finally:
+                fcntl.flock(fh, fcntl.LOCK_UN)
+
+    def release(self, provider: str, reservation_id: str) -> bool:
+        """Remove one named reservation. False means it was already absent."""
+        fd = os.open(self.path, os.O_RDWR | os.O_CREAT, 0o600)
+        with os.fdopen(fd, "r+", encoding="utf-8") as fh:
+            fcntl.flock(fh, fcntl.LOCK_EX)
+            try:
+                data = self._load(fh)
+                records = data.get(provider, [])
+                kept = [r for r in records
+                        if not (isinstance(r, dict)
+                                and r.get("reservation_id") == reservation_id)]
+                if len(kept) == len(records):
+                    return False
+                data[provider] = kept
+                fh.seek(0)
+                fh.truncate()
+                json.dump(data, fh)
+                fh.flush()
+                os.fsync(fh.fileno())
+                return True
             finally:
                 fcntl.flock(fh, fcntl.LOCK_UN)
 
@@ -157,7 +187,8 @@ class Limiter:
         for provider, stamps in data.items():
             if not isinstance(stamps, list):
                 continue
-            good = [t for t in stamps if isinstance(t, (int, float)) and now - t < DAY]
+            good = [_stamp(t) for t in stamps]
+            good = [t for t in good if t is not None and now - t < DAY]
             out[provider] = {
                 "hour": sum(1 for t in good if now - t < HOUR),
                 "day": len(good),
@@ -170,3 +201,14 @@ def _mins(seconds: float) -> str:
     if m >= 60:
         return f"{m // 60}h {m % 60}m"
     return f"{m}m" if m else "under a minute"
+
+
+def _stamp(record) -> float | None:
+    if isinstance(record, bool):
+        return None
+    if isinstance(record, (int, float)):
+        return float(record)
+    if isinstance(record, dict) and isinstance(record.get("ts"), (int, float)) \
+            and not isinstance(record["ts"], bool):
+        return float(record["ts"])
+    return None

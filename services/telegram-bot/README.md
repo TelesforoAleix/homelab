@@ -5,6 +5,11 @@ own state and can change nothing. See
 [`guide/07-telegram/README.md`](../../guide/07-telegram/README.md) and
 [ADR-023](../../docs/decisions/ADR-023-telegram-bot-service.md).
 
+`/spend` is a read-only command added in Phase 15.1. It asks the model helper
+for the four rolling spend windows for attended and unattended work and the
+week's metered-call count. The bot receives no path to `spend.json` and no new
+filesystem permission; the main allowlist protects it exactly as `/status`.
+
 | File | Purpose |
 |---|---|
 | `bot.py` | The bot. Standard library only — no third-party dependencies |
