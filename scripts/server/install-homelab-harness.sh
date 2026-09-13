@@ -103,10 +103,11 @@ check_account() {
     else
         ok "${SERVICE_USER} has no home directory (${home})"
     fi
-    if [[ "$groups" == "${MODEL_GROUP} ${SERVICE_USER}" ]]; then
+    # Compared as a sorted set; `sort` puts homelab-harness before homelab-model.
+    if [[ "$groups" == "$(printf '%s\n' "$SERVICE_USER" "$MODEL_GROUP" | sort | paste -sd' ' -)" ]]; then
         ok "${SERVICE_USER} groups are exactly: ${groups}"
     else
-        echo "FAIL  ${SERVICE_USER} groups are: ${groups} (expected '${MODEL_GROUP} ${SERVICE_USER}')"; rc=1
+        echo "FAIL  ${SERVICE_USER} groups are: ${groups} (expected exactly ${SERVICE_USER} and ${MODEL_GROUP})"; rc=1
     fi
     for g in aleix docker sudo adm lxd; do
         if id -nG "$SERVICE_USER" | tr ' ' '\n' | grep -qx "$g"; then
