@@ -239,8 +239,8 @@ amendment. Three points restated because they will be misread:
 - **"TPM-bound" is not "protected from physical access."** The seal narrows a pulled disk. A USB
   boot on the same machine unseals it. The BIOS password narrows the USB boot. Neither protects the
   running machine.
-- **No secret entered the repository.** Checked: `git grep -nE 'AAAAC3NzaC1lZDI1NTE5|BEGIN OPENSSH|[0-9]{8,10}:[A-Za-z0-9_-]{35}|age-encryption|-----BEGIN'` over the branch → only the
-  MacBook's *public* key line in `config/ssh/…example` and this sentence. The BIOS password, the
+- **No secret entered the repository.** Checked: `git grep -nE 'AAAAC3NzaC1lZDI1NTE5|BEGIN OPENSSH|[0-9]{8,10}:[A-Za-z0-9_-]{35}|age-encryption|-----BEGIN'` over the branch → no key material; the only hits are the
+  pattern strings themselves in the Phase 04 audit log, `scan-history.sh` and this sentence. The BIOS password, the
   token, the age passphrase and both private keys exist only in the password manager, the TPM, or
   the card.
 - **The sudo-password lesson is a rule** (baseline §7), and this phase's three runbooks were written
