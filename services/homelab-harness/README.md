@@ -26,7 +26,7 @@ set is **closed**: anything not in this table is refused by name.
 | `v` | int | client | yes | must be `1` |
 | `kind` | `question` \| `task` \| `command` | client (a declaration) | no | absent means "classify from structure alone". `unclassifiable` cannot be declared — it is a verdict |
 | `role` | string `^[a-z0-9][a-z0-9-]{0,31}$` | client | **yes** | the routing key, forwarded unchanged (ADR-034 §5). Required so the endpoint never defaults an agent's request onto the owner's route, which the helper would do for an absent role |
-| `question` | string, non-empty, ≤ `max_question_chars` (500) | client | yes | the one thing that is asked. Over the limit is `too_large`, not truncated (the helper *would* truncate) |
+| `question` | string, non-empty, ≤ `max_question_chars` (4000) | client | yes | the one thing that is asked. Over the limit is `too_large`, not truncated (the helper *would* truncate) |
 | `context` | list of `{"text": str, "source": str\|null}`, ≤ 20 items, ≤ 2000 chars total | client | no | what the client **selected** (ADR-039 §2). `source` is the client's provenance (§3), carried as received. The endpoint adds nothing |
 | `capabilities` | list of short names, ≤ 16 | client | no | carried for classification only (a request that names a capability is a `task`); **not** forwarded — the helper has no such field |
 | `unattended` | bool | client | no, default `false` | forwarded; triggers the helper's eligibility filter and owner floor (ADR-026) |
@@ -90,7 +90,13 @@ Endpoint-stage refusals never spawn a helper process — the fixture counts spaw
 
 `GET /health` answers `{"ok": true, "service": "homelab-harness", "v": 1}` without touching the
 helper. `GET /health/helper` sends the helper `op: ping` (no model call) and reports
-`reachable`/`unreachable` — the live proof that the harness account is in the socket's group.
+`reachable`/`unreachable` — the live proof that the harness account is in the socket's group. Each
+call spawns one helper instance (that is what `Accept=yes` costs for every call); a client polling it
+in a loop is spawning helpers. No rate limit in 23.0, by decision.
+
+`max_question_chars` (4000) and `max_context_chars` (2000) bound what leaves the machine per request;
+they are size bounds, not security controls. The helper's `max_answer_chars` stays 3000 (Telegram's
+message limit is why it exists).
 
 ## 3. The taxonomy (layer 2)
 

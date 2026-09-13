@@ -1,5 +1,5 @@
 {
-  "_format": "Phase 23.0 harness config. Copy to /etc/homelab-harness/config.json (root:root 0644). listen.host must be loopback; harness.py refuses anything else in code (ADR-038 §2). audit_file null means $STATE_DIRECTORY/audit.jsonl, which is what the unit provides. helper_timeout_seconds (280) is deliberately above the helper instance's RuntimeMaxSec (270, brief §6.9) so the endpoint outlives the helper and reports the helper's failure, not its own. max_question_chars matches the helper's max_question_chars (500): the helper TRUNCATES silently past its own limit (helper.py handle_ask); the endpoint REFUSES with too_large instead, so keep the two equal when either changes.",
+  "_format": "Phase 23.0 harness config. Copy to /etc/homelab-harness/config.json (root:root 0644). listen.host must be loopback; harness.py refuses anything else in code (ADR-038 §2). audit_file null means $STATE_DIRECTORY/audit.jsonl, which is what the unit provides. helper_timeout_seconds (280) is deliberately above the helper instance's RuntimeMaxSec (270, brief §6.9) so the endpoint outlives the helper and reports the helper's failure, not its own. max_question_chars (4000, orchestrator decision S1 q4) must equal the helper's max_question_chars: the helper TRUNCATES silently past its own limit (helper.py handle_ask); the endpoint REFUSES with too_large instead, so keep the two equal when either changes. It bounds what leaves the machine per request; it is not a security control.",
 
   "listen": { "host": "127.0.0.1", "port": 8766 },
   "helper_socket": "/run/homelab-model-helper.sock",
@@ -7,7 +7,7 @@
   "audit_file": null,
 
   "max_body_bytes": 16384,
-  "max_question_chars": 500,
+  "max_question_chars": 4000,
   "max_context_items": 20,
   "max_context_chars": 2000,
   "max_capabilities": 16
