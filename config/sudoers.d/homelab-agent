@@ -1,0 +1,180 @@
+# Home Lab -- the executor agent's sudo grant. ADR-049, Phase 13.1.
+#
+# Applied to : /etc/sudoers.d/homelab-agent
+# Ownership  : root:root
+# Mode       : 0440
+# Installed  : scripts/server/install-homelab-agent.sh, which runs
+#              `visudo -c -f` on this file BEFORE it lands. A parse error in
+#              any file under /etc/sudoers.d/ disables sudo for EVERY account,
+#              aleix included -- landing this file is lockout-class
+#              (safe-changes-headless.md section 1, "Authentication").
+#
+# THE ONE THING TO UNDERSTAND ABOUT THIS FILE
+# -------------------------------------------
+# sudoers matches a command's arguments as ONE string joined by spaces, and
+# `*` matches anything -- including a space. So an allow written as
+#
+#     /usr/bin/cat /etc/homelab-*/*.json
+#
+# also admits
+#
+#     cat /etc/homelab-x/a.json /etc/shadow /etc/homelab-x/config.json
+#
+# because the first `*` swallows "x/a.json /etc/shadow /etc/homelab-x". Every
+# two-argument allow below therefore has a matching deny that refuses a third
+# argument, a later option (`-t DIR` would redirect cp/install anywhere), and
+# `..` (which walks out of the directory a glob was meant to pin). That is
+# what ADR-049's "every allow has a matching deny" means in practice, and it
+# is the brief's learning objective 3.1.
+#
+# ORDER MATTERS: sudoers is LAST-MATCH-WINS. The deny alias is listed AFTER
+# the allow alias on the grant line so that where both match, the deny holds.
+# (ADR-049 section 2 says "before"; that wording is amended at acceptance.)
+#
+# The node runs sudo-rs, not C sudo. This file uses only the subset both
+# parse: Cmnd_Alias, NOPASSWD, `!` negation, `*` globs. No Defaults, no
+# digests, no sudoedit. The MacBook's C-sudo visudo is the local check; the
+# node's own visudo is the gate.
+#
+# WHAT THIS GRANTS, IN ONE LINE: start/stop/restart/inspect the project's own
+# units, read the journal and sockets, replace a .json config from the agent's
+# staging directory, copy ledgers within their own directory, read the
+# volume's lock state. Nothing that can lock the owner out, nothing that reads
+# or writes a secret, nothing that opens or closes the volume, nothing that
+# spends outside the governor's config, and nothing that widens this grant.
+#
+# `sudo -l -U homelab-agent` on the node is the ground truth, not this file.
+
+# --- Allowed: the routine operator set (ADR-049 section 2) ------------------
+
+Cmnd_Alias HOMELAB_AGENT_UNITS = \
+    /usr/bin/systemctl start homelab-*, \
+    /usr/bin/systemctl stop homelab-*, \
+    /usr/bin/systemctl restart homelab-*, \
+    /usr/bin/systemctl reset-failed homelab-*, \
+    /usr/bin/systemctl is-active homelab-*, \
+    /usr/bin/systemctl is-enabled homelab-*, \
+    /usr/bin/systemctl show homelab-*, \
+    /usr/bin/systemctl status homelab-*, \
+    /usr/bin/systemctl cat homelab-*, \
+    /usr/bin/systemctl daemon-reload
+
+Cmnd_Alias HOMELAB_AGENT_READ = \
+    /usr/bin/systemctl list-units, \
+    /usr/bin/systemctl list-units *, \
+    /usr/bin/systemctl list-timers, \
+    /usr/bin/systemctl list-timers *, \
+    /usr/bin/systemctl --failed, \
+    /usr/bin/systemctl is-system-running, \
+    /usr/bin/journalctl, \
+    /usr/bin/journalctl *, \
+    /usr/bin/ss -tlnp, \
+    /usr/bin/systemd-analyze security *, \
+    /usr/bin/systemd-analyze verify *, \
+    /usr/bin/stat *, \
+    /usr/bin/ls *, \
+    /usr/bin/cat /etc/homelab-*/*.json, \
+    /usr/bin/getent *, \
+    /usr/bin/id *, \
+    /usr/local/sbin/data-volume.sh status
+
+# The staging directory is /tmp/homelab-agent/, created by the agent per
+# session; /tmp is cleared at boot (brief 6.2). Mode 644, not 600: both
+# installers write config.json as root:root 0644 because the helper runs as
+# aleix and the harness as homelab-harness -- a 0600 root:root config blinds
+# the service on its next start, and this account has no chmod.
+# cp -p, not cp: root's cp without -p would leave the ledger root-owned and
+# the helper (aleix) unable to write it -- the 15.1 S3 ledger-restore defect.
+Cmnd_Alias HOMELAB_AGENT_FILES = \
+    /usr/bin/install -m 644 -o root -g root /tmp/homelab-*/* /etc/homelab-*/*.json, \
+    /usr/bin/cp -p /var/lib/homelab-model-helper/* /var/lib/homelab-model-helper/*, \
+    /usr/bin/mv /var/lib/homelab-model-helper/* /var/lib/homelab-model-helper/*
+
+# --- Denied by explicit line (ADR-049 section 3) ----------------------------
+# Everything not allowed above is already denied by omission. These lines
+# exist so the intent survives a later edit, and so `sudo -l` shows the
+# boundary rather than only the grant.
+
+# Lockout-class: remote access, network, authentication, boot.
+Cmnd_Alias HOMELAB_AGENT_DENY_LOCKOUT = \
+    /usr/sbin/sshd, /usr/sbin/sshd *, \
+    /usr/sbin/ufw, /usr/sbin/ufw *, \
+    /usr/sbin/iptables, /usr/sbin/iptables *, \
+    /usr/sbin/ip6tables, /usr/sbin/ip6tables *, \
+    /usr/sbin/nft, /usr/sbin/nft *, \
+    /usr/bin/tailscale, /usr/bin/tailscale *, \
+    /usr/sbin/netplan, /usr/sbin/netplan *, \
+    /usr/sbin/visudo, /usr/sbin/visudo *, \
+    /usr/sbin/cryptsetup, /usr/sbin/cryptsetup *, \
+    /usr/sbin/usermod, /usr/sbin/usermod *, \
+    /usr/sbin/useradd, /usr/sbin/useradd *, \
+    /usr/sbin/userdel, /usr/sbin/userdel *, \
+    /usr/bin/passwd, /usr/bin/passwd *, \
+    /usr/sbin/chpasswd, /usr/sbin/chpasswd *, \
+    /usr/bin/apt, /usr/bin/apt *, \
+    /usr/bin/apt-get, /usr/bin/apt-get *, \
+    /usr/bin/dpkg, /usr/bin/dpkg *, \
+    /usr/bin/snap, /usr/bin/snap *, \
+    /usr/sbin/reboot, /usr/sbin/reboot *, \
+    /usr/sbin/shutdown, /usr/sbin/shutdown *, \
+    /usr/bin/systemd-creds, /usr/bin/systemd-creds *, \
+    /usr/bin/systemctl reboot*, \
+    /usr/bin/systemctl poweroff*, \
+    /usr/bin/systemctl halt*, \
+    /usr/bin/systemctl kexec*, \
+    /usr/bin/systemctl isolate*, \
+    /usr/bin/systemctl rescue*, \
+    /usr/bin/systemctl emergency*, \
+    /usr/bin/systemctl default*, \
+    /usr/bin/systemctl suspend*, \
+    /usr/bin/systemctl hibernate*, \
+    /usr/bin/systemctl edit*
+
+# The volume: status only (ADR-046 section 3).
+Cmnd_Alias HOMELAB_AGENT_DENY_VOLUME = \
+    /usr/local/sbin/data-volume.sh lock*, \
+    /usr/local/sbin/data-volume.sh unlock*
+
+# The glob holes described at the top: a third argument, a later option, or
+# `..` on any command whose allow names two paths -- and a second unit on the
+# mutating systemctl verbs (`stop homelab-x ssh.socket` would match
+# `homelab-*` otherwise).
+Cmnd_Alias HOMELAB_AGENT_DENY_GLOB = \
+    /usr/bin/systemctl start * *, /usr/bin/systemctl start -*, \
+    /usr/bin/systemctl stop * *, /usr/bin/systemctl stop -*, \
+    /usr/bin/systemctl restart * *, /usr/bin/systemctl restart -*, \
+    /usr/bin/systemctl reset-failed * *, /usr/bin/systemctl reset-failed -*, \
+    /usr/bin/cat * *, /usr/bin/cat *..*, \
+    /usr/bin/install -m 644 -o root -g root * * *, \
+    /usr/bin/install -m 644 -o root -g root * -*, \
+    /usr/bin/install -m 644 -o root -g root -*, \
+    /usr/bin/install -m 644 -o root -g root *..*, \
+    /usr/bin/cp -p * * *, /usr/bin/cp -p * -*, /usr/bin/cp -p -*, /usr/bin/cp -p *..*, \
+    /usr/bin/mv * * *, /usr/bin/mv * -*, /usr/bin/mv -*, /usr/bin/mv *..*
+
+# Secrets: no read, no write, no copy of anything named like a credential,
+# nothing under the owner's or root's home, no password hashes.
+Cmnd_Alias HOMELAB_AGENT_DENY_SECRETS = \
+    /usr/bin/cat *key*, /usr/bin/cat *token*, /usr/bin/cat *.cred*, \
+    /usr/bin/cat *secret*, /usr/bin/cat *credentials*, /usr/bin/cat *shadow*, \
+    /usr/bin/cat */home/aleix/*, /usr/bin/cat */root/*, \
+    /usr/bin/install -m 644 -o root -g root *key*, \
+    /usr/bin/install -m 644 -o root -g root *token*, \
+    /usr/bin/install -m 644 -o root -g root *.cred*, \
+    /usr/bin/install -m 644 -o root -g root *secret*, \
+    /usr/bin/install -m 644 -o root -g root *credentials*, \
+    /usr/bin/install -m 644 -o root -g root * /etc/ssh/*, \
+    /usr/bin/install -m 644 -o root -g root * /etc/sudoers*, \
+    /usr/bin/install -m 644 -o root -g root * /etc/ufw/*, \
+    /usr/bin/cp -p *key*, /usr/bin/cp -p *token*, /usr/bin/cp -p *.cred*, \
+    /usr/bin/cp -p *secret*, /usr/bin/cp -p *credentials*, /usr/bin/cp -p *shadow*, \
+    /usr/bin/mv *key*, /usr/bin/mv *token*, /usr/bin/mv *.cred*, \
+    /usr/bin/mv *secret*, /usr/bin/mv *credentials*, /usr/bin/mv *shadow*, \
+    /usr/bin/getent shadow*, /usr/bin/getent gshadow*
+
+# --- The grant --------------------------------------------------------------
+# Allow first, deny last: last match wins.
+homelab-agent ALL=(root) NOPASSWD: \
+    HOMELAB_AGENT_UNITS, HOMELAB_AGENT_READ, HOMELAB_AGENT_FILES, \
+    !HOMELAB_AGENT_DENY_LOCKOUT, !HOMELAB_AGENT_DENY_VOLUME, \
+    !HOMELAB_AGENT_DENY_GLOB, !HOMELAB_AGENT_DENY_SECRETS

@@ -94,3 +94,31 @@ Host homelab-lan
     IdentitiesOnly yes
     AddKeysToAgent yes
     UseKeychain yes
+
+# ---------------------------------------------------------------------------
+# The executor agent's door -- its own account, its own key (Phase 13.1, ADR-049)
+# ---------------------------------------------------------------------------
+# Used by an executor agent running on this MacBook to run a runbook's AGENT
+# block; never by the owner for owner work, which stays on `homelab`. What is
+# different from the aliases above, and why:
+#   - User homelab-agent: a separate account, so sudo's log and journalctl
+#     say WHO, and revoking the agent is deleting one authorized_keys line.
+#   - The key is passphrase-less (an agent cannot type one), 0600, excluded
+#     from the backup like the node's GitHub key. Hence no AddKeysToAgent and
+#     no UseKeychain: there is nothing to cache.
+#   - BatchMode + ConnectTimeout: a hung command FAILS rather than waits for
+#     a prompt nobody will answer.
+#   - RequestTTY no: no pty, so `sudo systemctl status` and `journalctl`
+#     never open a root pager on the agent path.
+Host homelab-agent
+    HostName homelab.CHANGE-ME.ts.net
+    User homelab-agent
+    IdentityFile ~/.ssh/id_ed25519_homelab_agent
+    IdentitiesOnly yes
+    BatchMode yes
+    ConnectTimeout 10
+    RequestTTY no
+    ForwardAgent no
+    # A dead Wi-Fi link is reported in about a minute instead of never.
+    ServerAliveInterval 15
+    ServerAliveCountMax 4
