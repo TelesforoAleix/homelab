@@ -310,11 +310,18 @@ sudo stat -c '%n %U:%G %a %s bytes' \
 ```
 
 ```bash
-# T — repository-side backup coverage landed in S1 and remains present in S2.
 echo "== backup source and verifier name all three Phase 15.1 paths =="
-rg -n 'gateway-key|spend.json|credential.conf' \
-  scripts/macos/backup-node.sh scripts/macos/verify-node-backup.sh
+if command -v rg >/dev/null 2>&1; then
+  rg -n 'gateway-key|spend.json|credential.conf' \
+    scripts/macos/backup-node.sh scripts/macos/verify-node-backup.sh
+else
+  grep -nE 'gateway-key|spend\.json|credential\.conf' \
+    scripts/macos/backup-node.sh scripts/macos/verify-node-backup.sh
+fi
 ```
+
+The fallback is intentional: the S2 reference Mac did not have `rg`. There is no leading comment
+inside the paste block because interactive zsh does not necessarily enable `interactivecomments`.
 
 Paste back all outputs from steps 1–9, both Telegram replies, and the dashboard's numeric
 before/after request count and spend. Label the call count explicitly:
