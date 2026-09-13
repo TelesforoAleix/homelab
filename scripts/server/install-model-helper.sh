@@ -296,8 +296,11 @@ check_fixture_tests() {
     set -e
     rm -rf "$tmp"
     if [[ $rc -eq 0 ]] && grep -q "^All .* checks passed" <<<"$out"; then
-        ok "fixture tests passed as ${OWNER} (refusal, control, no cap, hints, unknown key)"
-        grep -E '^ok +test (1|2|3|11|12):' <<<"$out" | sed 's/ --.*//; s/^/      /'
+        ok "fixture tests passed as ${OWNER} (Phase 15.0 plus Phase 15.1 rows 1-8)"
+        # Print the evidence, not only a summary: S2 must show all fake-gateway
+        # rows on the node before the first paid call is even attempted.
+        grep -E '^ok +(test (1|2|3|11|12):|row [1-8]:|provider errors:|uncertain HTTP)|^All ' \
+            <<<"$out" | sed 's/^/      /'
         return 0
     fi
     if grep -qE '^(ok|FAIL) ' <<<"$out"; then
@@ -338,7 +341,7 @@ check_no_new_listener() {
 
 run_verify() {
     local rc=0
-    echo "=== Model helper — verification (Phase 09 + 15.0) ==="
+    echo "=== Model helper — verification (Phase 09 + 15.0 + 15.1) ==="
     echo
     check_socket_permissions            || rc=1
     check_bot_can_reach_socket          || rc=1
