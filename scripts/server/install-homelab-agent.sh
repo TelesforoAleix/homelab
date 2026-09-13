@@ -88,7 +88,10 @@ agent_sudo() {
     set -e
 }
 
-denied_msg() { grep -qiE 'not allowed|password is required|not permitted' <<<"$1"; }
+# sudo-rs refuses with "I'm sorry <user>. I'm afraid I can't do that"
+# (OBSERVED 2026-09-13, S2 step 1: every deny was refused and this function,
+# knowing only C sudo's phrasings, reported all nineteen as UNKNOWN).
+denied_msg() { grep -qiE "not allowed|password is required|not permitted|afraid I can't do that" <<<"$1"; }
 
 # expect_allowed <label> <cmd...>: rc 0 => ok. rc != 0 with a sudo denial
 # message => FAIL (the grant is missing). rc != 0 otherwise => the command
