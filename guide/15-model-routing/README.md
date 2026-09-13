@@ -4,6 +4,23 @@
 the closing sections after the live tests. Brief:
 [`docs/handovers/15.0-model-registry.md`](../../docs/handovers/15.0-model-registry.md).
 
+## Phase 15.1 — approved serving-provider control
+
+**OBSERVED 2026-09-13 — owner approval, recorded verbatim:**
+
+`APPROVE providers_approved = ["anthropic-cli", "openai-cli", "vercel-ai-gateway:openai"]`
+
+For a gateway model, the entry names the serving provider, not merely the model creator or the
+Vercel processor. The helper derives `openai` from `openai/<model>`, requires
+`vercel-ai-gateway:openai` in the root-owned approved list, and sends
+`providerOptions.gateway.only=["openai"]` on every request. Vercel documents that requests are
+dynamically routed by default and that `only` is the request-level provider allowlist:
+https://vercel.com/docs/ai-gateway/models-and-providers/provider-options (read 2026-09-13).
+
+A team-wide provider allowlist in the Vercel dashboard is not a required control and is not relied
+on because it lives outside git and can drift. If the owner enables one, record the setting and
+observation date here as belt-and-braces, not as the enforcement mechanism.
+
 ## What we are trying to achieve
 
 Today the model helper knows exactly two models, one per provider, both hardcoded in

@@ -546,11 +546,16 @@ def main() -> int:
     row8 = b.config("row-8")
     reply, _ = ask(row8, utility())
     captured = gateway.requests[-1] if gateway.requests else {}
-    fields_exact = set(captured) == {"model", "messages", "max_tokens"}
+    fields_exact = set(captured) == {
+        "model", "messages", "max_tokens", "providerOptions"
+    }
+    pin_exact = captured.get("providerOptions") == {
+        "gateway": {"only": ["openai"]}
+    }
     serialized = json.dumps(captured).lower()
     host_data_absent = not any(x in serialized for x in
                                ("/etc/", "/home/", ".service", "hostname"))
-    if reply.get("ok") and fields_exact and host_data_absent:
+    if reply.get("ok") and fields_exact and pin_exact and host_data_absent:
         report("ok", "row 8: fake gateway request body captured exactly",
                json.dumps(captured, separators=(",", ":")))
     else:

@@ -360,6 +360,7 @@ class GatewayProvider(Provider):
 
     def __init__(self, entry: dict, model: dict, timeout: int) -> None:
         self.model = model["id"]
+        self.vendor = self.model.split("/", 1)[0]
         self.timeout = timeout
         self.endpoint = entry["endpoint"]
         self.max_output_tokens = model["max_output_tokens"]
@@ -406,6 +407,10 @@ class GatewayProvider(Provider):
             "model": self.model,
             "messages": [{"role": "user", "content": content}],
             "max_tokens": self.max_output_tokens,
+            # The creator prefix in the model id is not a serving-provider
+            # pin. Vercel dynamically routes by default, so enforce the
+            # approved egress destination on every request (brief §6.5).
+            "providerOptions": {"gateway": {"only": [self.vendor]}},
         }
         if self.reasoning not in (None, "none", "provider-default"):
             body["reasoning"] = {"effort": self.reasoning}
