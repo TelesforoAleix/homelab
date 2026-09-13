@@ -1,6 +1,6 @@
 # Current Architecture
 
-**State:** Phases 01–09, 12, 13, 18, 18.1, 18.2 and 20.0 complete — the reference node runs Ubuntu Server, is
+**State:** Phases 01–09, 12, 13, 15.0, 18, 18.1, 18.2, 20.0 and 23.0 complete — the reference node runs Ubuntu Server, is
 administered remotely over Tailscale with key-only SSH, and has Docker Engine/Compose plus two
 subscription-authenticated AI operator CLIs. **The monitor and keyboard are detached**; the node runs
 headless, with a console available on demand — the connectors are present and console login is tested
@@ -17,7 +17,19 @@ owned `aleix:aleix`, and the **Factory Workbench runs there as `homelab-workbenc
 `127.0.0.1:8765`, reached from the MacBook only through `ssh homelab-workbench`'s `LocalForward`.
 The MacBook is a client and a terminal; nothing runs from its clones. The node holds one new secret —
 an SSH key to GitHub with write access to the three private repositories — and one new listening
-socket, on loopback. ADR-038 §5's rule is now the measured statement: **seven sockets, seven names.**
+socket, on loopback. ADR-038 §5's rule is now the measured statement: ~~seven sockets, seven names~~
+**eight sockets, eight names** (Phase 23.0, 2026-09-13).
+
+**The endpoint exists** (Phase 23.0, 2026-09-13): `homelab-harness.service`, its own account, on
+`127.0.0.1:8766` — the eighth socket. Layer 1 attaches origin and refuses identity claims in the body
+by name; layer 2 classifies deterministically (`question` served; `task`, `command`, `unclassifiable`
+refused with the reason); layer 9 forwards a question to the model helper with `role` as the only
+routing key and writes one content-free audit line to `/var/lib/homelab-harness/audit.jsonl` on root.
+It reaches the helper as a member of **`homelab-model`**, the group that now owns the helper's socket
+(ADR-048: `aleix:homelab-model:0660`, members `homelab-bot,homelab-harness`). The Workbench is its
+first client through the `homelab` adapter (`factory`), and **the adapter interface is proved** —
+the same project run on the fake and on `homelab` differs only in `Result` fields. Up after a locked
+boot; score 1.3; `client` is a label, not an identity, until 23.3.
 
 **The security boundary is written down and measured** (Phase 13, 2026-09-13). From the outside in:
 **Tailscale ACL** (only a tailnet member's device may reach the node, and only on tcp/22 —
@@ -91,7 +103,7 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
         runs as homelab-bot; reads the previous boot's journal and findmnt;
         sends one of four literal messages via homelab-notify.sh; OUTBOUND HTTPS only
         RestrictAddressFamilies has no AF_UNIX: the model helper is unreachable at the kernel
-    homelab-notify@{bot,model-helper,watchdog,workbench}.service — OnFailure= targets, same account,
+    homelab-notify@{bot,model-helper,watchdog,workbench,harness}.service — OnFailure= targets, same account,
         same LoadCredential= token grant; homelab-notify@ itself has no OnFailure= (recursion guard)
     /srv/homelab (LUKS2, unlocked over SSH) — aleix:aleix 0750 (Phase 18.2)
         homelab/ factory/ brain/ projects/oncla/ projects/factory/ — clones, SSH remotes
@@ -100,6 +112,12 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
         runs as aleix under NoNewPrivileges; ProtectSystem=strict + ReadWritePaths=/srv/homelab
         ConditionPathIsMountPoint= / PartOf= / WantedBy=homelab-data.target — the canary
         LISTENS on 127.0.0.1:8765 only; no AF_UNIX; systemd-analyze security: 1.3 OK
+        its `homelab` adapter POSTs to the harness below (Phase 23.0)
+    homelab-harness.service — the endpoint, layers 1/2/9 (Phase 23.0, ADR-048)
+        runs as homelab-harness (uid 995), no shell, no home, groups: own + homelab-model
+        StateDirectory on ROOT (audit.jsonl, no content); WantedBy=multi-user.target — up while locked
+        LISTENS on 127.0.0.1:8766 only; AF_UNIX for the helper's socket (# WHY); score 1.3 OK
+        ──socket──▶ homelab-model-helper as one more capped consumer; holds no credential
     NO MONITOR, NO KEYBOARD — all DRM connectors report disconnected
     Cold-boots headless to a reachable state in ~26 seconds
 ```
@@ -123,12 +141,14 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | **Router / executors** | **Active** — registry-based, in the bot process. Six executors at three capability levels; authorisation in one function; two allowlists with privileged enforced as a subset (ADR-024) |
 | **Escalation grant** | **Active** — polkit, one user / one unit / one verb, plus a second allowlist inside the bot. Zero sudoers entries; `NoNewPrivileges` retained |
 | **Telegram status bot** | **Active** — `homelab-telegram-bot.service`, the project's first service. Read-only, standard library only, never forks a process. Long polling means **no listening socket**; isolation proved by attempted access (ADR-023) |
-| **Model helper** | **Active** — `homelab-model-helper.socket` + templated service. Runs as `aleix` because it must reach the credentials the bot cannot; **cannot see `~/.ssh`** (`InaccessiblePaths`, Phase 13; score 3.8, syscall filter declined after SIGSYS); socket-activated, one process per connection, so nothing holds an OAuth token between requests. Access control is the socket's group and mode, not code (ADR-025) |
+| **Model helper** | **Active** — `homelab-model-helper.socket` + templated service. Runs as `aleix` because it must reach the credentials the bot cannot; **cannot see `~/.ssh`** (`InaccessiblePaths`, Phase 13; score 3.8, syscall filter declined after SIGSYS); socket-activated, one process per connection, so nothing holds an OAuth token between requests. Access control is the socket's group and mode, not code (ADR-025). **Since Phase 23.0 the group is `homelab-model`** (ADR-048): members `homelab-bot`, `homelab-harness`; `getent group homelab-model` is the access list. `RuntimeMaxSec=270` via drop-in (the 15.0 debt) |
 | **Model executor** | **Active** — `/ask`, two providers with independent usage limits and automatic fallback, cheapest model by default. **Phase 15.0:** models are a registry in root-owned `config.json` (`providers → models`, `routes`, `default_route`); the caller asks by routing key (`role`, absent → `owner-interactive`), unknown key refused; `unattended` eligibility per provider refused before the cap reservation (proved by fixture); an owner floor on every provider; hints (`priority`, `severity`, `complexity`, `summary`) logged, never selecting; any other field refused by name. The model gets **no tools** (verified with a canary), and its output is never dispatched |
 | **Encrypted data volume** | **Active, locked at boot** — `ubuntu-vg/data` (LUKS2, 128 GiB) → mapper `homelab-data` → ext4, mounted at `/srv/homelab`. Unlocked manually over SSH via `data-volume.sh unlock`; `noauto` in `/etc/crypttab` and `/etc/fstab` keeps boot from waiting on it (ADR-037, Phase 18.1) |
 | **Watchdog / notifier** | **Active** — token via `LoadCredentialEncrypted=` (TPM2-sealed, Phase 13) in both, as in the bot; `homelab-watchdog.timer` (`OnBootSec=90s`, `WantedBy=timers.target`) → `homelab-watchdog.service` (oneshot, `User=homelab-bot`, `SupplementaryGroups=systemd-journal`, `LoadCredential=` on the bot's token, `RestrictAddressFamilies=AF_INET AF_INET6`). Classifies the previous stop from PID 1's journal (`Shutting down.` present → clean, absent → unplanned), computes downtime from `journalctl --list-boots`, reads lock state from `/etc/crypttab` + `findmnt`. `homelab-notify@.service` is the single send primitive and the `OnFailure=` target for the bot (drop-in), the model helper (drop-in) and the watchdog; it has no `OnFailure=` of its own. Three boots observed 2026-09-12: enable, clean reboot, power cut — all reported correctly (Phase 12) |
 | **`homelab-data.target` + `homelab-workbench.service`** | **Active pattern** — `ConditionPathIsMountPoint=/srv/homelab`, `PartOf=`/`WantedBy=homelab-data.target`, and **no `WorkingDirectory=` on the volume** (implicit `RequiresMountsFor=` would run before the Condition — found by a false alert, Phase 18.2). A dependent unit started while locked is skipped, not failed; `is-system-running` stays `running` either way. The Workbench is the canary; the 18.1 probe is removed. Contract: `docs/standards/volume-dependent-services.md` |
 | **Factory Workbench** | **Active** — `homelab-workbench.service`, `User=aleix`, `python3 -m workbench.cli --project /srv/homelab/projects/factory serve` from `/srv/homelab/factory` via `PYTHONPATH`. Binds `127.0.0.1:8765` only (refused otherwise in `server.py`); reached through `ssh homelab-workbench`; no application login — the OS user is the boundary (ADR-035 §7, ADR-036 §5, ADR-038). `OnFailure=homelab-notify@workbench.service`. Score 1.3 OK. **Writes records into `projects/factory/ops/` and never commits** — the owner commits by hand (Phase 18.2) |
+| **Harness — the endpoint** | **Active** — `homelab-harness.service` (Phase 23.0, 2026-09-13), `User=homelab-harness`, `127.0.0.1:8766` only (refused otherwise in code), `StateDirectory=/var/lib/homelab-harness` on root holding `audit.jsonl` — one line per request, **no content** (ids, labels, enums, lengths; proved on the file). `POST /v1/request` with a closed schema; identity fields in the body refused by name; `role` required; a deterministic four-class taxonomy (only `question` is served; `task` → `needs_decomposition` for 23.1). Forwards to the helper as a member of `homelab-model`; hints carried, never selecting. `GET /health/helper` pings the helper without a model call. `OnFailure=homelab-notify@harness.service`. Score **1.3**; `AF_UNIX` the one waiver. **`client` is a declared label, not an identity** (23.3). Up after a locked reboot |
+| **Second adapter — `Workbench → homelab`** | **Active, proved** — `factory` `workbench/adapters/homelab.py`, selected by `ops/project.json` `"adapter": "homelab"` (default `fake`); `python3 -m workbench.cli run <item>` is the one action that calls it. The Phase 20.0 §8.1.3 check run locally and on the node: records byte-identical apart from `Result` fields, the adapter name, the request id and the `adapter` key — **the adapter interface is proved** (2026-09-13). `Result` carries no correlation field; the request id reaches the run record out of band (to 23.3) |
 | **The four layers in the volume** | **Active** — five clones at `/srv/homelab/{homelab,factory,brain,projects/oncla,projects/factory}`, SSH remotes, cloned with `~aleix/.ssh/id_ed25519_github` (owner-account key, write to the three private repos; excluded from `backup-node.sh` by design). The MacBook's clones remain as working copies (Phase 18.2) |
 
 ## Confirmed architectural direction
@@ -182,8 +202,9 @@ as an **accepted judgement with its reasoning**, not as resolved.
 - ~~encryption at rest~~ — **executed** by Phase 18.1 (2026-09-12, ADR-037); root stays unencrypted
   by decision (ADR-046)
 - local GPU node (Phase 16)
-- the harness endpoint (Phase 23.0) — the Workbench is on loopback and the socket rule is measured;
-  the endpoint follows the same shape
+- ~~the harness endpoint (Phase 23.0)~~ — **built** (2026-09-13): layers 1, 2 and 9 as
+  `homelab-harness.service`. Layers 3–4 (23.1), 6 (23.2) and governance (23.3) are not; a `task` is
+  refused, not decomposed, and `client` is a label
 - a dedicated Workbench account — it runs as `aleix` under `NoNewPrivileges`; Phase 13 takes or
   declines the upgrade with a reason (Phase 18.2)
 

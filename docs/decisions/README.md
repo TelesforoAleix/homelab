@@ -273,12 +273,13 @@ were decided as one, and several only make sense together.
 
 
 - **[ADR-048](ADR-048-model-socket-consumers-group.md) — The model socket's consumers are a
-  group** (2026-09-13, Phase 23.0). **Proposed.** The helper's socket changes from
+  group** (2026-09-13, Phase 23.0). **Accepted 2026-09-13.** The helper's socket changes from
   `aleix:homelab-bot:0660` to `aleix:homelab-model:0660`, where `homelab-model` is a system group
   whose one meaning is "may ask the helper"; its members are the bot and the harness
   (`homelab-harness`, the endpoint's own account per ADR-047). Chosen over running the harness as
   the bot, over a `usermod` into the bot's group (a group meaning two things — forbidden by the
   15.0 handover), over a second socket and over `SupplementaryGroups=`. Keeps ADR-025's principle
   (access is the socket unit, not code) and the Phase 09 property (the caller cannot name a
-  program); widens the helper's consumers by one and makes its caps a shared budget. Accepted once
-  the 23.0 brief's rows 10, 14 and 18 are OBSERVED.
+  program); widens the helper's consumers by one and makes its caps a shared budget. Rows 10, 14
+  and 18 of the 23.0 brief OBSERVED on the node the same day (`nobody` → `EACCES`; `/ask` unchanged
+  across the change and a locked reboot; 15.0 fixture 19/19).

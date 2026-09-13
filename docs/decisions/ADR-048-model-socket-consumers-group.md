@@ -1,6 +1,6 @@
 # ADR-048: The model socket's consumers are a group
 
-- **Status:** Proposed (Phase 23.0 S1; accepted at S4 once rows 10, 14 and 18 of the 23.0 brief are OBSERVED)
+- **Status:** Accepted 2026-09-13 (Phase 23.0 S4). Validation rows 10, 14 and 18 of the 23.0 brief OBSERVED on the node 2026-09-13: `getent group homelab-model` = `homelab-bot,homelab-harness`; `/ask` answered before the change, after the socket and bot restart, and after a locked reboot, with the 15.0 fixture 19/19; `sudo -u nobody` probing the socket → `PermissionError errno=13`. Proposed the same day at S1.
 - **Date:** 2026-09-13
 - **Supersedes:** none. Amends the access-control paragraph of ADR-025 (the socket's group is no longer the bot's own group); ADR-025's principle — access is the socket unit, not code — is unchanged.
 - **Superseded by:** none
@@ -98,7 +98,7 @@ What this changes:
 
 ## Validation / revisit trigger
 
-Validation, from the 23.0 brief §8 (OBSERVED on the node in S2; this ADR moves to Accepted when they are):
+Validation, from the 23.0 brief §8 — all three OBSERVED on the node 2026-09-13 (S2), which is what moved this ADR to Accepted:
 
 - Row 10: `id homelab-harness` shows no `aleix`, `docker`, `sudo`; `getent group homelab-model`
   = `homelab-bot,homelab-harness`.

@@ -24,6 +24,7 @@ Phase 13 S2. Only `.service` units can be scored; timers, sockets and targets re
 | `homelab-watchdog.service` | `homelab-bot` | **1.3** | none needed |
 | `homelab-notify@.service` | `homelab-bot` | **1.3** | none needed |
 | `homelab-workbench.service` | `aleix` | **1.3** | `User=aleix` (writes must stay commit-able by the owner — ADR-047) |
+| `homelab-harness.service` | `homelab-harness` | **1.3** | `RestrictAddressFamilies=` includes `AF_UNIX` (it exists to reach the helper's socket — ADR-048; Phase 23.0, 2026-09-13) |
 | `homelab-model-helper@.service` | `aleix` | **3.8** | `User=aleix` + `ProtectHome` unset (its purpose is the OAuth files); `MemoryDenyWriteExecute` (Node JIT); `RestrictNamespaces` (codex's own sandbox); `SystemCallFilter` (SIGSYS on the Claude CLI, OBSERVED) |
 | `wifi-powersave-off.service` | root | **5.1** | root + `CAP_NET_ADMIN` (netlink); no syscall filter on a boot oneshot |
 
@@ -108,10 +109,10 @@ dependency — read ADR-046's amendment before choosing.
 **Loopback binding, refused in code, and a socket-table row — for every listener.** ADR-038 §2:
 bind `127.0.0.1` (or a UNIX socket with an owner and mode), refuse anything else in the code
 itself, reach it from the MacBook through `ssh -L` on the `homelab-workbench` alias or a second
-alias — never on `homelab`. The measured baseline is **seven TCP listeners** (`sshd` ×2,
-`systemd-resolved` ×2, `tailscaled` ×2, the Workbench on `127.0.0.1:8765`), re-verified with
-`sudo ss -tlnp` at every phase close; an eighth row is a finding until it is named in
-`docs/architecture/current-architecture.md`'s socket table.
+alias — never on `homelab`. The measured baseline is **eight TCP listeners** (`sshd` ×2,
+`systemd-resolved` ×2, `tailscaled` ×2, the Workbench on `127.0.0.1:8765`, the harness on
+`127.0.0.1:8766` — Phase 23.0), re-verified with `sudo ss -tlnp` at every phase close; a ninth row
+is a finding until it is named in `docs/architecture/current-architecture.md`'s socket table.
 
 A listener that must be reachable from another tailnet device (not through SSH) additionally gets
 its port added to `config/tailscale/acl.hujson` in the same commit — the ACL is a device-level
