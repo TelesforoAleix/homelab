@@ -222,6 +222,13 @@ the helper counts them as output, which is what made the settlement exact.
   own material to leave for an approved provider under its standard terms; ZDR is an enterprise
   arrangement, not a repository-owned control. **Revisit at ADR-033 trigger 1**, before any
   third-party data is sent.
+- **The close backup was first written with `main`'s `backup-node.sh`** (the owner ran it from the
+  main checkout, not the worktree): it does not collect the helper's `credential.conf`, and the
+  branch's verifier said `WRONG ABSENT`. Also: run with no argument, the verifier picks the
+  lexically newest directory — `2026-09-13-p151-s2` over `2026-09-13` — and reported five stale
+  mismatches against a two-stage-old archive; and `--force` overwrote 13.1's same-day snapshot.
+  Fixed by renaming and re-running both scripts from the branch → PASS. **Until a phase is merged,
+  its close backup runs from its worktree**, with the path given to the verifier explicitly.
 - The S2 backup-search paste failed on the Mac (`rg` absent; a leading `# T` line eaten by zsh) —
   the runbook now falls back to `grep -nE` and starts with a command.
 
@@ -262,5 +269,5 @@ the helper counts them as output, which is what made the settlement exact.
 | 16 | OBSERVED | no `AI_GATEWAY_API_KEY`; journal type/code only |
 | 17 | OBSERVED | `/ask` → `claude/haiku`, ledger mtime unchanged; endpoint `execution-agent` free (S2) |
 | 18 | OBSERVED / PREDICTED | owner `/spend` ×9; non-allowlisted refusal PREDICTED from the allowlist gate |
-| 19 | OBSERVED | close: `running`, 0 failed, 8 listeners; backup + verify PASS with `gateway-key` and `spend.json` present |
+| 19 | OBSERVED | close: `running`, 0 failed, 8 listeners, helper 3.8 / harness 1.3; `backup-node.sh` from **this branch** + `verify-node-backup.sh` → PASS against the live node, `gateway-key`, `spend.json` and the helper's `credential.conf` present, control fires |
 | 20 | OBSERVED | `git grep` for the key prefix in both repos → 0 |
