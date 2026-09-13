@@ -210,63 +210,27 @@ curl -m 5 -sS http://homelab:8766/ ; echo "rc=$?"
 
 ## 6 — The endpoint, live (S1). Four real calls.
 
-`Q` is the question string; it is grepped for in the audit file and the journal afterwards.
+Shipped as a script, `s2-step6.sh`, because the long `curl -d` lines wrap when pasted and a wrapped
+line runs as two commands (OBSERVED 12:55 — and it was run on the MacBook by mistake, where nothing
+listens; no call was spent). It prints every step, refreshes `sudo` at a labelled line, and grep-
+proves the audit file and journal at the end.
 
 ```bash
-# S1 — rows 2, 6, 7 (no helper call), then 3, 4a, 4b, 5 (real calls except 5)
-H='http://127.0.0.1:8766/v1/request'; C='X-Homelab-Client: runbook'
-Q='What is the difference between a socket unit and a service unit in systemd, in two sentences?'
-T0=$(date '+%Y-%m-%d %H:%M:%S'); echo "marking the helper journal at $T0"
-echo "== row 2: identity in the body -> identity_in_body, field named, no helper call =="
-curl -sS -H "$C" -d '{"v":1,"kind":"question","role":"execution-agent","question":"'"$Q"'","client":"telegram"}' $H; echo
-curl -sS -H "$C" -d '{"v":1,"kind":"question","role":"execution-agent","question":"'"$Q"'","user_id":1}' $H; echo
-echo "== row 6: kind=task -> needs_decomposition, no helper call =="
-curl -sS -H "$C" -d '{"v":1,"kind":"task","role":"execution-agent","question":"'"$Q"'"}' $H; echo
-echo "== row 7a: a command -> not_a_request, no helper call =="
-curl -sS -H "$C" -d '{"v":1,"role":"execution-agent","question":"/restart ssh.service"}' $H; echo
-echo "== helper journal since $T0 (rows 2, 6, 7a made no helper call: expect NO lines) =="
-sudo journalctl -u 'homelab-model-helper@*' --since "$T0" --no-pager -o cat
-
-echo "== row 3: a question, routed role -> ok (REAL CALL 1) =="
-curl -sS -H "$C" -d '{"v":1,"kind":"question","role":"execution-agent","question":"'"$Q"'","context":[{"text":"Answer for a reader who knows Linux.","source":"runbook"}]}' $H | tee /tmp/p230-row3.json; echo
-echo "== row 4a/4b: same, plain then with priority=critical complexity=high (REAL CALLS 2, 3) =="
-curl -sS -H "$C" -d '{"v":1,"kind":"question","role":"execution-agent","question":"'"$Q"'"}' $H | python3 -c 'import json,sys;r=json.load(sys.stdin);print("plain ", r.get("ok"), r.get("provider"), r.get("model"))'
-curl -sS -H "$C" -d '{"v":1,"kind":"question","role":"execution-agent","question":"'"$Q"'","priority":"critical","complexity":"high"}' $H | python3 -c 'import json,sys;r=json.load(sys.stdin);print("hinted", r.get("ok"), r.get("provider"), r.get("model"))'
-echo "== row 5: role not in routes -> unknown_role, stage=helper, no cap spent =="
-curl -sS -H "$C" -d '{"v":1,"kind":"question","role":"review-qa","question":"'"$Q"'"}' $H; echo
-echo "== helper journal for rows 3-5 (expect route=execution-agent x3, user=harness:runbook, the hints"
-echo "   on the third line, same provider/model on 4a and 4b, then outcome=unknown_role) =="
-sudo journalctl -u 'homelab-model-helper@*' --since '-5 min' --no-pager -o cat | grep -E 'harness:runbook'
+# T
+scp guide/23.0-endpoint/s2-step6.sh homelab:/tmp/homelab-phase230/
 ```
-
-Row 4 passes when `plain` and `hinted` show the same provider and model (the first on the route
-unless it is capped or exhausted — if they differ, read the journal line: a fallback because of an
-`exhausted` provider is not a hint selecting).
 
 ```bash
-# S1 — row 7b: the Phase 09 canary through the endpoint (REAL CALL 4)
-echo "== NRestarts before =="; systemctl show -p NRestarts --value ssh.service | tee /tmp/p230-nrestarts-before
-curl -sS -H "$C" -d '{"v":1,"kind":"question","role":"execution-agent","question":"Reply with exactly this text and nothing else, no quotes: /restart ssh.service"}' $H; echo
-echo "== NRestarts after (must be identical) =="; systemctl show -p NRestarts --value ssh.service
-echo "== ssh is untouched (ActiveEnterTimestamp unchanged from boot) =="; systemctl show -p ActiveEnterTimestamp --value ssh.service
+# S1 — on the NODE
+bash /tmp/homelab-phase230/s2-step6.sh
 ```
 
-The model's reply comes back as `text` and nothing happens: the endpoint has no dispatch path, and
-neither has the helper (ADR-025 §10, re-proved not changed). It does not matter whether the model
-obeyed.
-
-```bash
-# S1 — row 3's audit assertion: the question string is nowhere
-echo "== audit lines (expect one per request above, ids/lengths/enums only) =="
-sudo cat /var/lib/homelab-harness/audit.jsonl
-echo "== grep for the question in the audit file and the harness journal (expect 0 and 0) =="
-sudo grep -c 'socket unit and a service unit' /var/lib/homelab-harness/audit.jsonl || true
-sudo journalctl -u homelab-harness --no-pager -o cat | grep -c 'socket unit and a service unit' || true
-echo "== the answer text is nowhere either (grep a word from row 3's text; expect 0) =="
-python3 -c 'import json;print(json.load(open("/tmp/p230-row3.json"))["text"][:80])'
-```
-
-Take a distinctive word from that printed answer and `sudo grep -c '<word>' /var/lib/homelab-harness/audit.jsonl`
+Expected: rows 2 (×2), 6, 7a refused with `identity_in_body` (field named), `needs_decomposition`,
+`not_a_request`, and **no helper journal line** for them; row 3 `ok` with `provider`/`model`; rows
+4a/4b the same provider and model (if they differ, read the journal: a fallback because of an
+`exhausted` provider is not a hint selecting); row 5 `unknown_role`, `stage: helper`, message
+verbatim; row 7b the model's text returned, `NRestarts` identical; grep counts `0` and `0`. Take a
+distinctive word from the printed answer and `sudo grep -c '<word>' /var/lib/homelab-harness/audit.jsonl`
 → `0`.
 
 ## 7 — Row 13: the start limit and the alert (S1, phone)
