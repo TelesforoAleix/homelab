@@ -36,6 +36,10 @@ A change is **lockout-class** if it touches any of:
 
 Everything else is ordinary work. Everything in the table gets the rest of this document.
 
+**The `homelab-agent` account never performs a lockout-class step** (ADR-049, Phase 13.1): every
+row in this table is an OWNER step in a runbook, run as `aleix` with a password — the agent's
+sudoers file denies each of them by name, and landing that file is itself a row here.
+
 The classification matters more than the checklist. Most lockouts are not caused by someone skipping
 a safety step; they are caused by not noticing that a safety step applied.
 

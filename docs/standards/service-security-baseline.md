@@ -85,6 +85,19 @@ A service account is a system account (`--system`, no shell, own group), is **ne
 `docker`, `sudo`, `adm` or `lxd`, and gets its files through `LoadCredential=` and `ReadWritePaths=`,
 not through group membership on the admin's directories.
 
+**The operator account is the one exception to "no shell", and it is not a service** (ADR-049,
+Phase 13.1). `homelab-agent` runs no unit, holds no credential, and exists so that an executor agent
+on the MacBook operates the node under its own name: its own Ed25519 key, its own alias
+(`ssh homelab-agent`), `/bin/bash`, no password, member of no group but its own, and one sudoers
+file — `config/sudoers.d/homelab-agent`, `NOPASSWD`, a closed list, denies by explicit line. What
+it may do as root is the routine operator set (start/stop/restart/inspect `homelab-*`, read the
+journal, replace a `.json` config from `/tmp/homelab-agent/`, copy ledgers within their directory,
+`data-volume.sh status`); what it may never do is anything lockout-class, any secret, the volume's
+lock state, or its own grant. `sudo -l -U homelab-agent` on the node is the ground truth and is
+pasted into the phase guide at every close that touches the file. The audit set for this account:
+`id` (own group only), `visudo -c -f /etc/sudoers.d/homelab-agent`, the `sudo -l` diff against the
+committed file, and the deny attempts in `install-homelab-agent.sh verify`.
+
 ## 4. The credential rule
 
 **Every secret reaches a unit through `LoadCredential=` (or `LoadCredentialEncrypted=`), never
@@ -152,6 +165,15 @@ a labelled line, and refreshed the timestamp so no later block could stall.
 And never put a prompting script behind a buffering pipe — `backup-node.sh | tail` hid the node's
 sudo prompt from the owner at Phase 13's own close (`tee` is fine; `tail`, `head`, `less` are not).
 
+**Since Phase 13.1 a runbook has two blocks with a fixed vocabulary** (ADR-049 §4). **AGENT** —
+run by the executor over `ssh homelab-agent`; it captures and reads its own output and reports it
+OBSERVED; this is the default for every step. **OWNER** — the owner at the keyboard: anything with
+a password (`aleix`'s `sudo`), the credential editor, the browser (Vercel, GitHub, Tailscale, BIOS),
+the phone (Telegram), and every lockout-class change under `safe-changes-headless.md`. The executor
+tells the owner when it is their turn and stops. It never asks the owner to run something the
+AGENT block could run, and never asks for a password. The print-before-wait rule above is for the
+OWNER block; the AGENT block has no prompt to hide.
+
 Two habits that go with it: a script that changes a file keeps the previous version as
 `<file>.bak-<date>` and **never overwrites an existing backup from the same day** (a second round
 would otherwise destroy the original); and a `systemd-run` probe that is *meant* to fail passes
@@ -167,5 +189,7 @@ Listeners: 127.0.0.1, refused in code, socket-table row. Seven is the baseline. 
 Volume? volume-dependent-services.md decides when it runs.
 apply-firewall.sh resets ufw -> apply-docker-user-rules.sh after it, always.
 Owner runbooks: print before you wait. sudo prompt only. .bak-<date>, never overwritten.
+Runbooks are AGENT (ssh homelab-agent, default) + OWNER (password, secret, browser, phone, lockout).
+homelab-agent: operator, not a service. Closed NOPASSWD list; sudo -l -U is the truth; never lockout.
 Known limits: @system-service kills the Claude CLI; AF_NETLINK alone breaks iw/ip.
 ```
