@@ -54,7 +54,7 @@ scp services/homelab-harness/harness.py services/homelab-harness/classify.py \
     config/systemd/homelab-harness.service \
     config/systemd/homelab-harness.service.d/onfailure.conf \
     homelab:/tmp/homelab-p151/harness/
-scp guide/15-model-routing/p151-s2-row10.sh homelab:/tmp/homelab-p151/
+scp guide/15.1-gateway-and-spend-governor/s2-row10.sh homelab:/tmp/homelab-p151/
 ssh homelab 'ls -l /tmp/homelab-p151/helper /tmp/homelab-p151/bot /tmp/homelab-p151/harness /tmp/homelab-p151/p151-s2-row10.sh'
 ```
 
@@ -305,7 +305,7 @@ On T, transfer only the committed diagnostic code and fixture. This contains no 
 scp services/model-helper/helper.py services/model-helper/providers.py \
     services/model-helper/fixture-tests.py \
     homelab:/tmp/homelab-p151/helper/
-scp guide/15-model-routing/p151-s2-row10.sh homelab:/tmp/homelab-p151/
+scp guide/15.1-gateway-and-spend-governor/s2-row10.sh homelab:/tmp/homelab-p151/
 ```
 
 On S1, install and verify before any request leaves the node:

@@ -40,7 +40,7 @@ the owner for the same edit; the record to insert is the one in the heredoc.
 
 **As run:** pasting a heredoc into a wrapped terminal broke twice (indented `EOF`, a
 line-wrapped one-liner), so the same four edits were staged by the agent as
-[`p151-s3-ledger.py`](p151-s3-ledger.py) in `/tmp/homelab-agent/` and the owner ran
+[`s3-ledger.py`](s3-ledger.py) (staged on the node as `p151-s3-ledger.py`) in `/tmp/homelab-agent/` and the owner ran
 `python3 /tmp/homelab-agent/p151-s3-ledger.py restore | add <window> | final | dump` as aleix.
 Identical records, identical in-place write; the OWNER command is one short line.
 
@@ -358,7 +358,7 @@ owner runs through the agent alias from the Mac — same account, same one-attem
 
 ~~~bash
 # AGENT stages (no request):
-scp guide/15-model-routing/p151-s3-call4.sh homelab-agent:/tmp/homelab-agent/p151-s3-call4.sh
+scp guide/15.1-gateway-and-spend-governor/s3-call4.sh homelab-agent:/tmp/homelab-agent/p151-s3-call4.sh
 # OWNER fires, once, from the Mac (the alias does not exist on the node):
 ssh homelab-agent bash /tmp/homelab-agent/p151-s3-call4.sh
 # AGENT reads:
