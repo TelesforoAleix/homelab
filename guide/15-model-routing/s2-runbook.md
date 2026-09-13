@@ -27,8 +27,16 @@ Terminals:
 echo "== local fixture (no node, no allowance) =="
 python3 services/model-helper/fixture-tests.py
 
+echo "== stage the ROLLBACK first: the Phase 09 helper from main (7c2fc3b) to /tmp/p150-rollback on the node =="
+mkdir -p /tmp/p150-rollback
+for f in helper providers limits; do
+  git -C /Users/home/Code/homelab show 7c2fc3b:services/model-helper/$f.py > /tmp/p150-rollback/$f.py
+done
+ssh homelab 'mkdir -p /tmp/p150-rollback /tmp/homelab-phase09'
+scp /tmp/p150-rollback/*.py homelab:/tmp/p150-rollback/
+ssh homelab 'ls -l /tmp/p150-rollback/'
+
 echo "== copy the helper files to the node (same staging path Phase 09 used) =="
-ssh homelab 'mkdir -p /tmp/homelab-phase09'
 scp services/model-helper/helper.py services/model-helper/providers.py \
     services/model-helper/limits.py services/model-helper/socket-probe.py \
     services/model-helper/fixture-tests.py services/model-helper/config.example.json \
@@ -37,7 +45,13 @@ scp services/model-helper/helper.py services/model-helper/providers.py \
     homelab:/tmp/homelab-phase09/
 ```
 
+The revert is on the box before anything changes. `/tmp` is cleared at boot; nothing here reboots.
+
 ```bash
+# S1 — sudo once, up front, at a labelled line. Every later sudo in this runbook runs on the
+# refreshed timestamp, so no piped command is ever the one that prompts (baseline §7).
+echo "== refreshing sudo (password prompt follows) =="; sudo -v
+
 # S1 — baseline. Every figure here is compared against at the end.
 echo "== nothing failed =="; systemctl --failed; systemctl is-system-running
 echo "== the NEW verify against the OLD install: the Phase 09 six must pass; the two 15.0 checks"
@@ -127,12 +141,11 @@ sudo ls -l /etc/homelab-model-helper/
 Rollback, if anything in step 4 is wrong — one step, both halves:
 
 ```bash
-# S1 — ROLLBACK ONLY. Old config back, old code back from git (main is at 7c2fc3b).
-# T first:  git -C /Users/home/Code/homelab show 7c2fc3b:services/model-helper/helper.py > /tmp/helper.py.old   (same for providers.py, limits.py)
-#           scp /tmp/*.old homelab:/tmp/homelab-phase09/
-echo "== rollback: restore config and code =="
+# S1 — ROLLBACK ONLY. Old config back, old code back from /tmp/p150-rollback (staged in step 0).
+echo "== rollback: restore config and the three Phase 09 files =="
 sudo cp -p /etc/homelab-model-helper/config.json.bak-$(date +%F) /etc/homelab-model-helper/config.json
-for f in helper providers limits; do sudo install -o root -g root -m 0644 /tmp/homelab-phase09/$f.py.old /opt/homelab-model-helper/$f.py; done
+for f in helper providers limits; do sudo install -o root -g root -m 0644 /tmp/p150-rollback/$f.py /opt/homelab-model-helper/$f.py; done
+sudo ls -l /opt/homelab-model-helper/ /etc/homelab-model-helper/
 ```
 
 ## 4 — Verify (S1)
