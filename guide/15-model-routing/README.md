@@ -21,6 +21,19 @@ A team-wide provider allowlist in the Vercel dashboard is not a required control
 on because it lives outside git and can drift. If the owner enables one, record the setting and
 observation date here as belt-and-braces, not as the enforcement mechanism.
 
+### Phase 15.1 security notes
+
+**OBSERVED 2026-09-13:** the first gateway attempt's dashboard record showed Zero Data Retention
+disabled. **Accepted:** ZDR is not required for the owner's own material. ADR-039 §1 permits that
+material to leave for an approved provider under its standard terms, and ZDR is an enterprise
+arrangement rather than a repository-owned control. Do not silently widen that acceptance:
+**revisit at ADR-033 trigger 1, before any third-party data is sent or stored**.
+
+On a non-2xx gateway response, the helper reads a bounded JSON error body and journals only
+validated `type` and `code` identifiers. It never journals or returns the upstream `message` or
+`param`, because either could echo question or context content. The fixture injects unique message
+and param sentinels and fails if either reaches stderr or the reply.
+
 ## What we are trying to achieve
 
 Today the model helper knows exactly two models, one per provider, both hardcoded in

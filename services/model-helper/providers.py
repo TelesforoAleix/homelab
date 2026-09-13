@@ -38,6 +38,7 @@ than refuse -- which is why nothing here treats model output as fact.
 from __future__ import annotations
 
 import dataclasses
+import http.client
 import json
 import os
 import re
@@ -50,7 +51,9 @@ import urllib.parse
 import urllib.request
 
 MAX_GATEWAY_RESPONSE_BYTES = 256 * 1024
+MAX_GATEWAY_ERROR_BYTES = 16 * 1024
 CHAT_ENVELOPE_TOKEN_ALLOWANCE = 256
+GATEWAY_ERROR_METADATA = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$")
 
 
 def log(msg: str) -> None:
@@ -119,6 +122,8 @@ class Answer:
     usage: dict | None = None
     gateway_cost: str | None = None
     charge_uncertain: bool = False
+    gateway_error_type: str = ""
+    gateway_error_code: str = ""
 
 
 # Phrases that mean "your allowance is spent" rather than "something broke".
@@ -393,6 +398,32 @@ class GatewayProvider(Provider):
             return None
         return raw
 
+    @staticmethod
+    def _error_metadata(exc: urllib.error.HTTPError) -> tuple[str, str]:
+        """Extract only bounded, journal-safe identifiers from an HTTP error.
+
+        Vercel's error object may also contain `message` and `param`. Those are
+        deliberately discarded because either could echo request content.
+        """
+        try:
+            raw = exc.read(MAX_GATEWAY_ERROR_BYTES + 1)
+            if len(raw) > MAX_GATEWAY_ERROR_BYTES:
+                return "", ""
+            payload = json.loads(raw)
+        except (OSError, ValueError, http.client.HTTPException):
+            return "", ""
+        if not isinstance(payload, dict) or not isinstance(payload.get("error"), dict):
+            return "", ""
+        error = payload["error"]
+
+        def safe(field: str) -> str:
+            value = error.get(field)
+            if isinstance(value, str) and GATEWAY_ERROR_METADATA.fullmatch(value):
+                return value
+            return ""
+
+        return safe("type"), safe("code")
+
     def input_token_bound(self, question: str, context: str) -> int:
         # One UTF-8 byte per token is deliberately conservative for text and
         # includes the exact labels sent in the sole message. The API's prompt
@@ -432,19 +463,28 @@ class GatewayProvider(Provider):
                                   detail="gateway response was too large", charge_uncertain=True)
                 payload = json.loads(raw)
         except urllib.error.HTTPError as exc:
-            # Do not read or log the body: an upstream could echo request data.
+            # Read only a bounded JSON body and retain only two validated
+            # identifiers. Never retain message or param: either could echo
+            # request content into the journal.
+            error_type, error_code = self._error_metadata(exc)
             if exc.code == 429:
                 return Answer(ok=False, kind="exhausted", provider=self.name,
-                              model=self.model, detail="gateway rate limit reached")
+                              model=self.model, detail="gateway rate limit reached",
+                              gateway_error_type=error_type,
+                              gateway_error_code=error_code)
             if exc.code == 401:
                 return Answer(ok=False, kind="provider_error", provider=self.name,
-                              model=self.model, detail="gateway authentication refused")
+                              model=self.model, detail="gateway authentication refused",
+                              gateway_error_type=error_type,
+                              gateway_error_code=error_code)
             # Only the documented refusal states above are safe to release.
             # A server/proxy error happened after the request left the node;
             # the provider may have completed billable work before failing.
             return Answer(ok=False, kind="error", provider=self.name,
                           model=self.model, detail=f"gateway HTTP {exc.code}",
-                          charge_uncertain=True)
+                          charge_uncertain=True,
+                          gateway_error_type=error_type,
+                          gateway_error_code=error_code)
         except (TimeoutError, urllib.error.URLError, OSError) as exc:
             log(f"{self.name}/{self.model} transport failure: {type(exc).__name__}")
             return Answer(ok=False, kind="error", provider=self.name, model=self.model,

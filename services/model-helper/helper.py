@@ -473,10 +473,15 @@ def handle_ask(req: dict, cfg: dict) -> dict:
         elif answer.kind == "exhausted":
             limiter.release(provider.name, count_reservation)
 
+        gateway_error = ""
+        if answer.gateway_error_type:
+            gateway_error += f" gateway_error_type={answer.gateway_error_type}"
+        if answer.gateway_error_code:
+            gateway_error += f" gateway_error_code={answer.gateway_error_code}"
         log(f"ask user={user} route={route} unattended={str(unattended).lower()} {tags} "
             f"provider={answer.provider} model={answer.model} "
             f"qlen={len(question)} took={took:.1f}s "
-            f"outcome={'ok' if answer.ok else answer.kind} {note}")
+            f"outcome={'ok' if answer.ok else answer.kind}{gateway_error} {note}")
 
         if answer.ok:
             max_a = int(cfg.get("max_answer_chars", 3000))

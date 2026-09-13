@@ -29,7 +29,7 @@ echo "== branch and commits (expect phase/15.1-work; 3289b5b above 55caa4f) =="
 git status --short --branch
 git log -2 --oneline
 
-echo "== local fake-gateway fixture: expect All 35 checks passed, external calls 0 =="
+echo "== local fake-gateway fixture: expect All 36 checks passed, external calls 0 =="
 python3 services/model-helper/fixture-tests.py
 echo "== local endpoint regression: expect All 64 checks passed =="
 python3 services/homelab-harness/fixture-tests.py
@@ -174,7 +174,7 @@ echo "== install ledger and credential drop-in, daemon-reload, then verify =="
 sudo env SRC=/tmp/homelab-p151/helper \
     bash /tmp/homelab-p151/helper/install-model-helper.sh install
 
-echo "== explicit node fixture evidence: expect rows 1-8 and All 35 checks passed above =="
+echo "== explicit node fixture evidence: expect rows 1-8 and All 36 checks passed above =="
 echo "== helper score AFTER LoadCredential: expect <=3.8 =="
 sudo systemd-analyze security 'homelab-model-helper@probe.service' --no-pager \
     | grep -i 'overall exposure' | tee /tmp/p151-score-after
@@ -185,7 +185,7 @@ systemctl show 'homelab-model-helper@probe.service' -p LoadCredential -p Runtime
 ```
 
 Stop unless the installer ends `All checks passed`, its embedded fixture prints every row 1–8 and
-`All 35 checks passed`, and the score is no worse than 3.8.
+`All 36 checks passed`, and the score is no worse than 3.8.
 
 ## 5 — Deploy endpoint correlation/cost and `/spend` without changing units (S1, Phone)
 

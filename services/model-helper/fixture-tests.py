@@ -539,9 +539,38 @@ def main() -> int:
         report("FAIL", "uncertain HTTP failure settlement",
                f"reply={reply} ledger={uncertain_state} count={uncertain_count}")
 
+    # Authorized S2 diagnostic: retain only the gateway's bounded type/code
+    # identifiers. Neither free-text message nor param may reach the journal.
+    diagnostic = b.config("gateway-error-diagnostic")
+    success_payload = gateway.payload
+    message_sentinel = "SYNTHETIC-MESSAGE-MUST-NOT-REACH-JOURNAL"
+    param_sentinel = "SYNTHETIC-PARAM-MUST-NOT-REACH-JOURNAL"
+    gateway.status = 403
+    gateway.payload = {
+        "error": {
+            "type": "access_denied",
+            "code": "insufficient_credits",
+            "message": message_sentinel,
+            "param": param_sentinel,
+        }
+    }
+    reply, err = ask(diagnostic, utility())
+    safe_metadata = "gateway_error_type=access_denied" in err \
+        and "gateway_error_code=insufficient_credits" in err
+    content_absent = message_sentinel not in err and param_sentinel not in err \
+        and message_sentinel not in json.dumps(reply) \
+        and param_sentinel not in json.dumps(reply)
+    if reply.get("kind") == "error" and safe_metadata and content_absent:
+        report("ok", "gateway error diagnostic logs only type/code",
+               "synthetic message and param absent from journal and reply")
+    else:
+        report("FAIL", "gateway error diagnostic redaction",
+               f"reply={reply} safe_metadata={safe_metadata} content_absent={content_absent}")
+
     # Row 8: exact request-body capture. Luna's reasoning=none is represented
     # by omitting the optional reasoning object; no provider/model is caller data.
     gateway.status = 200
+    gateway.payload = success_payload
     gateway.requests.clear()
     row8 = b.config("row-8")
     reply, _ = ask(row8, utility())
