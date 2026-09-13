@@ -34,7 +34,8 @@
   MacBook and on the node; an owner floor (`caps.owner_reserve`, half) that unattended work cannot
   spend; hints on the wire logged and provably unable to select. `/ask` unchanged from Telegram,
   captured live, including with the volume locked. No new listener, account, group, dependency or
-  unit-file change (score 3.8). Handover addressed to 15.1, 23.0 and 14:
+  unit-file change (score 3.8). **Phase 23.0 is next** (ADR-045 order). Handover addressed to 15.1,
+  23.0 and 14:
   [`15.0-model-registry-handover.md`](../handovers/15.0-model-registry-handover.md).
 - **Previous phase:** 13 — Security hardening (**complete**, 2026-09-13). See
   [`13-security-hardening-handover.md`](../handovers/13-security-hardening-handover.md) and the

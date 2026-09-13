@@ -355,7 +355,7 @@ Workbench account (**ADR-047**), rootless Docker, `fail2ban`, key expiry. **ADR-
 `docs/standards/service-security-baseline.md` is what Phase 15.0's units must meet. Two rows stay
 PREDICTED and are named in the handover: the ACL's other-device negative (no second tailnet device)
 and the published-port LAN negative (the building Wi-Fi isolates clients, so no host of ours can
-reach the node at L2 to test it). ~~**Phase 15.0 is next.**~~ Phase 15.0 complete 2026-09-13. Handover:
+reach the node at L2 to test it). ~~**Phase 15.0 is next.**~~ Phase 15.0 complete 2026-09-13; **Phase 23.0 is next** (ADR-045 order: 15.0 → 23.0 → 15.1). Handover:
 `docs/handovers/13-security-hardening-handover.md`.
 
 ## Phase 14 — Reproducibility / Infrastructure as Code
