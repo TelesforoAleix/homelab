@@ -17,7 +17,8 @@
 # WHY IT ALSO KNOWS HOW TO COMPOSE A FAILURE ALERT (--alert)
 #
 #   §7.6 needs a short case statement mapping a literal alias (bot,
-#   model-helper, watchdog; workbench since Phase 18.2) to the unit(s) that actually failed, then a few
+#   model-helper, watchdog; workbench since Phase 18.2; harness since Phase
+#   23.0) to the unit(s) that actually failed, then a few
 #   journal lines for context, before sending. That composition step lives
 #   here, in one `bash -n`- and shellcheck-able file, rather than as an inline
 #   one-liner inside homelab-notify@.service's ExecStart= -- systemd's own
@@ -54,6 +55,7 @@
 #   homelab-notify.sh "message text"        # send this exact text
 #   homelab-notify.sh --alert <alias>       # compose and send a failure alert
 #                                            # for bot | model-helper | watchdog
+#                                            #     | workbench | harness
 #
 set -euo pipefail
 
@@ -126,7 +128,9 @@ compose_alert() {
         # new unit is lost exactly when it is wanted -- add the case with the
         # drop-in, same commit.
         workbench)    unit="homelab-workbench.service" ;;
-        *) die "unknown alert alias: '${alias}' (expected bot, model-helper, watchdog or workbench)" ;;
+        # Phase 23.0: the harness's OnFailure= drop-in names this alias.
+        harness)      unit="homelab-harness.service" ;;
+        *) die "unknown alert alias: '${alias}' (expected bot, model-helper, watchdog, workbench or harness)" ;;
     esac
 
     # journalctl -u accepts a glob (systemd >= 246; this node runs 259.5), so
@@ -140,7 +144,7 @@ compose_alert() {
 
 case "${1:-}" in
     --alert)
-        [ $# -eq 2 ] || die "usage: homelab-notify.sh --alert <bot|model-helper|watchdog>"
+        [ $# -eq 2 ] || die "usage: homelab-notify.sh --alert <bot|model-helper|watchdog|workbench|harness>"
         compose_alert "$2"
         ;;
     -* )

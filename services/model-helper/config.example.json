@@ -32,6 +32,6 @@
 
   "state_file": "/var/lib/homelab-model-helper/calls.json",
   "timeout_seconds": 120,
-  "max_question_chars": 500,
+  "max_question_chars": 4000,
   "max_answer_chars": 3000
 }

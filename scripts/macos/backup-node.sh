@@ -129,6 +129,15 @@ NODE_PATHS=(
     # and the owner registers it; the old one is revoked on GitHub (brief §9).
     /etc/systemd/system/homelab-workbench.service
     /etc/systemd/system/homelab-workbench.service.d/onfailure.conf
+    # Phase 23.0: the harness (the endpoint) and the helper's RuntimeMaxSec
+    # drop-in. /var/lib/homelab-harness holds audit.jsonl, which carries no
+    # content by design (ids, labels, enums, lengths) -- not secret material,
+    # but the endpoint's record and worth restoring with the rest.
+    /etc/systemd/system/homelab-harness.service
+    /etc/systemd/system/homelab-harness.service.d/onfailure.conf
+    /etc/homelab-harness
+    /var/lib/homelab-harness
+    /etc/systemd/system/homelab-model-helper@.service.d/runtime.conf
     # Phase 13: every /etc file the hardening phase created or changed, plus
     # two that had never been captured -- the Phase 03 sshd drop-in and ufw's
     # rule files (a restored node came back with password auth and no

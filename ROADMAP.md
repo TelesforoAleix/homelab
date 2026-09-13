@@ -355,7 +355,7 @@ Workbench account (**ADR-047**), rootless Docker, `fail2ban`, key expiry. **ADR-
 `docs/standards/service-security-baseline.md` is what Phase 15.0's units must meet. Two rows stay
 PREDICTED and are named in the handover: the ACL's other-device negative (no second tailnet device)
 and the published-port LAN negative (the building Wi-Fi isolates clients, so no host of ours can
-reach the node at L2 to test it). ~~**Phase 15.0 is next.**~~ Phase 15.0 complete 2026-09-13; **Phase 23.0 is next** (ADR-045 order: 15.0 → 23.0 → 15.1). Handover:
+reach the node at L2 to test it). ~~**Phase 15.0 is next.**~~ ~~Phase 15.0 complete 2026-09-13; **Phase 23.0 is next**~~ Phase 23.0 complete 2026-09-13; **Phase 15.1 is next** (ADR-045 order: 15.0 → 23.0 → 15.1 → 23.1), once the owner has created the Vercel AI Gateway account and key. Handover:
 `docs/handovers/13-security-hardening-handover.md`.
 
 ## Phase 14 — Reproducibility / Infrastructure as Code
@@ -386,7 +386,7 @@ pieces, in running order:
 | | Scope |
 |---|---|
 | **15.0** | Model registry as configuration; `unattended` eligibility enforced structurally. **Complete 2026-09-13** — refusal proved against a positive control on the node; owner floor; hints logged, never selecting; `/ask` unchanged. Cost nothing. Handover: `docs/handovers/15.0-model-registry-handover.md` |
-| **15.1** | Metered provider integration **and the spend governor, together** — ADR-033 §5 says they ship together or not at all. No metered call is possible before it |
+| **15.1** | Metered provider integration **and the spend governor, together** — ADR-033 §5 says they ship together or not at all. No metered call is possible before it. **Next after 23.0** (ADR-045 order). **Dependency, stated:** the owner creates the Vercel AI Gateway account and key **before its brief is written** — it is the first phase with money behind it and the key's ADR-046 row is part of its S1. **Inherits from 23.0:** the endpoint's calls count against the caps and will count against the governor; the reservation is not released when a provider returns `exhausted` (a cap slot spent on a non-answer — the governor must release or not reserve); nothing in the endpoint names a provider |
 | **15** | Routing proper: deterministic first, deterministic retained as the fallback, AI-assisted as the target rather than this phase's completion criterion |
 
 **Cloud inference** is a provider question and belongs here rather than in Phase 16, which is about
@@ -856,8 +856,8 @@ Split by layer, because that is where the research boundaries fall:
 
 | | Layers | Scope |
 |---|---|---|
-| **23.0** | 1, 2, 9 | The always-running endpoint; entry from every client; request classification; result handling. **Includes the Workbench→homelab adapter**, which finally tests the adapter interface Phase 20.0 left unproved |
-| **23.1** | 3, 4 | Decomposition and service routing, with **ADR-044**'s client exposure policy — a declared capability grants nothing |
+| **23.0** | 1, 2, 9 | The always-running endpoint; entry from every client; request classification; result handling. **Includes the Workbench→homelab adapter**, which finally tests the adapter interface Phase 20.0 left unproved. **Complete 2026-09-13** — `homelab-harness.service` as its own account on `127.0.0.1:8766` (eighth socket, 1.3, up after a locked reboot); ADR-048 accepted; **the adapter interface is proved** (§8.1.3 run locally and on the node). Five real calls, 0 €. Brief `docs/handovers/23.0-endpoint.md`; handover `docs/handovers/23.0-endpoint-handover.md` |
+| **23.1** | 3, 4 | Decomposition and service routing, with **ADR-044**'s client exposure policy — a declared capability grants nothing. **Inherits from 23.0:** the refused `task` class (`needs_decomposition`, rules T1–T4) as its seam — work-shaped instructions are refused until decomposition exists; `client` as a label; `role` required at the endpoint; the Telegram deferral and what would change it |
 | **23.2** | 6 | Context assembly and the stable-prefix discipline, under **ADR-039**'s egress policy |
 | **23.3** | governance | Identity, budgets, approvals and audit as harness machinery, and the **ADR-034 §13 transition** — the largest security change on this roadmap |
 
@@ -997,9 +997,11 @@ briefed. Do it while the node work settles.
 
 **5. Phase 23.0 — The endpoint.** The first harness sub-phase, and the one that makes the system
 reachable as a system. **It also resolves Phase 20.0's unproved adapter interface** by building the
-second implementation.
+second implementation. **Complete 2026-09-13; the interface is proved.**
 
 **6. Phase 15.1 — Gateway and spend governor.** Together, per ADR-033 §5. The first real money.
+**Next.** Before its brief: the owner creates the Vercel AI Gateway account and key (the key's
+ADR-046 row is part of its S1).
 
 **7. Phase 23.1 — Decomposition and service routing.** Where ADR-044's client exposure becomes code.
 

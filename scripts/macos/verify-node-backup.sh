@@ -234,6 +234,11 @@ CRITICAL=(
     # Phase 18.2: matches backup-node.sh, same commit. The probe is gone.
     etc/systemd/system/homelab-workbench.service
     etc/systemd/system/homelab-workbench.service.d/onfailure.conf
+    # Phase 23.0: matches backup-node.sh, same commit.
+    etc/systemd/system/homelab-harness.service
+    etc/systemd/system/homelab-harness.service.d/onfailure.conf
+    etc/homelab-harness/config.json
+    etc/systemd/system/homelab-model-helper@.service.d/runtime.conf
     # Phase 13: matches backup-node.sh, same commit.
     etc/ssh/sshd_config.d/10-homelab-hardening.conf
     etc/ufw/after.rules

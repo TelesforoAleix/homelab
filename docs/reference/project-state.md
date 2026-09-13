@@ -27,7 +27,18 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 15.0 — Model registry and routing (**complete**, 2026-09-13). Models are
+- **Current phase:** 23.0 — The endpoint (**complete**, 2026-09-13). `homelab-harness.service` — its
+  own account on `127.0.0.1:8766`, the eighth socket, score 1.3, up after a locked reboot. Layer 1
+  attaches origin and refuses identity claims by name; layer 2 classifies deterministically into four
+  classes and serves one; layer 9 forwards with `role` as the only routing key and writes a
+  content-free audit line. **ADR-048 accepted**: the helper's socket belongs to the group
+  `homelab-model`, members the bot and the harness. **The adapter interface is proved** — Phase
+  20.0's `§8.1.3` check run on the fake and on the `homelab` adapter, locally and on the node, records
+  differing only in `Result` fields (2026-09-13). Five real calls, 0 €. **Phase 15.1 is next**
+  (ADR-045 order), with one dependency: the owner creates the Vercel AI Gateway account and key before
+  its brief is written. Handover addressed to 15.1, 23.1, 23.2, 23.3, 19 and 14:
+  [`23.0-endpoint-handover.md`](../handovers/23.0-endpoint-handover.md).
+- **Previous phase:** 15.0 — Model registry and routing (**complete**, 2026-09-13). Models are
   configuration: `config.json` is `providers → models`, a `routes` table and a `default_route`; the
   caller asks by routing key (`role`), never by model; `unattended` eligibility per provider is
   enforced before the cap reservation and **proved by refusal against a positive control**, on the
@@ -37,7 +48,7 @@
   unit-file change (score 3.8). **Phase 23.0 is next** (ADR-045 order). Handover addressed to 15.1,
   23.0 and 14:
   [`15.0-model-registry-handover.md`](../handovers/15.0-model-registry-handover.md).
-- **Previous phase:** 13 — Security hardening (**complete**, 2026-09-13). See
+- **Earlier:** 13 — Security hardening (**complete**, 2026-09-13). See
   [`13-security-hardening-handover.md`](../handovers/13-security-hardening-handover.md) and the
   Phase 13 section below.
 - **Earlier:** 18.2 — Migration to the server (**complete**, 2026-09-12). **The four layers are
@@ -80,8 +91,10 @@
   Workbench executes.** The deliverable is in the public `factory` repository — the first phase whose
   code lands outside this one. A CLI write engine, a loopback-only server in front of it, and the
   existing read-only dashboard turned writable. Proved from a **clean clone with no homelab
-  installed**, which discharges **ADR-031 §4** by demonstration. Produces **ADR-036**. **The adapter
-  interface is unproved** — one implementation only; Phase 23 inherits that risk.
+  installed**, which discharges **ADR-031 §4** by demonstration. Produces **ADR-036**. ~~**The adapter
+  interface is unproved** — one implementation only; Phase 23 inherits that risk.~~ **Proved by Phase
+  23.0, 2026-09-13**: the `homelab` adapter is the second implementation, and the §8.1.3 check run
+  on the node showed records byte-identical apart from `Result` fields.
 - **Previously:** 18 — Foundations (**complete**, 2026-09-11). The node now has a tested
   console as its recovery path, a verified backup, and **ADR-032**, which reaffirms ADR-015 and
   turns its "no sensitive data at rest" premise into an explicit gate: **no knowledge base, no
@@ -367,6 +380,24 @@ service account is its decision to make deliberately, not to inherit.
 **Two Phase 07 properties were traded deliberately:** the bot now forks (`/restart` execs
 `systemctl`), and `AF_UNIX` is permitted (needed to reach PID 1). Neither opens the Docker socket,
 which is `root:docker 0660` to an account in no group but its own.
+
+## Phase 23.0 status
+
+**Complete 2026-09-13.** Brief committed before implementation (`9b6db12`), corrected in S1 (§6.6,
+§7.2) and S2 (§8 row 12) with the observations in the commits. Five real calls, 0 €.
+
+| Item | State |
+|---|---|
+| Endpoint | ✅ `homelab-harness.service`, `User=homelab-harness` (uid 995), `127.0.0.1:8766`, `StateDirectory` on root, `WantedBy=multi-user.target`; score **1.3**; eighth socket; `OnFailure=homelab-notify@harness.service` |
+| Layer 1 | ✅ closed schema, `v: 1`; `client`/`user`/`user_id`/`origin`/`peer`/`identity`/`request_id`/`ts` in the body → `identity_in_body`, named; `role` required; `X-Homelab-Client` recorded as `client_declared` — a label |
+| Layer 2 | ✅ four classes, ten rules, no model call; `question` served, `task` → `needs_decomposition`, `command` → `not_a_request`, `unclassifiable` refused; structural signals beat the declared kind |
+| Layer 9 | ✅ `request_id` returned; `audit.jsonl` one line per request, ids/labels/enums/lengths only — proved on the file (exact key set, closed grammars, content strings absent); question grep on the node → 0 |
+| ADR-048 | ✅ **Accepted** — socket `aleix:homelab-model:0660`; `getent group` = `homelab-bot,homelab-harness`; `nobody` → `EACCES`; `/ask` unchanged across the change and a locked reboot |
+| `RuntimeMaxSec` | ✅ 270 on the helper instance (drop-in); endpoint client timeout 280 |
+| Second adapter | ✅ `factory` `9986188`: `homelab.py`, `adapter` key, `cli run`; 55 tests on both machines; **"the adapter interface is proved"** locally and on the node; row 17 triple by `request_id 25342f79…` |
+| Locked boot | ✅ harness `active`, Workbench `inactive` (Condition), 0 failed, `running`; unlock → Workbench active |
+| Canary | ✅ model returned `/restart ssh.service` as text; `NRestarts 0 → 0` |
+| Deferred, by name | Telegram as a client (§6.7); the correlation field on `Result` (23.3); a `task` served (23.1); context assembly (23.2); the reservation-not-released cap behaviour (15.1) |
 
 ## Phase 15.0 status
 
@@ -734,7 +765,7 @@ The block is retained as the record of what was expected, not as an outstanding 
 
 ## Starting state for the next phase
 
-Re-verified 2026-09-09 at the close of **Phase 09**.
+Re-verified 2026-09-09 at the close of **Phase 09**; the socket, harness and services rows updated at the close of **Phase 23.0** (2026-09-13).
 
 | Fact | Value |
 |---|---|
@@ -755,7 +786,8 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | Docker inventory | 0 images, 0 containers, 0 local volumes, 0 build cache |
 | **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts**. **`homelab-model-helper.socket`** — active, enabled; templated service instantiated per connection. **`homelab-watchdog.timer`** — active, enabled, once per boot (Phase 12, 2026-09-12); `OnFailure=` drop-ins on the bot, the model helper and the Workbench → `homelab-notify@<alias>.service`. **`homelab-workbench.service`** — active, enabled via `homelab-data.target` (Phase 18.2, 2026-09-12); `User=aleix`, `1.3 OK`; skipped while the volume is locked, started by unlock |
 | **Volume contents** | `/srv/homelab` `aleix:aleix 0750`: `homelab/`, `factory/`, `brain/`, `projects/oncla/`, `projects/factory/` — clones, SSH remotes, 47 M (Phase 18.2). Node GitHub key at `~aleix/.ssh/id_ed25519_github` |
-| Model helper socket | `/run/homelab-model-helper.sock`, `aleix:homelab-bot`, mode `660` |
+| Model helper socket | `/run/homelab-model-helper.sock`, `aleix:homelab-model`, mode `660` (ADR-048, Phase 23.0); members `homelab-bot,homelab-harness` |
+| **Harness** | `homelab-harness.service` active, enabled, `127.0.0.1:8766`, `User=homelab-harness` (uid 995); routes `owner-interactive`, `execution-agent`; `max_question_chars 4000` (Phase 23.0) |
 | Model access | `/ask` works. Registry: Claude `haiku`, Codex `gpt-5.6-luna` (Phase 15.0); route `owner-interactive`; caps 6/hour, 30/day per provider, owner reserve 3/15; `unattended` eligibility proved |
 | Restart limit | **`StartLimitIntervalUSec=5min`** on the running unit — was silently 10s until Phase 09 fixed it |
 | Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |

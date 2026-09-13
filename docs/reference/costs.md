@@ -211,3 +211,14 @@ registered on the existing GitHub account (SSH keys and private repositories are
 `python3-yaml` from the Ubuntu archive — already installed, only `apt-mark manual` applied. No
 package purchased, no subscription, no metered call, no hardware. Reference-build running total
 unchanged at **899 DKK (~121 EUR)**.
+
+## Phase 23.0 — The endpoint
+
+**Phase 23.0 actual spend: 0 DKK.** Five real model calls through the model helper, all on the two
+existing subscriptions under the helper's caps (four in S2 — answered by Codex after Claude's
+subscription limit was reached; one in S3 — Claude). No package purchased, no new subscription, no
+metered call (ADR-033 §5: the governor does not exist; the `metered` key's presence is refused). No
+hardware. Reference-build running total unchanged at **899 DKK (~121 EUR)**.
+
+The next phase, 15.1, is the first with money behind it: the Vercel AI Gateway key. Its usage is
+recorded here under the accounting rules above when it lands.

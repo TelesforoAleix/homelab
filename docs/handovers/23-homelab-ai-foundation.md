@@ -5,6 +5,7 @@
 - **Status:** Brief, committed before implementation per ADR-017
 - **Implements:** ADR-034 §5, §11, §13; ADR-033 §5; ADR-035 §4 (the backend half)
 - **Inherits from:** [Phase 20.0 handover](20.0-minimal-factory-workbench-handover.md)
+- **Layers 1, 2 and 9 delivered by Phase 23.0** (2026-09-13) under its own brief, [`23.0-endpoint.md`](23.0-endpoint.md), and handover, [`23.0-endpoint-handover.md`](23.0-endpoint-handover.md); this document is context for 23.1–23.3.
 
 > ## ⚠️ Superseded in part, 2026-09-11 — do not implement from §0 as written
 >

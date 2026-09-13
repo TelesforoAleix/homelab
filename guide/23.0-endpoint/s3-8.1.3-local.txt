@@ -1,0 +1,41 @@
+--- run on fake (rc=0)
+RUN-2026-0001  ok       adapter=fake model=deterministic-fake request_id=None
+    output (67 chars): [fake:33df5356e332] execution-agent completed: Second-adapter check
+--- run on homelab (rc=0)
+RUN-2026-0001  ok       adapter=homelab model=haiku request_id=9b21cd1b6d9f4154b6fdc2f0d397aaa5
+    output (11 chars): STUB-ANSWER
+
+=== raw differences (timestamps and hashes normalised) -- for the handover ===
+--- fake/ops/audit/audit.jsonl
++++ homelab/ops/audit/audit.jsonl
+@@ -3,2 +3,2 @@
+-{"timestamp": "<ts>", "actor": "human:aleix", "action": "activate_agent", "target": "execution-agent", "outcome": "applied", "detail": {"backend": "fake", "digest": "d349d2f3d0a0c5a9"}, "previous_hash": "<hash>", "hash": "<hash>"}
+-{"timestamp": "<ts>", "actor": "human:aleix", "action": "execute", "target": "TICKET-2026-9001", "outcome": "applied", "detail": {"agent": "execution-agent", "digest": "d349d2f3d0a0c5a9", "backend": "fake", "model": "deterministic-fake", "budget": {"max_calls": 1, "max_cost": null, "calls_used": 1, "cost_used": 0.0, "unknown_cost_calls": 1, "cost_is_complete": false}, "reason": ""}, "previous_hash": "<hash>", "hash": "<hash>"}
++{"timestamp": "<ts>", "actor": "human:aleix", "action": "activate_agent", "target": "execution-agent", "outcome": "applied", "detail": {"backend": "homelab", "digest": "d349d2f3d0a0c5a9"}, "previous_hash": "<hash>", "hash": "<hash>"}
++{"timestamp": "<ts>", "actor": "human:aleix", "action": "execute", "target": "TICKET-2026-9001", "outcome": "applied", "detail": {"agent": "execution-agent", "digest": "d349d2f3d0a0c5a9", "backend": "homelab", "model": "haiku", "budget": {"max_calls": 1, "max_cost": null, "calls_used": 1, "cost_used": 0.0, "unknown_cost_calls": 1, "cost_is_complete": false}, "reason": ""}, "previous_hash": "<hash>", "hash": "<hash>"}
+--- fake/ops/project.json
++++ homelab/ops/project.json
+@@ -5 +5 @@
+-  "adapter": "fake"
++  "adapter": "homelab"
+--- fake/ops/runs/RUN-2026-0001.json
++++ homelab/ops/runs/RUN-2026-0001.json
+@@ -12,2 +12,2 @@
+-  "adapter": "fake",
+-  "request_id": null,
++  "adapter": "homelab",
++  "request_id": "9b21cd1b6d9f4154b6fdc2f0d397aaa5",
+@@ -15 +15 @@
+-  "model": "deterministic-fake",
++  "model": "haiku",
+@@ -20 +20 @@
+-  "output": "[fake:33df5356e332] execution-agent completed: Second-adapter check",
++  "output": "STUB-ANSWER",
+
+=== residual differences after removing the fields the adapter may fill ===
+(none)
+
+scratch copies: /var/folders/01/4xlwrnc144v7y4svzyx356300000gn/T/second-adapter-mgucz43m (removed)
+
+the adapter interface is proved
+(files that differed only in Result fields, the adapter name, the request id, or the project's adapter key: ops/audit/audit.jsonl, ops/project.json, ops/runs/RUN-2026-0001.json)

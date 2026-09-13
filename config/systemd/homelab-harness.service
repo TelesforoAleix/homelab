@@ -1,0 +1,150 @@
+# Home Lab harness -- the endpoint. Phase 23.0.
+#
+# Installed to /etc/systemd/system/homelab-harness.service
+#
+# One always-running, loopback-only HTTP service (127.0.0.1:8766) that accepts
+# a normalised request from a local client, classifies it, forwards a question
+# to the model helper over its UNIX socket, returns the answer and writes one
+# audit line. Layers 1, 2 and 9 of docs/architecture/target-architecture.md.
+# It is the eighth listening socket on the node; its row is in
+# docs/architecture/current-architecture.md.
+#
+# WHY ITS OWN ACCOUNT (baseline §3, ADR-047, the 18.2 and 13 handovers)
+#
+#   This is the first service on the node that accepts requests from another
+#   process. Its account is the boundary: `homelab-harness` is a system
+#   account with no shell, no home, no credential, in no group but its own and
+#   `homelab-model` (ADR-048). Never `aleix` (sudo, docker, the OAuth files);
+#   never `homelab-bot` (the watchdog's reuse is a named exception for a unit
+#   that SENDS alerts, not a precedent for one that ACCEPTS requests). What a
+#   compromised harness can do: call the helper as one more capped consumer,
+#   and write its own audit file. That sentence is the whole blast radius.
+#
+# WHY IT IS NOT VOLUME-DEPENDENT (brief §6.3, ADR-046 §2)
+#
+#   Its only state is audit.jsonl under StateDirectory= on the ROOT filesystem,
+#   and that file holds no content (ids, labels, enums, lengths -- harness.py
+#   Audit.FIELDS). So it carries none of volume-dependent-services.md's four
+#   directives, is WantedBy=multi-user.target, and is up and useful with the
+#   volume locked -- that is what "always running" means here. Results are the
+#   client's to record. If the endpoint ever had to persist request content,
+#   that reopens the account question (ADR-047 trigger 3); it does not get a
+#   path into the volume quietly.
+#
+# WHY AF_UNIX (the one difference from homelab-workbench.service)
+#
+#   The Workbench forbids AF_UNIX so it cannot reach the model helper's socket.
+#   This unit exists to reach it. RestrictAddressFamilies= below therefore adds
+#   AF_UNIX, and the compensations are: no credential in this process to lose,
+#   the socket's group as the access control (ADR-048), and the helper's own
+#   refusals and caps on the other side.
+#
+# WHY NO LoadCredential=
+#
+#   It holds no secret. A `client` in 23.0 is a LABEL the caller declares in a
+#   header, recorded as client_declared; nothing authenticates it (brief
+#   §6.10). Do not read the audit line as authenticated.
+#
+# Score target <= 2.0 (baseline §2). PREDICTED 1.3 -- the Workbench's set plus
+# AF_UNIX, which systemd-analyze does not penalise on its own. OBSERVED on the
+# node in S2; recorded in guide/23.0-endpoint/README.md.
+
+[Unit]
+Description=Home Lab harness -- the endpoint on loopback (Phase 23.0)
+Documentation=https://github.com/TelesforoAleix/homelab
+
+# Ordering only, never a requirement: the endpoint answers (with
+# helper_unavailable) whether or not the helper's socket is up, and must not
+# fail because of it. After= makes the common case tidy at boot.
+After=network.target homelab-model-helper.socket
+
+# Bounded restart loop, in [Unit] (StartLimitIntervalSec= is ignored in
+# [Service] -- the bot's unit records why). Row 13 of the brief kills it 5x in
+# 300 s and expects the OnFailure= alert to name `harness`.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=homelab-harness
+Group=homelab-harness
+
+# Config is root-owned under /etc; code is root-owned under /opt. The account
+# that runs the code cannot rewrite it (install-homelab-harness.sh proves it).
+Environment=HOMELAB_HARNESS_CONFIG=/etc/homelab-harness/config.json
+ExecStart=/usr/bin/python3 /opt/homelab-harness/harness.py
+
+# The audit file's home. On root -- see the header. systemd creates
+# /var/lib/homelab-harness owned by the service user and adds it to the
+# writable set; the config's audit_file is null and harness.py derives the
+# path from $STATE_DIRECTORY. 0700: the audit line holds no content, but it
+# is still the endpoint's record and nobody else's to write.
+StateDirectory=homelab-harness
+StateDirectoryMode=0700
+
+# Unbuffered so the "listening on" line reaches the journal at start, not at
+# exit; no bytecode so /opt stays exactly what was installed.
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+# on-failure, not always: a clean `systemctl stop` stays stopped.
+Restart=on-failure
+RestartSec=5
+
+# The failure alert is the drop-in homelab-harness.service.d/onfailure.conf,
+# the Phase 12 way: alert wiring beside the boundary text, not inside it.
+
+# --- Privilege -----------------------------------------------------------
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+# 0077: nothing else reads what this writes. The audit file is read by the
+# owner with sudo, or shipped by the backup as root.
+UMask=0077
+
+# --- Filesystem ----------------------------------------------------------
+# Read-only view of everything except the state directory systemd adds.
+# No ReadWritePaths= of our own: StateDirectory= is the whole writable set.
+ProtectSystem=strict
+# No home directory is ever needed: no git, no key, no CLI. This is also what
+# keeps the OAuth files under /home/aleix out of reach at the mount layer,
+# beside the DAC layer (the account is not aleix and not in aleix's group).
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+DevicePolicy=closed
+ProtectProc=invisible
+
+# --- Kernel and system ---------------------------------------------------
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# Proved for Python 3.14.4 on this node by the Workbench (Phase 18.2 S2); the
+# same interpreter, no JIT, no CLI spawned from here.
+MemoryDenyWriteExecute=yes
+
+# --- Network -------------------------------------------------------------
+# WHY AF_UNIX: /run/homelab-model-helper.sock is how a question reaches a
+# model. See the header. AF_INET/AF_INET6 for the loopback listener, which
+# harness.py refuses to bind anywhere but 127.0.0.1 / ::1 / localhost.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# --- System calls --------------------------------------------------------
+# The Workbench's filter, which the baseline proved for a Python service on
+# this node. Safe here because this unit never spawns the AI CLIs -- the
+# helper does, in its own unit, which carries the SIGSYS finding instead.
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete @mount @swap @reboot @raw-io @debug @module @cpu-emulation
+
+[Install]
+# multi-user.target, NOT homelab-data.target: this unit does not depend on
+# the volume and must come up on a locked boot (brief row 12).
+WantedBy=multi-user.target
