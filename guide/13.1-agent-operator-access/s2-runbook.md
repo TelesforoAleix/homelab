@@ -61,6 +61,13 @@ Expected: preflight ok except the LAN route; one key pair; `ssh -G` shows `user 
 
 ## 1 — Install the account and the grant (S1, with S2 holding a root shell)
 
+> **First attempt, 2026-09-13 — OBSERVED:** the node's `visudo` refused the first draft of the
+> grant, *"wildcards are not allowed in command arguments"*, at the installer's pre-landing check;
+> nothing was installed, no account was created, `aleix`'s `sudo` was untouched. sudo-rs matches
+> arguments exactly. The grant was rewritten as an explicit list (172 entries) and re-`scp`'d;
+> the block below is the second attempt. Re-copy first: `scp config/sudoers.d/homelab-agent
+> scripts/server/install-homelab-agent.sh homelab:/tmp/p131/` from T.
+
 ```bash
 # S2 — open it now, become root, and type the rollback WITHOUT pressing Enter:
 ssh homelab
@@ -148,14 +155,14 @@ Every row's evidence and where it is:
 |---|---|---|
 | 1, 2, 13 | step 2, T | |
 | 3, 4 | `verify.log`: `visudo -c -f accepts it`; the `sudo -l` block | paste row 4 verbatim into the guide |
-| 5 | `ALLOW systemctl restart homelab-harness.service`, `is-active`; then `sudo journalctl _COMM=sudo -n 5 --no-pager` shows the restart under `homelab-agent` | |
+| 5 | `ALLOW systemctl restart homelab-harness.service`, `is-active homelab-harness.service`; then `sudo journalctl _COMM=sudo -n 5 --no-pager` shows the restart under `homelab-agent` | |
 | 6 | `ALLOW journalctl`, `ss -tlnp`, `systemd-analyze security` | eight listeners; 1.3 |
-| 7 | `ALLOW install config.json from /tmp/homelab-agent` + `byte-identical … still root:root:644`; `DENY install to gateway-key` | **644, not 600** — the helper runs as `aleix` and the harness as `homelab-harness`; a 600 root:root config blinds both. ADR §2 is amended at acceptance |
+| 7 | `ALLOW install model-helper-config.json from /tmp/homelab-agent` + `byte-identical … still root:root:644`; `DENY install to gateway-key` | **644, not 600** — the helper runs as `aleix` and the harness as `homelab-harness`; a 600 root:root config blinds both. ADR §2 is amended at acceptance |
 | 8 | `DENY cat gateway-key`, `DENY cat token.cred` | output discarded by the script on purpose |
 | 9 | `DENY sshd -t`, `ufw status`, `tailscale status`, `visudo -c`, `apt update`; `DENY reboot`, `usermod -aG sudo`, `data-volume.sh lock` **(sudo -l, not executed)** | a broken deny on `reboot` must not be discovered by rebooting |
 | 10 | `ALLOW data-volume.sh status` | |
-| 11 | `ALLOW cp -p spend.json …`, `mv …`, `ledger copy kept owner/mode aleix:aleix:…`; `DENY cp spend.json to /tmp` | **`cp -p`, not `cp`** — root's `cp` would leave the ledger root-owned and the helper unable to write it (the 15.1 S3 defect) |
-| — | the six glob probes, all `DENY … ok` | the brief's learning objective 3.1, proved |
+| 11 | `ALLOW cp -p spend.json spend.json.bak`, `mv spend.json.bak spend.json`, `ledger copy kept owner/mode aleix:aleix:…`; `DENY cp spend.json to /tmp` | **`cp -p`, not `cp`** — root's `cp` would leave the ledger root-owned and the helper unable to write it (the 15.1 S3 defect) |
+| — | the four exact-match probes (`cat config.json /etc/hostname`, `cat via ..`, two units, a unit without its suffix), all `DENY … ok` | sudo-rs matches arguments exactly; learning objective 3.1 in its sudo-rs form |
 
 If any line is `UNKNOWN`, it is not a result: paste it and stop. In particular, if the three
 `sudo -l` probes say `unsupported`, sudo-rs on this node does not list a single command; the
@@ -197,7 +204,7 @@ and reports OBSERVED in its own words with the raw output:
 
 ```bash
 # AGENT
-ssh homelab-agent 'sudo -n systemctl restart homelab-harness.service && sudo -n systemctl is-active homelab-harness'
+ssh homelab-agent 'sudo -n systemctl restart homelab-harness.service && sudo -n systemctl is-active homelab-harness.service'
 ssh homelab-agent 'sudo -n journalctl -u homelab-harness -n 3 --no-pager; sudo -n ss -tlnp; sudo -n systemd-analyze security homelab-harness.service --no-pager | tail -1'
 ssh homelab-agent 'sudo -n /usr/local/sbin/data-volume.sh status'
 ssh homelab-agent 'sudo -n cat /etc/homelab-model-helper/gateway-key >/dev/null; echo "rc=$?"'   # the control: must be refused (stdout dropped, so a broken deny cannot print the key)

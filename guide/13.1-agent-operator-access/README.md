@@ -22,32 +22,45 @@ phase run by paste; its final row is the executor running three commands itself.
 
 | It may | Bound to |
 |---|---|
-| `systemctl start / stop / restart / reset-failed / is-active / is-enabled / show / status / cat` | `homelab-*` units only, one unit per call; `daemon-reload` |
-| `systemctl list-units / list-timers / --failed / is-system-running`, `journalctl`, `ss -tlnp`, `systemd-analyze security / verify`, `stat`, `ls`, `getent`, `id` | read |
-| `cat` | `/etc/homelab-*/*.json` only, one file per call |
-| `install -m 644 -o root -g root <src> <dst>` | `src` under `/tmp/homelab-*/`, `dst` a `.json` under `/etc/homelab-*/` |
-| `cp -p`, `mv` | both paths inside `/var/lib/homelab-model-helper/` |
+| `systemctl start / stop / restart / reset-failed / is-active / is-enabled / show / status / cat` | seven named units: `homelab-telegram-bot.service`, `homelab-model-helper.socket`, `homelab-harness.service`, `homelab-workbench.service`, `homelab-watchdog.timer`, `homelab-watchdog.service`, `homelab-data.target`; plus `daemon-reload` |
+| `systemctl list-units / list-timers / --failed / is-system-running`, `journalctl`, `ss -tlnp`, `systemd-analyze security / verify`, `stat`, `ls`, `getent`, `id` | read, any arguments |
+| `cat` | `/etc/homelab-model-helper/config.json`, `/etc/homelab-harness/config.json` — exactly those |
+| `install -m 644 -o root -g root <src> <dst>` | `/tmp/homelab-agent/model-helper-config.json` → the helper's `config.json`; `/tmp/homelab-agent/harness-config.json` → the harness's |
+| `cp -p`, `mv` | `spend.json` / `calls.json` ↔ their `.bak`, inside `/var/lib/homelab-model-helper/` |
 | `/usr/local/sbin/data-volume.sh status` | read; `lock`/`unlock` denied |
+
+**The file is a list, not a pattern.** The node runs sudo-rs, which matches a command's arguments
+exactly, token by token; its only wildcard is a lone trailing `*` ("any arguments"). OBSERVED
+2026-09-13 at S2 step 1: the first draft, written in C-sudo idiom (`systemctl restart homelab-*`,
+`cat /etc/homelab-*/*.json`), was refused by the node's `visudo` — *"wildcards are not allowed in
+command arguments"* — before it landed, which is what the installer is built to do; the MacBook's
+C-sudo `visudo` had said `parsed OK` to the same file. A new unit or config file is a new line,
+`visudo`'d and committed: the right amount of friction for widening a root grant.
 
 ## What it may never do — the line (ADR-049 §3)
 
 - **Lock the owner out**: `sshd`, `ufw`, `iptables`/`nft`, `tailscale`, `netplan`, `visudo`,
-  `usermod`/`useradd`/`passwd`, `reboot`/`shutdown`, `systemctl reboot|isolate|rescue|…`,
-  `apt`/`dpkg`/`snap`, and any `install` to `/etc/ssh/`, `/etc/sudoers*`, `/etc/ufw/`.
-- **Read or write a secret**: any `cat`/`cp`/`mv`/`install` whose arguments contain `key`, `token`,
-  `.cred`, `secret`, `credentials` or `shadow`, anything under `/home/aleix/` or `/root/`,
-  `getent shadow`, `systemd-creds`.
-- **Touch the volume's lock state**: `data-volume.sh lock|unlock`, `cryptsetup`.
+  `usermod`/`useradd`/`passwd`, `reboot`/`shutdown`, `systemctl reboot|isolate|rescue|edit|…`,
+  `apt`/`dpkg`/`snap`, `cryptsetup`, `systemd-creds`.
+- **Read or write a secret**: `gateway-key`, `token.cred`, the two OAuth files, the GitHub key,
+  `/etc/shadow`, `getent shadow` — each named; and every other path, by not being on the list.
+- **Touch the volume's lock state**: `data-volume.sh lock|unlock`.
 - **Change its own grant**: sudoers is owner-only, with a password, through `visudo`.
 
 Every one of these is a **named deny line**, not just an omission, so the intent survives a later
-edit; and every allow that names two paths has a matching deny for a third argument, a later option
-(`-t DIR`), and `..` — because sudoers matches arguments as one space-joined string and `*` matches
-a space. Read the header of the sudoers file for the worked example; it is learning objective 3.1.
+edit and `sudo -l` shows the boundary as well as the grant. Under exact matching the denies are
+documentation with one working exception: `getent shadow` sits inside `getent *`, and the deny,
+listed last, wins.
+
+**For the record — the C-sudo hazard this file was first written against.** In C sudo `*` matches
+a space, so `cat /etc/homelab-*/*.json` would also admit `cat a.json /etc/shadow b.json`, and
+`cp -p /var/lib/x/* /var/lib/x/*` would admit `-t /tmp/anywhere`. That is learning objective 3.1,
+and it is why the first draft carried deny lines for a third argument, a later option and `..`.
+sudo-rs made them unnecessary and unparseable at once. If this node ever runs C sudo, they come back.
 
 **A property the project maintains, not one sudoers enforces:** `journalctl` is unscoped because
-unit-scoped globs are fragile and the journal holds no secret by the project's own rules (Phase 13's
-audit; 15.1's type/code-only logging). If a future unit logs a secret, that unit is the defect.
+the journal holds no secret by the project's own rules (Phase 13's audit; 15.1's type/code-only
+logging). If a future unit logs a secret, that unit is the defect.
 
 ## `sudo -l -U homelab-agent` — the ground truth
 
@@ -73,8 +86,8 @@ One worked example — replacing the helper's config to lower a ceiling:
 
 ```text
 AGENT   ssh homelab-agent 'mkdir -p /tmp/homelab-agent'
-AGENT   scp config/model-helper/config.example.json homelab-agent:/tmp/homelab-agent/config.json
-AGENT   ssh homelab-agent 'sudo -n install -m 644 -o root -g root /tmp/homelab-agent/config.json /etc/homelab-model-helper/config.json'
+AGENT   scp config/model-helper/config.example.json homelab-agent:/tmp/homelab-agent/model-helper-config.json
+AGENT   ssh homelab-agent 'sudo -n install -m 644 -o root -g root /tmp/homelab-agent/model-helper-config.json /etc/homelab-model-helper/config.json'
 AGENT   ssh homelab-agent 'sudo -n systemctl restart homelab-model-helper.socket && sudo -n journalctl -u homelab-model-helper@* -n 5 --no-pager'
 OWNER   (nothing — no password, no secret, no lockout-class file was touched)
 ```
@@ -108,9 +121,9 @@ Not in ADR-046's table on purpose: the key is on the MacBook, not on root (brief
   the `homelab-agent` alias says `RequestTTY no` so the executor path never has a pager at all.
   PREDICTED; owner check: `ssh -t homelab-agent sudo -n systemctl status homelab-harness`, then
   `!id` inside `less` → "Command not available".
-- **Two parsers.** The node runs `sudo-rs`; the MacBook's `visudo` is C sudo. The file uses only
-  the subset both accept (aliases, `NOPASSWD`, `!`, `*`). The local `visudo -c -f` is a syntax
-  check; the node's own, inside `install` before the file lands, is the gate.
+- **Two parsers.** The node runs `sudo-rs`; the MacBook's `visudo` is C sudo, and it accepts
+  things sudo-rs refuses (see above). The local `visudo -c -f` is a syntax check; the node's own,
+  inside `install` before the file lands, is the gate — and it fired.
 
 ## Status by row
 

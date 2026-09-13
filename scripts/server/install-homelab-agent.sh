@@ -25,8 +25,9 @@
 #   denies (reboot, usermod -aG sudo, data-volume.sh lock) are probed with
 #   `sudo -n -l <cmd>`, which reports the decision without running anything:
 #   "attempting" a reboot to prove it is denied is not a test, it is a bet.
-#   The glob holes named at the top of config/sudoers.d/homelab-agent are
-#   probed too, each against a harmless target.
+#   sudo-rs matches arguments exactly (a lone trailing `*` is its only
+#   wildcard), so three probes check that an extra argument, a second unit
+#   and a `..` path are refused -- each against a harmless target.
 #
 # Landing the sudoers file IS lockout-class: a parse error in any file under
 # /etc/sudoers.d/ disables sudo for every account. Hence visudo -c -f before
@@ -213,14 +214,15 @@ check_allows() {
     # byte-identical content; the ledger copy is removed again.
     local rc=0
     echo "--> every allow, run as ${AGENT}"
+    # Exact unit names, suffix included: that is what the grant says.
     expect_allowed "systemctl restart homelab-harness.service"  systemctl restart homelab-harness.service || rc=1
     sleep 1
-    expect_allowed "systemctl is-active homelab-harness"        systemctl is-active homelab-harness      || rc=1
-    expect_allowed "systemctl status homelab-harness"           systemctl status homelab-harness --no-pager || rc=1
-    expect_allowed "systemctl show homelab-harness"             systemctl show homelab-harness           || rc=1
-    expect_allowed "systemctl cat homelab-harness"              systemctl cat homelab-harness            || rc=1
-    expect_allowed "systemctl is-enabled homelab-harness"       systemctl is-enabled homelab-harness     || rc=1
-    expect_allowed "systemctl reset-failed homelab-harness"     systemctl reset-failed homelab-harness   || rc=1
+    expect_allowed "systemctl is-active homelab-harness.service" systemctl is-active homelab-harness.service || rc=1
+    expect_allowed "systemctl status homelab-harness.service"   systemctl status homelab-harness.service  || rc=1
+    expect_allowed "systemctl show homelab-harness.service"     systemctl show homelab-harness.service    || rc=1
+    expect_allowed "systemctl cat homelab-harness.service"      systemctl cat homelab-harness.service     || rc=1
+    expect_allowed "systemctl is-enabled homelab-harness.service" systemctl is-enabled homelab-harness.service || rc=1
+    expect_allowed "systemctl reset-failed homelab-harness.service" systemctl reset-failed homelab-harness.service || rc=1
     expect_allowed "systemctl daemon-reload"                    systemctl daemon-reload                  || rc=1
     expect_allowed "systemctl list-units --failed"              systemctl list-units --failed            || rc=1
     expect_allowed "systemctl --failed"                         systemctl --failed                       || rc=1
@@ -243,26 +245,26 @@ check_allows() {
     local before after
     as_agent mkdir -p "$STAGE"
     before=$(sha256sum "$HELPER_CONF" | cut -d' ' -f1)
-    cp "$HELPER_CONF" "${STAGE}/config.json"; chown "$AGENT:$AGENT" "${STAGE}/config.json"
-    expect_allowed "install config.json from ${STAGE}" \
-        install -m 644 -o root -g root "${STAGE}/config.json" "$HELPER_CONF" || rc=1
+    cp "$HELPER_CONF" "${STAGE}/model-helper-config.json"; chown "$AGENT:$AGENT" "${STAGE}/model-helper-config.json"
+    expect_allowed "install model-helper-config.json from ${STAGE}" \
+        install -m 644 -o root -g root "${STAGE}/model-helper-config.json" "$HELPER_CONF" || rc=1
     after=$(sha256sum "$HELPER_CONF" | cut -d' ' -f1)
     [[ "$before" == "$after" && "$(stat -c '%U:%G:%a' "$HELPER_CONF")" == "root:root:644" ]] \
         && ok "config.json byte-identical after re-install, still root:root:644" \
         || { echo "FAIL  config.json changed or lost its mode after re-install"; rc=1; }
 
-    # Row 11, allow half: cp -p then mv back, and the ledger's owner must
-    # be what it was (the helper writes it as aleix).
+    # Row 11, allow half: cp -p to the fixed .bak name, check its owner, mv
+    # it back over the original (same bytes). The ledger's owner must be what
+    # it was: the helper writes it as aleix.
     if [[ -f "${HELPER_STATE}/spend.json" ]]; then
         local owner_before owner_after
         owner_before=$(stat -c '%U:%G:%a' "${HELPER_STATE}/spend.json")
-        expect_allowed "cp -p spend.json spend.json.bak-verify" \
-            cp -p "${HELPER_STATE}/spend.json" "${HELPER_STATE}/spend.json.bak-verify" || rc=1
-        expect_allowed "mv spend.json.bak-verify spend.json.bak-verify2" \
-            mv "${HELPER_STATE}/spend.json.bak-verify" "${HELPER_STATE}/spend.json.bak-verify2" || rc=1
-        owner_after=$(stat -c '%U:%G:%a' "${HELPER_STATE}/spend.json.bak-verify2" 2>/dev/null || echo missing)
-        rm -f "${HELPER_STATE}/spend.json.bak-verify2"
-        [[ "$owner_before" == "$owner_after" ]] \
+        expect_allowed "cp -p spend.json spend.json.bak" \
+            cp -p "${HELPER_STATE}/spend.json" "${HELPER_STATE}/spend.json.bak" || rc=1
+        owner_after=$(stat -c '%U:%G:%a' "${HELPER_STATE}/spend.json.bak" 2>/dev/null || echo missing)
+        expect_allowed "mv spend.json.bak spend.json" \
+            mv "${HELPER_STATE}/spend.json.bak" "${HELPER_STATE}/spend.json" || rc=1
+        [[ "$owner_before" == "$owner_after" && "$(stat -c '%U:%G:%a' "${HELPER_STATE}/spend.json")" == "$owner_before" ]] \
             && ok "ledger copy kept owner/mode ${owner_before} (cp -p as root preserves aleix)" \
             || { echo "FAIL  ledger copy is ${owner_after}, original ${owner_before} -- the helper could not write a restored ledger"; rc=1; }
     else
@@ -278,8 +280,8 @@ check_denies() {
     echo "--> every named deny, attempted as ${AGENT} (output discarded)"
     expect_denied "cat gateway-key"                cat "$HELPER_KEY"                         || rc=1
     expect_denied "cat token.cred"                 cat "$BOT_TOKEN"                          || rc=1
-    expect_denied "install to gateway-key"         install -m 644 -o root -g root "${STAGE}/config.json" "$HELPER_KEY" || rc=1
-    expect_denied "install with -m 600"            install -m 600 -o root -g root "${STAGE}/config.json" "$HELPER_CONF" || rc=1
+    expect_denied "install to gateway-key"         install -m 644 -o root -g root "${STAGE}/model-helper-config.json" "$HELPER_KEY" || rc=1
+    expect_denied "install with -m 600"            install -m 600 -o root -g root "${STAGE}/model-helper-config.json" "$HELPER_CONF" || rc=1
     expect_denied "sshd -t"                        sshd -t                                   || rc=1
     expect_denied "ufw status"                     ufw status                                || rc=1
     expect_denied "tailscale status"               tailscale status                          || rc=1
@@ -288,7 +290,7 @@ check_denies() {
     expect_denied "systemd-creds list"             systemd-creds list                        || rc=1
     expect_denied "getent shadow"                  getent shadow "$AGENT"                    || rc=1
     expect_denied "cp spend.json to /tmp"          cp -p "${HELPER_STATE}/spend.json" "${STAGE}/x" || rc=1
-    expect_denied "cp without -p"                  cp "${HELPER_STATE}/spend.json" "${HELPER_STATE}/spend.json.bak-x" || rc=1
+    expect_denied "cp without -p"                  cp "${HELPER_STATE}/spend.json" "${HELPER_STATE}/spend.json.bak" || rc=1
     expect_denied "systemctl restart ssh"          systemctl restart ssh.service             || rc=1
     expect_denied "systemctl edit homelab-harness" systemctl edit homelab-harness            || rc=1
 
@@ -299,24 +301,14 @@ check_denies() {
     expect_denied_dry "data-volume.sh lock"        /usr/local/sbin/data-volume.sh lock       || rc=1
     expect_denied_dry "data-volume.sh unlock"      /usr/local/sbin/data-volume.sh unlock     || rc=1
 
-    echo "--> the glob holes (each against a harmless target)"
-    # A third argument riding on a two-path allow.
-    expect_denied "cat a.json /etc/hostname b.json" \
-        cat "$HELPER_CONF" /etc/hostname "$HELPER_CONF"                                  || rc=1
-    # Directory traversal inside an allowed prefix.
-    expect_denied "cat via .." \
-        cat /etc/homelab-model-helper/../hostname "$HELPER_CONF"                        || rc=1
-    expect_denied "cp -p via .." \
-        cp -p "${HELPER_STATE}/../../../etc/hostname" "${HELPER_STATE}/x"                || rc=1
-    # A later option that changes the destination.
-    expect_denied "cp -p ... -t ${STAGE}" \
-        cp -p "${HELPER_STATE}/spend.json" -t "$STAGE" "${HELPER_STATE}/spend.json"      || rc=1
-    expect_denied "install ... -t /etc/homelab-model-helper" \
-        install -m 644 -o root -g root "${STAGE}/config.json" -t /etc/homelab-model-helper "$HELPER_CONF" || rc=1
-    # A second unit on a mutating verb.
-    expect_denied "systemctl restart homelab-harness homelab-workbench" \
+    echo "--> exact matching: an extra argument, a second unit, a .. path (harmless targets)"
+    expect_denied "cat config.json /etc/hostname" cat "$HELPER_CONF" /etc/hostname      || rc=1
+    expect_denied "cat via .." cat /etc/homelab-model-helper/../hostname                || rc=1
+    expect_denied "systemctl restart harness + workbench" \
         systemctl restart homelab-harness.service homelab-workbench.service              || rc=1
-    rm -f "${STAGE}/config.json"
+    expect_denied "systemctl restart homelab-harness (no suffix)" \
+        systemctl restart homelab-harness                                                || rc=1
+    rm -f "${STAGE}/model-helper-config.json"
     return $rc
 }
 
