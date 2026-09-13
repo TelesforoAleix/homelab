@@ -148,6 +148,9 @@ while the owner was typing a sudo password, and the password landed in the trans
 runbooks were the first written under this rule; the S1 audit asked for `sudo` once, up front, at
 a labelled line, and refreshed the timestamp so no later block could stall.
 
+And never put a prompting script behind a buffering pipe — `backup-node.sh | tail` hid the node's
+sudo prompt from the owner at Phase 13's own close (`tee` is fine; `tail`, `head`, `less` are not).
+
 Two habits that go with it: a script that changes a file keeps the previous version as
 `<file>.bak-<date>` and **never overwrites an existing backup from the same day** (a second round
 would otherwise destroy the original); and a `systemd-run` probe that is *meant* to fail passes

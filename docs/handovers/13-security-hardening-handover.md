@@ -184,13 +184,18 @@ Brief §8, all rows. OBSERVED unless stated; evidence verbatim in the guide.
 | 15 | unattended-upgrades | `Automatic-Reboot` absent (default false); `enabled` |
 | 16 | `docker system df` | Zero after the 2b probe; `data-root` `/var/lib/docker` |
 | 17 | Lock/unlock cycle | Exercised twice by real boots: Workbench inactive while locked, active after unlock, no alert |
-| 18 | Closing check | *(S4 close — see §Closing check)* |
-| 19 | Backup + verify | *(S4 close — see §Closing check)* |
+| 18 | Closing check | `systemctl --failed` empty; `running`; Workbench/bot/watchdog timer/helper socket/wifi all `active`; seven sockets; `/status` answered |
+| 19 | Backup + verify | `backup-node.sh` → `2026-09-13`, 340K node state; `verify-node-backup.sh` **PASS** — all Phase 13 paths present (`token.cred`, sshd drop-in, ufw rules, profile, wifi unit, three drop-ins); GitHub key, plaintext token and recovery key **absent as required**; planted control fires |
 | 20 | `# WHY` per changed directive | Read: helper (4), wifi (3), Workbench (`User=` → ADR-047), credential drop-ins (header) |
 
-### Closing check (S4)
+### Closing check (S4, 2026-09-13 ~07:40 UTC, OBSERVED)
 
-*Filled from the owner's paste at close.*
+Install refresh: eight installed files md5-identical to the repository (Workbench and helper units,
+wifi unit, sshd drop-in, console-timeout profile, three `credential.conf`); `DOCKER-USER` block in
+both `after` files, nine chain lines. `systemctl --failed` → none; `is-system-running` → `running`;
+five units `active`; `ss -tlnp` → **7**, the same seven; scores 1.3 / 1.3 / 1.3 / 5.1 / 3.8; ADR-046
+check 1 (`Tokens:` empty, crypttab `none`) and check 2 (exit 1, nothing found) PASS; `/status`
+answered at uptime 17 min; backup + verify PASS as row 19.
 
 ## Files changed
 
@@ -279,6 +284,12 @@ Per PROJECT.md §11 — initial choice → what happened → learned → changed
 11. **Two `systemctl show` calls on template names** in the scripts failed cosmetically; the
     substantive checks passed; noted, not fixed further.
 12. **The brief's IPv6 `FORWARD` claim was stale** — closed since 09-10 by ufw; corrected in S1.
+13. **My own S4 checklist broke the no-silent-pause rule**: `backup-node.sh 2>&1 | tail -15` put the
+    node's sudo prompt behind a buffering pipe; the owner saw nothing and asked. Ctrl-C, re-run
+    without the pipe. The rule now has a corollary in the baseline: never pipe a prompting script
+    through `tail`/`head`/`less`; `tee` is fine. Also: five mistyped sudo attempts in one closing
+    block (`maximum 3 incorrect authentication attempts`) — nothing echoed, no exposure; the two
+    affected checks were re-run cleanly.
 
 ## Deviations from phase brief
 

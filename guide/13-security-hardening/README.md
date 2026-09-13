@@ -1,7 +1,7 @@
 # Phase 13 — Security hardening
 
-> **S1 (audit), S2 (software controls) and S3 (credentials and the box) complete; S4 (documentation
-> and close) in progress.** Every row below is OBSERVED unless it says PREDICTED.
+> **Phase complete 2026-09-13.** Every row below is OBSERVED unless it says PREDICTED. Handover:
+> [`docs/handovers/13-security-hardening-handover.md`](../../docs/handovers/13-security-hardening-handover.md).
 
 Brief: [`docs/handovers/13-security-hardening.md`](../../docs/handovers/13-security-hardening.md).
 Audit runbooks: [`scripts/server/security-audit.sh`](../../scripts/server/security-audit.sh) (node,
@@ -273,3 +273,26 @@ Amend the check to `grep -rhv '^\s*#' … | grep -l …` or narrow the pattern t
   scrolled. No exposure. `systemctl show` on template names (`homelab-notify@.service`) fails — the
   script now uses instances.
 - Nothing was changed on the node or the MacBook in S1.
+
+## S4 — close (2026-09-13)
+
+Eight installed files md5-identical to the repository; `DOCKER-USER` block in both `after` files;
+no failed units, `running`, five units active, **seven sockets**; scores 1.3 / 1.3 / 1.3 / 5.1 / 3.8;
+ADR-046 checks PASS; `/status` at uptime 17 min; `backup-node.sh` + `verify-node-backup.sh` PASS with
+the new coverage and the three must-be-absent checks. One more defect, recorded in the handover
+(§Problems 13): the checklist piped a sudo-prompting script through `tail` — the silent pause the
+rule forbids. Fixed in the standard's wording.
+
+## Security notes
+
+- Nothing on root can open the volume — re-verified at close (ADR-046 checks 1–2). The TPM seals the
+  *bot token*, never the LUKS key; keep the two apart when reading "TPM" anywhere in this phase.
+- What each control protects is in ADR-046's amendment. The one sentence to keep: the TPM seal
+  narrows a pulled disk; the BIOS password narrows a USB boot; nothing protects the running machine.
+- Secrets created this phase and where they live: BIOS password (password manager only); bot token
+  plaintext (password manager only; `token.cred` on the node); recovery key private half (card,
+  `age`); its age passphrase (password manager). None in the repository — checked by `git grep`
+  (handover §Security notes).
+- Rollbacks: every control's undo is in the runbooks' rollback tables (`s2-runbook.md`,
+  `s3-runbook.md`).
+
