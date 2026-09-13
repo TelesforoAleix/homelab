@@ -172,7 +172,11 @@ a password (`aleix`'s `sudo`), the credential editor, the browser (Vercel, GitHu
 the phone (Telegram), and every lockout-class change under `safe-changes-headless.md`. The executor
 tells the owner when it is their turn and stops. It never asks the owner to run something the
 AGENT block could run, and never asks for a password. The print-before-wait rule above is for the
-OWNER block; the AGENT block has no prompt to hide.
+OWNER block; the AGENT block has no prompt to hide. **A step that spends money is OWNER-fired even
+when it is AGENT-runnable** (ADR-049 §4, amended at 15.1's close): the executor stages the script
+with a one-attempt guard, the owner fires it — through the agent alias is fine — and the executor
+reads the result. Long OWNER commands are staged scripts with a one-word invocation; a wrapped
+terminal turns a pasted one-liner into an attempt spent on a `bad_request`.
 
 Two habits that go with it: a script that changes a file keeps the previous version as
 `<file>.bak-<date>` and **never overwrites an existing backup from the same day** (a second round
@@ -189,7 +193,7 @@ Listeners: 127.0.0.1, refused in code, socket-table row. Seven is the baseline. 
 Volume? volume-dependent-services.md decides when it runs.
 apply-firewall.sh resets ufw -> apply-docker-user-rules.sh after it, always.
 Owner runbooks: print before you wait. sudo prompt only. .bak-<date>, never overwritten.
-Runbooks are AGENT (ssh homelab-agent, default) + OWNER (password, secret, browser, phone, lockout).
+Runbooks are AGENT (ssh homelab-agent, default) + OWNER (password, secret, browser, phone, lockout, MONEY).
 homelab-agent: operator, not a service. Closed NOPASSWD list; sudo -l -U is the truth; never lockout.
 Known limits: @system-service kills the Claude CLI; AF_NETLINK alone breaks iw/ip.
 ```

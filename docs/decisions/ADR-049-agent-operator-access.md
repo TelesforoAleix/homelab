@@ -107,6 +107,15 @@ From Phase 13.1 on, a runbook has two blocks with a fixed vocabulary:
 The executor never asks the owner to run something the AGENT block could run, and never asks
 for a password.
 
+**Amended 2026-09-13 (Phase 15.1 close) — a step that spends money is OWNER-fired even when
+AGENT-runnable: the executor stages the script, the owner fires it, the executor reads the
+result.** Observation: at 15.1 S3 the executor's own `curl` for the one paying call was refused by
+Claude Code's permission layer as a real-world transaction. Nothing was worked around; the call
+became `s3-call4.sh` in `/tmp/homelab-agent/` with a one-attempt marker, and the owner ran
+`ssh homelab-agent bash /tmp/homelab-agent/p151-s3-call4.sh` from the Mac — same account, same
+audit trail. The rule generalises the reason: money is a decision the owner takes by hand, as a
+password is.
+
 ### 5. The account is in the audit trail and the backup, and is revocable in one line
 
 `sudo` logs every invocation with the account name; `journalctl _UID=<homelab-agent>` shows its

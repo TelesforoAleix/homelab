@@ -181,3 +181,14 @@ Revisit when:
 **The check that this decision is holding:** no module above `InferenceProvider` names a provider or a
 model; adding a model is a configuration diff with no code change; and no paid call can be made with
 the spend governor absent or unreadable.
+
+**Re-run 2026-09-13 (Phase 15.1 close) — holding.** (1) `harness.py`, `classify.py` and the bot name
+no provider or model (grep → 0; 23.0's check, unchanged); the endpoint sends `role` only.
+(2) `gateway/sol` was added and `gateway/luna` routed as configuration lines in `config.json`,
+no code change; the fixture refuses a model missing a price field or outside the approved list by
+naming it. (3) Fixture row 4 (ledger absent / unreadable / malformed → `governor_unavailable`, the
+fake gateway saw 0 requests) passed locally and on the node ×4; on the real path the governor
+refused before egress in every window that was tested and settled fail-closed on the two uncertain
+outcomes (403, 400). §Consequences' third bullet — *what may leave* — is still ADR-039's; the vendor
+list is now explicit and owner-signed (`providers_approved`, 15.1 guide). Trigger 1 stands: ZDR
+shows disabled on the dashboard and is accepted for the owner's own material only.
