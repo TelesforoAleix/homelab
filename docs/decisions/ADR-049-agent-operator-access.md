@@ -1,7 +1,14 @@
 # ADR-049: Agents operate the node through their own account with a bounded, passwordless command set
 
-- **Status:** Proposed (Phase 13.1 brief, 2026-09-13); accepted by the orchestrator when Phase
-  13.1's validation rows are OBSERVED
+- **Status:** Accepted 2026-09-13 (Phase 13.1 close). Rows 4, 8, 9 and 12 of the 13.1 brief OBSERVED
+  on the node 2026-09-13; the executor ran row 12 from its own session over `ssh homelab-agent`.
+  **§2 amended at acceptance** (13.1 handover §ADR-049 §2 amendments): the grant is a **list of named
+  entries**, not globs — sudo-rs allows no wildcard inside an argument (`visudo` refused the glob
+  form before it landed); `install -m 644`, not `600` (the helper and the harness read their config
+  as their own accounts); `cp -p` with fixed `.bak` names; `!` denies come **after** the allows
+  (last match wins); the glob-hole denies are moot under exact matching and the C-sudo hazard is
+  recorded in the guide instead. `config/sudoers.d/homelab-agent` and the guide's `sudo -l -U
+  homelab-agent` output are the ground truth; where this text and that file differ, the file wins.
 - **Date:** 2026-09-13
 - **Supersedes:** none. Refines ADR-040 (autonomous operation is normal) and ADR-041 (the console
   is the recovery path) for the case of an *executor agent on the MacBook* operating the node;
