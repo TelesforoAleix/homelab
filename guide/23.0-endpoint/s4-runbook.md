@@ -34,14 +34,18 @@ OBSERVED in S2 and their checks are unchanged.
 
 ```bash
 # T — row 19: backup and verify, card in. Two prompts: the node's sudo password, the age passphrase.
-echo "== card mounted? =="; ls "/Volumes/SD Card/homelab-backup/" | tail -3
-echo "== backup-node.sh into a phase-named sibling: today's directory already holds Phase 13/15.0's"
-echo "   close, and the script refuses to overwrite a same-day archive without --force (correctly).  =="
-echo "   Neither archive is lost this way; Phase 14 can decide which to keep."
-DEST="/Volumes/SD Card/p230" ./scripts/macos/backup-node.sh
-echo "== verify-node-backup.sh on that archive: expect PASS and the new paths present =="
-./scripts/macos/verify-node-backup.sh "/Volumes/SD Card/p230/homelab-backup/2026-09-13"
+ls "/Volumes/SD Card/homelab-backup/"
+mv "/Volumes/SD Card/homelab-backup/2026-09-13" "/Volumes/SD Card/homelab-backup/2026-09-13-p13-p150"
+./scripts/macos/backup-node.sh
+./scripts/macos/verify-node-backup.sh
 ```
+
+Why the `mv`: today's directory already holds Phase 13/15.0's close, and `backup-node.sh` refuses a
+same-day overwrite without `--force` (correctly). A phase-named `DEST` was tried first and refused
+too — the script requires `DEST` to be a mount point (OBSERVED). Renaming the morning's directory
+keeps both archives; `verify-node-backup.sh` with no argument picks the newest `20*` directory, the
+fresh one. The date-only directory name is the same lesson as the `.bak-<date>` collision, for
+Phase 14.
 
 Expected in the verify: `etc/systemd/system/homelab-harness.service`, `…/homelab-harness.service.d/onfailure.conf`,
 `etc/homelab-harness/config.json`, `etc/systemd/system/homelab-model-helper@.service.d/runtime.conf`
