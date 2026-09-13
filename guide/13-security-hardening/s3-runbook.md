@@ -93,7 +93,8 @@ Watch the console. Expect: boot, login prompt, **then a Telegram message from th
 manual step.** That is condition 3.
 
 ```bash
-# T — after /status answered
+# T — after /status answered. /tmp is cleared at boot (OBSERVED): re-copy the script first.
+ssh homelab 'mkdir -p /tmp/p13'; scp scripts/server/p13-s3.sh homelab:/tmp/p13/
 ssh -t homelab 'sudo bash /tmp/p13/p13-s3.sh postboot'
 ssh -t homelab 'sudo data-volume.sh unlock'        # visible passphrase prompt, as always
 ssh -t homelab 'sudo bash /tmp/p13/p13-s3.sh postboot'
@@ -140,7 +141,8 @@ console), **pull the power cord for 10 s, plug it back in**. Expect the box to p
 (After Power Loss = On), boot, and the bot to report with the volume locked — no keyboard touched.
 
 ```bash
-# T
+# T — re-copy again: /tmp was cleared by the power-cycle
+ssh homelab 'mkdir -p /tmp/p13'; scp scripts/server/p13-s3.sh homelab:/tmp/p13/
 ssh -t homelab 'sudo bash /tmp/p13/p13-s3.sh postboot'
 ssh -t homelab 'sudo data-volume.sh unlock'
 ssh -t homelab 'sudo bash /tmp/p13/p13-s3.sh postboot; sudo efibootmgr'
