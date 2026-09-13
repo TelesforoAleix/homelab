@@ -347,11 +347,15 @@ run_install() {
     else
         ok "systemd-analyze verify accepted the unit with no complaint"
     fi
-    if [[ "$(systemctl show -p RequiresMountsFor --value "$UNIT")" == "" ]]; then
-        ok "RequiresMountsFor is empty: the unit does not depend on the volume"
-    else
-        fail "the unit acquired RequiresMountsFor=$(systemctl show -p RequiresMountsFor --value "$UNIT") -- it must not depend on the volume"
+    # StateDirectory= always yields RequiresMountsFor=/var/lib/<name> -- a path on ROOT, which
+    # is the point (brief §6.3). What must not appear is anything under /srv/homelab. OBSERVED
+    # 2026-09-13: the first version asserted "empty" and failed on the root path.
+    local rmf
+    rmf=$(systemctl show -p RequiresMountsFor --value "$UNIT")
+    if [[ "$rmf" == *"/srv/homelab"* ]]; then
+        fail "the unit acquired RequiresMountsFor=${rmf} -- it must not depend on the volume"
     fi
+    ok "RequiresMountsFor=${rmf:-<empty>} -- on root, nothing under /srv/homelab"
 
     step "enabling and starting ${UNIT} (boot-class: WantedBy=multi-user.target)"
     systemctl enable --now "$UNIT"

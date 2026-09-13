@@ -184,7 +184,7 @@ sudo SRC=/tmp/homelab-phase230 bash /tmp/homelab-phase230/install-homelab-harnes
 
 Expected, in order: six files present; group exists; `created homelab-harness: uid=… groups=…
 homelab-harness,homelab-model`; four files installed; config installed; `systemd-analyze verify
-accepted the unit`; `RequiresMountsFor is empty`; enabled and started; then the verify block with
+accepted the unit` (two `CPUAccounting` warnings about vendor xfs units are systemd's, not ours); `RequiresMountsFor=/var/lib/homelab-harness -- on root`; enabled and started; then the verify block with
 every line `ok` — in particular `GET /health/helper: the harness reached the helper's socket`
 (**row 10 live**), `nobody ... is refused ... errno=13` (**row 18**), `fixture tests passed as
 homelab-harness: All 64 checks passed` (**row 1**), and `systemd-analyze security
