@@ -222,3 +222,21 @@ hardware. Reference-build running total unchanged at **899 DKK (~121 EUR)**.
 
 The next phase, 15.1, is the first with money behind it: the Vercel AI Gateway key. Its usage is
 recorded here under the accounting rules above when it lands.
+
+## Phase 15.1 — Metered provider and spend governor (in progress)
+
+**OBSERVED — S2 actual spend: $0.0000 (0 DKK).** The first and only real gateway request returned
+HTTP 403. The Vercel dashboard recorded one request, no usage, inference cost `$0.0000`, and total
+cost `$0.0000`. Two additional real model calls used the existing subscriptions and added no
+metered charge. The reference-build running total remains **899 DKK (~121 EUR)**.
+
+**OBSERVED — conservative local accounting:** the spend governor retained the failed request and
+settled its maximum reservation of `$0.001310300`, because the request had left the node and charge
+status was not yet known. The dashboard later established that actual spend was zero. The local
+amount deliberately remains charged against all attended rolling windows; it is fail-closed budget
+state, not an actual project expense.
+
+**OBSERVED — standing repository ceilings:** attended hour/day/week/month are
+`$0.25/$1.00/$4.00/$8.00`; unattended are `$0.10/$0.40/$1.50/$3.00`. **PREDICTED:** the brief's
+expected first non-zero cost row remains unmet until a successful metered call is explicitly
+authorized and observed.
