@@ -225,21 +225,22 @@ recorded here under the accounting rules above when it lands.
 
 ## Phase 15.1 — Metered provider and spend governor (in progress)
 
-**OBSERVED — S2 actual spend: $0.0000 (0 DKK).** The first and only real gateway request returned
-HTTP 403. The Vercel dashboard recorded one request, no usage, inference cost `$0.0000`, and total
-cost `$0.0000`. Two additional real model calls used the existing subscriptions and added no
-metered charge. The reference-build running total remains **899 DKK (~121 EUR)**.
+**OBSERVED — S2 dashboard spend: `$0.00001` (displayed USD).** The first gateway request returned
+HTTP 403 with no usage and `$0.0000` cost. The one authorized retry succeeded with 22 input and 5
+output tokens; the dashboard displayed inference and total cost `$0.00001`. The reference-build
+running total remains **899 DKK (~121 EUR)**; no DKK conversion is asserted for this fractional USD
+usage.
 
 **OBSERVED — conservative local accounting:** the spend governor retained the failed request and
 settled its maximum reservation of `$0.001310300`, because the request had left the node and charge
 status was not yet known. The dashboard later established that actual spend was zero. The local
 amount deliberately remains charged against all attended rolling windows; it is fail-closed budget
-state, not an actual project expense.
+state, not an actual project expense. The successful retry's exact local settlement was
+`$0.000010400`; the dashboard rounded it to `$0.00001`.
 
 **OBSERVED — standing repository ceilings:** attended hour/day/week/month are
-`$0.25/$1.00/$4.00/$8.00`; unattended are `$0.10/$0.40/$1.50/$3.00`. **PREDICTED:** the brief's
-expected first non-zero cost row remains unmet until a successful metered call is explicitly
-authorized and observed.
+`$0.25/$1.00/$4.00/$8.00`; unattended are `$0.10/$0.40/$1.50/$3.00`. **OBSERVED:** the first
+successful metered call is now recorded above.
 
 **OBSERVED — prepaid gateway balance and one-off overhead:** the owner added `$10.00` of prepaid AI
 Gateway credit on 2026-09-13. The resulting balance is `$10.00`; no balance existed beforehand. The

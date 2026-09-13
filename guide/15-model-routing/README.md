@@ -34,6 +34,12 @@ validated `type` and `code` identifiers. It never journals or returns the upstre
 `param`, because either could echo question or context content. The fixture injects unique message
 and param sentinels and fails if either reaches stderr or the reply.
 
+**OBSERVED 2026-09-13:** the first real gateway attempt returned HTTP 403 with dashboard cost
+`$0.0000`; after the owner added `$10.00` prepaid credit, one authorized retry succeeded with 22
+input and 5 output tokens. The dashboard displayed `$0.00001`; the local settlement was
+`$0.000010400`. The first event's conservative `$0.001310300` settlement remains in the governor
+ledger as fail-closed state and is not treated as provider billing.
+
 ## What we are trying to achieve
 
 Today the model helper knows exactly two models, one per provider, both hardcoded in
