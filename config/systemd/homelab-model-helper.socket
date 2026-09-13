@@ -6,13 +6,29 @@
 #
 # Who may ask for a model call is decided here, by systemd, before the helper
 # process exists -- not by a check inside the helper. The socket inode is owned
-# aleix:homelab-bot with mode 0660, so the kernel refuses connect(2) to anyone
-# who is neither. That is a rule in a committed file, reviewable in one line,
-# and it cannot be bypassed by a bug in the Python it protects.
+# aleix:homelab-model with mode 0660, so the kernel refuses connect(2) to
+# anyone who is neither aleix nor a member of homelab-model. That is a rule in
+# a committed file, reviewable in one line, and it cannot be bypassed by a bug
+# in the Python it protects.
 #
-# Note carefully what this does NOT do: homelab-bot is not added to any group.
-# The SOCKET is given the group the bot already has. `id homelab-bot` is
-# unchanged by this phase, which is a Phase 09 Definition-of-Done item.
+# PHASE 23.0 / ADR-048: THE SOCKET'S CONSUMERS ARE A GROUP
+#
+# Phase 09 gave the socket the bot's own group (SocketGroup=homelab-bot) so the
+# bot needed no new membership -- "id homelab-bot is unchanged" was a Phase 09
+# Definition-of-Done item. Phase 23.0 adds a second consumer, the harness,
+# which runs as its own account (ADR-047, baseline §3). Three ways to let it
+# in, two of them wrong (ADR-048): run the harness as homelab-bot (one account
+# for two trust boundaries); add the harness to homelab-bot's group (a group
+# that then means two things -- "is the bot" and "may ask the helper" -- which
+# the 15.0 handover forbade as a usermod); or give the socket a group whose
+# ONE meaning is "may ask the helper" and make both consumers members. This
+# is the third. `homelab-model` is a system group with no other purpose; its
+# membership is the access list, readable with `getent group homelab-model`
+# and expected to be exactly homelab-bot,homelab-harness. The next consumer
+# is a membership with a `# WHY`, not a new mechanism. The Phase 09 property
+# survives: nothing on the wire names a program, and access is still a
+# committed line plus a group, not code. Test 18 of the 23.0 brief proves a
+# third account outside the group is refused.
 
 [Unit]
 Description=Home Lab model helper socket
@@ -24,7 +40,8 @@ ListenStream=/run/homelab-model-helper.sock
 # /run is a tmpfs, root:root 0755 -- world-traversable, so the bot can reach
 # the socket, and cleared on reboot, so a stale socket cannot survive a crash.
 SocketUser=aleix
-SocketGroup=homelab-bot
+# WHY homelab-model, not homelab-bot: see the header (ADR-048).
+SocketGroup=homelab-model
 SocketMode=0660
 
 # Accept=yes: one short-lived process per connection, from the template unit.

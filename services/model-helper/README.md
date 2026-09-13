@@ -18,6 +18,25 @@ over a UNIX socket.
 | `config.example.json` | The registry. Copy to `/etc/homelab-model-helper/config.json` |
 | `fixture-tests.py` | Proves the refusals against a fixture and a stub CLI; no allowance spent (15.0) |
 
+## Who may connect (ADR-048, Phase 23.0)
+
+Access is the socket's group and mode, decided in
+`config/systemd/homelab-model-helper.socket`, never in code. Since Phase 23.0
+the socket is `aleix:homelab-model:0660` and the group **`homelab-model`** has
+exactly one meaning: *may ask the helper*. Its members are the consumers:
+
+| Consumer | Account | Since | Why it may ask |
+|---|---|---|---|
+| Telegram bot | `homelab-bot` | Phase 09 | the owner's `/ask`; the recovery path when the volume is locked |
+| Harness (the endpoint) | `homelab-harness` | Phase 23.0 | forwards `question`-class requests from local clients; its own account per ADR-047 |
+
+`getent group homelab-model` is the access list and is expected to read
+`homelab-bot,homelab-harness`. The next consumer is a membership with a
+`# WHY`, not a new mechanism (`install-model-helper.sh group` creates the
+group; the harness installer adds its account). The per-provider caps are
+shared by every consumer — the endpoint's calls count against the same
+`per_hour`/`per_day` as the owner's `/ask`.
+
 ## The protocol
 
 Request — one JSON object, one line, then EOF:

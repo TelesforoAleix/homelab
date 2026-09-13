@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # install-model-helper.sh — Phase 09, ADR-025. Phase 15.0: registry, fixture.
+# Phase 23.0 / ADR-048: the socket's consumers are the group homelab-model.
 #
 # Installs the model helper: the service that makes model calls on the bot's
 # behalf because the bot cannot read either AI credential and must not gain the
@@ -8,7 +9,8 @@
 #
 # WHAT THIS SCRIPT REFUSES TO DO
 # ------------------------------
-#   - add homelab-bot to any group
+#   - add homelab-bot to any group other than homelab-model (ADR-048: the one
+#     group whose single meaning is "may ask the helper")
 #   - copy, move or read either OAuth credential
 #   - make the helper's code writable by the account that runs it
 #
@@ -21,7 +23,9 @@
 #   - the socket exists with the exact owner, group and mode intended
 #   - a process running AS homelab-bot, INSIDE the bot's sandbox, can reach it
 #   - homelab-bot still cannot read either credential file
-#   - homelab-bot's group membership is unchanged
+#   - homelab-bot's group membership is exactly its own group plus
+#     homelab-model (Phase 09 said "unchanged"; ADR-048 widened it by one,
+#     deliberately, and this is where that is checked)
 #   - (15.0) the eligibility refusal, the unknown-key refusal and the
 #     hints-do-not-select check pass against a fixture, as the helper's own
 #     account, spending no allowance (fixture-tests.py)
@@ -41,6 +45,7 @@ set -euo pipefail
 
 OWNER="aleix"
 BOT_USER="homelab-bot"
+MODEL_GROUP="homelab-model"     # ADR-048
 CODE_DIR="/opt/homelab-model-helper"
 CONF_DIR="/etc/homelab-model-helper"
 STATE_DIR="/var/lib/homelab-model-helper"
@@ -59,10 +64,15 @@ info() { echo "      $*"; }
 
 usage() {
     cat <<'USAGE'
-Usage: install-model-helper.sh <install|verify>
+Usage: install-model-helper.sh <install|verify|group>
 
   install   deploy code, config and units, then prove the boundary
   verify    re-run every check without changing anything
+  group     Phase 23.0 / ADR-048: create the homelab-model group, add
+            homelab-bot to it, install the socket unit with
+            SocketGroup=homelab-model, restart the socket AND the bot (a
+            running process's groups are fixed at exec), then verify.
+            Idempotent. Run this BEFORE install-homelab-harness.sh.
 
 Expects the helper source files in $SRC (default /tmp/homelab-phase09):
   helper.py providers.py limits.py socket-probe.py fixture-tests.py
@@ -85,11 +95,15 @@ check_socket_permissions() {
     fi
     local spec
     spec=$(stat -c '%U:%G:%a' "$SOCKET_PATH")
-    if [[ "$spec" == "${OWNER}:${BOT_USER}:660" ]]; then
-        ok "socket is ${spec} — only ${OWNER} and ${BOT_USER} can connect"
+    if [[ "$spec" == "${OWNER}:${MODEL_GROUP}:660" ]]; then
+        ok "socket is ${spec} — only ${OWNER} and members of ${MODEL_GROUP} can connect"
         return 0
     fi
-    echo "FAIL  socket is ${spec}, expected ${OWNER}:${BOT_USER}:660"
+    if [[ "$spec" == "${OWNER}:${BOT_USER}:660" ]]; then
+        echo "FAIL  socket is ${spec}: the Phase 09 group. ADR-048 expects ${OWNER}:${MODEL_GROUP}:660 -- run '$0 group'"
+        return 1
+    fi
+    echo "FAIL  socket is ${spec}, expected ${OWNER}:${MODEL_GROUP}:660"
     return 1
 }
 
@@ -158,14 +172,39 @@ check_credential_boundary() {
 }
 
 check_bot_groups_unchanged() {
+    # Phase 09: "in no group but its own". ADR-048: plus homelab-model, and
+    # nothing else -- the check is still "exactly these", not "at least".
     local groups
     groups=$(id -nG "$BOT_USER" | tr ' ' '\n' | sort | paste -sd' ' -)
-    if [[ "$groups" == "$BOT_USER" ]]; then
-        ok "${BOT_USER} is in no group but its own: ${groups}"
+    if [[ "$groups" == "${BOT_USER} ${MODEL_GROUP}" ]]; then
+        ok "${BOT_USER} is in exactly its own group and ${MODEL_GROUP}: ${groups}"
         return 0
+    fi
+    if [[ "$groups" == "$BOT_USER" ]]; then
+        echo "FAIL  ${BOT_USER} is not yet in ${MODEL_GROUP} (Phase 09 state) -- run '$0 group'"
+        return 1
     fi
     echo "FAIL  ${BOT_USER} groups changed: ${groups}"
     return 1
+}
+
+check_model_group() {
+    # ADR-048: the group's membership IS the access list. Exactly the bot and,
+    # once Phase 23.0's installer has run, the harness. Before that, the bot
+    # alone is correct; anything else is a finding.
+    local members
+    if ! getent group "$MODEL_GROUP" >/dev/null; then
+        echo "FAIL  group ${MODEL_GROUP} does not exist -- run '$0 group'"
+        return 1
+    fi
+    members=$(getent group "$MODEL_GROUP" | cut -d: -f4 | tr ',' '\n' | sort | paste -sd',' -)
+    case "$members" in
+        "${BOT_USER}"|"${BOT_USER},homelab-harness")
+            ok "getent group ${MODEL_GROUP} = ${members}"; return 0 ;;
+        *)
+            echo "FAIL  group ${MODEL_GROUP} members are '${members}' -- expected ${BOT_USER}[,homelab-harness]"
+            return 1 ;;
+    esac
 }
 
 check_code_not_writable_by_runtime_user() {
@@ -259,6 +298,7 @@ run_verify() {
     check_bot_can_reach_socket          || rc=1
     check_credential_boundary           || rc=1
     check_bot_groups_unchanged          || rc=1
+    check_model_group                   || rc=1
     check_code_not_writable_by_runtime_user || rc=1
     check_config_is_registry            || rc=1
     check_fixture_tests                 || rc=1
@@ -283,6 +323,9 @@ run_install() {
 
     id "$OWNER"    >/dev/null 2>&1 || fail "user ${OWNER} does not exist"
     id "$BOT_USER" >/dev/null 2>&1 || fail "user ${BOT_USER} does not exist — install the bot first"
+    # ADR-048: the socket unit now says SocketGroup=homelab-model; the group
+    # must exist before the socket can bind with it.
+    ensure_model_group
 
     # The CLIs must be runnable BY THE OWNER. Checking them as root proves
     # nothing: root can execute things the service user cannot, and the whole
@@ -346,8 +389,60 @@ run_install() {
     run_verify
 }
 
+ensure_model_group() {
+    if getent group "$MODEL_GROUP" >/dev/null; then
+        info "group ${MODEL_GROUP} exists"
+    else
+        groupadd --system "$MODEL_GROUP"
+        ok "created system group ${MODEL_GROUP} (ADR-048: its one meaning is 'may ask the helper')"
+    fi
+    if id -nG "$BOT_USER" | tr ' ' '\n' | grep -qx "$MODEL_GROUP"; then
+        info "${BOT_USER} is already in ${MODEL_GROUP}"
+    else
+        usermod -aG "$MODEL_GROUP" "$BOT_USER"
+        ok "added ${BOT_USER} to ${MODEL_GROUP}: $(id "$BOT_USER")"
+    fi
+}
+
+run_group() {
+    # Phase 23.0 S2, step 1 (brief §7.2). The regression check on the bot's
+    # /ask comes AFTER this and BEFORE the harness exists.
+    echo "=== ADR-048: the model socket's consumers are a group ==="
+    [[ -f "${SRC}/homelab-model-helper.socket" ]] \
+        || fail "missing ${SRC}/homelab-model-helper.socket — scp the updated socket unit first"
+    grep -q "^SocketGroup=${MODEL_GROUP}$" "${SRC}/homelab-model-helper.socket" \
+        || fail "${SRC}/homelab-model-helper.socket does not say SocketGroup=${MODEL_GROUP}"
+
+    echo "--> creating the group and adding ${BOT_USER}"
+    ensure_model_group
+
+    echo "--> installing the socket unit (previous kept as .bak-$(date +%F), never overwritten)"
+    local bak="${UNIT_DIR}/homelab-model-helper.socket.bak-$(date +%F)"
+    if [[ -f "${UNIT_DIR}/homelab-model-helper.socket" && ! -f "$bak" ]]; then
+        cp -p "${UNIT_DIR}/homelab-model-helper.socket" "$bak"
+        ok "previous socket unit kept at ${bak}"
+    fi
+    install -o root -g root -m 0644 "${SRC}/homelab-model-helper.socket" \
+        "${UNIT_DIR}/homelab-model-helper.socket"
+    systemctl daemon-reload
+
+    echo "--> restarting the socket (the inode is re-created with the new group)"
+    systemctl restart homelab-model-helper.socket
+    ok "socket restarted: $(stat -c '%U:%G:%a' "$SOCKET_PATH")"
+
+    echo "--> restarting the bot: its running process was exec'd before the membership existed"
+    echo "    and supplementary groups are fixed at exec. Without this, its next /ask gets EACCES."
+    systemctl restart homelab-telegram-bot.service
+    sleep 2
+    systemctl is-active --quiet homelab-telegram-bot.service && ok "bot restarted and active" \
+        || fail "bot is not active after restart -- journalctl -u homelab-telegram-bot.service"
+    echo
+    run_verify
+}
+
 case "${1:-}" in
     install) run_install ;;
     verify)  run_verify ;;
+    group)   run_group ;;
     *)       usage; exit 1 ;;
 esac
