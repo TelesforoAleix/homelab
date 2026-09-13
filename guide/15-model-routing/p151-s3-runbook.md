@@ -38,6 +38,12 @@ the equivalent `python3` heredoc **run as aleix, no sudo, writing the same file 
 owner and mode unchanged). `nano /var/lib/homelab-model-helper/spend.json` remains available to
 the owner for the same edit; the record to insert is the one in the heredoc.
 
+**As run:** pasting a heredoc into a wrapped terminal broke twice (indented `EOF`, a
+line-wrapped one-liner), so the same four edits were staged by the agent as
+[`p151-s3-ledger.py`](p151-s3-ledger.py) in `/tmp/homelab-agent/` and the owner ran
+`python3 /tmp/homelab-agent/p151-s3-ledger.py restore | add <window> | final | dump` as aleix.
+Identical records, identical in-place write; the OWNER command is one short line.
+
 ## State found before this run (OBSERVED 2026-09-13, sudo and helper journals)
 
 The draft of this runbook was run by the owner at 16:32–16:44Z, before 13.1 landed:
@@ -346,16 +352,21 @@ Expected `root:root 600`, non-zero bytes, mtime now, `active`.
 **OWNER** Phone `/spend` first: `unattended: hour $0.100000000 / $0.100000000` must still show
 (else repeat §5). Paste.
 
-**AGENT — call 4**
+**AGENT stages, OWNER fires.** As run: the executor's own attempt was blocked by Claude Code's
+permission layer (a paying call is a real-world transaction), so the call is a staged script the
+owner runs through the agent alias from the Mac — same account, same one-attempt guard:
 
 ~~~bash
-ssh homelab-agent 'M=/tmp/homelab-agent/p151-s3-call4.done; [ -e "$M" ] && { echo "STOP: call 4 already attempted"; exit 2; }
-date -u +%FT%TZ | tee "$M"
-curl -sS --max-time 300 -H "X-Homelab-Client: p151-s3-new-key-attended-independence" -H "Content-Type: application/json" \
-  -d "{\"v\":1,\"kind\":\"question\",\"role\":\"utility\",\"question\":\"Reply with exactly S3-ROTATED-OK.\"}" \
-  http://127.0.0.1:8766/v1/request; echo
-sudo -n journalctl -u "homelab-model-helper@*" -n 4 --no-pager -o short-iso | grep -E "outcome=|spend"'
+# AGENT stages (no request):
+scp guide/15-model-routing/p151-s3-call4.sh homelab-agent:/tmp/homelab-agent/p151-s3-call4.sh
+# OWNER fires, once, from the Mac (the alias does not exist on the node):
+ssh homelab-agent bash /tmp/homelab-agent/p151-s3-call4.sh
+# AGENT reads:
+ssh homelab-agent 'sudo -n journalctl -u "homelab-model-helper@*" -n 3 --no-pager -o short-iso | grep -E "outcome=|spend"'
 ~~~
+
+`X-Homelab-Client` must match `^[a-z0-9][a-z0-9-]{0,31}$` — 32 characters at most; the first
+label written here was 36 and was refused at the endpoint (attempt 4x).
 
 Expected: `"ok": true`, `provider: gateway`, `model: openai/gpt-5.6-luna`, `cost` ≈ `0.0000104`;
 helper `outcome=ok … attended reserved $0.001310300`. **No fifth attempt for any reason.**
