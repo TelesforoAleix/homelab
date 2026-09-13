@@ -341,6 +341,23 @@ Security is still considered in every earlier phase; this phase is dedicated har
   Worth re-evaluating here with ACLs in scope.
 - **Firewall (UFW) and `fail2ban`** were both explicitly deferred from Phase 03 to here.
 
+**Status: Complete (2026-09-13).** Twenty-seven inherited items walked one by one, each closed,
+narrowed or declined with a written reason (`guide/13-security-hardening/README.md`). On the node,
+all OBSERVED: sshd `AllowUsers`/`MaxAuthTries 3`/no X11/no agent forwarding; a `DOCKER-USER` chain
+that keeps published container ports behind ufw; a tty-only console timeout; the model helper can no
+longer see the GitHub key; `wifi-powersave-off` bounded to `CAP_NET_ADMIN`; `aleix` out of `lxd`; a
+second SSH key `age`-encrypted on the card; a Tailscale ACL allowing only tcp/22; **the bot token
+sealed to the TPM2** and proved across a real reboot and a cord-pull (the audit found the *watchdog*
+loads it too — sealing only the bot would have silenced the recovery notice); **a BIOS supervisor
+password**, boot order locked, PXE off; `systemd-analyze security` for every service unit
+(1.3 / 1.3 / 1.3 / 1.3 / 3.8 / 5.1). Seven sockets, unchanged. Declined with reasons: the dedicated
+Workbench account (**ADR-047**), rootless Docker, `fail2ban`, key expiry. **ADR-046 amended**;
+`docs/standards/service-security-baseline.md` is what Phase 15.0's units must meet. Two rows stay
+PREDICTED and are named in the handover: the ACL's other-device negative (no second tailnet device)
+and the published-port LAN negative (the building Wi-Fi isolates clients, so no host of ours can
+reach the node at L2 to test it). **Phase 15.0 is next.** Handover:
+`docs/handovers/13-security-hardening-handover.md`.
+
 ## Phase 14 — Reproducibility / Infrastructure as Code
 
 Move toward rebuilding/replacing the M700 with minimal manual configuration using appropriate provisioning and deployment automation.
@@ -972,8 +989,8 @@ volume is open. Small, and it makes every later phase easier to operate.
 
 **3. Phase 18.2 — Migration to the server.** ~~Everything moves into the volume. Phase 13 gets more
 urgent the moment this lands.~~ **Done 2026-09-12.** The node runs a web service on loopback and
-holds a GitHub key with write access; **Phase 13 is promoted to next** (18.2 handover, *To Phase 13*),
-ahead of 15.0, which can still run alongside.
+holds a GitHub key with write access; ~~**Phase 13 is promoted to next**~~ **Phase 13 done
+2026-09-13** (promoted ahead of 15.0 by 18.2's handover; see its status block). **15.0 is next.**
 
 **4. Phase 15.0 — Model registry.** Can run at any point from here; costs nothing and is already
 briefed. Do it while the node work settles.
