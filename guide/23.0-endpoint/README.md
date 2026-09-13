@@ -196,7 +196,7 @@ expected it and was corrected); the watchdog's boot notice does: `Data volume: L
 
 ## Validation
 
-Every row of the brief's §8 **OBSERVED** on 2026-09-13 except 19 (S4's backup, run at close). The
+Every row of the brief's §8 **OBSERVED** on 2026-09-13, row 19 (backup + verify, PASS, 156 files) at close. The
 evidence lines, verbatim from the node, are in the handover; the shape:
 
 | # | Row | Result |
@@ -214,6 +214,7 @@ evidence lines, verbatim from the node, are in the handover; the shape:
 | 13 | start limit | six kills → seven alerts naming `homelab-harness.service` (one per crash + one for the refused restart), `Result=signal`, `NRestarts=6`; `reset-failed` recovers |
 | 14 | `/ask` | before, after the group change, after the reboot — all answered; 15.0 fixture 19/19 on the node |
 | 15, 16, 17 | factory | 55 tests on both adapters (MacBook and node); **"the adapter interface is proved"** locally and on the node; row 17's triple joined by `request_id 25342f79…` — run record, endpoint audit line, helper journal |
+| 19 | backup + verify | `backup-node.sh` 352K/23M → `homelab-backup/2026-09-13`; `verify-node-backup.sh` **PASS**, 156 files match the live node, the four new paths present, key/token/recovery key absent |
 | 20 | `# WHY` | service 5, socket 2, drop-in 1 |
 
 **Costs: five real model calls, 0 €** (four in S2, one in S3; subscriptions under the helper's caps).
