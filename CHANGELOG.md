@@ -6,6 +6,16 @@ This project uses this file for meaningful repository-level milestones rather th
 
 ### Added
 
+- **Phase 15.0 — Model registry and routing (2026-09-13).** The model helper's config is a registry
+  (`providers → models`, `routes`, `default_route`); the caller asks by routing key (`role`) and can
+  no longer send a field naming a model, binary or path (refused by name); `unattended` eligibility
+  per provider is enforced before the cap reservation and **proved by refusal against a positive
+  control** — on the MacBook and on the node as the helper's account, via a fixture derived from
+  `config.example.json` with a shape assertion; an owner floor (`caps.owner_reserve`) that unattended
+  work cannot spend; ADR-034 §5's hints accepted, logged, provably unable to select. `/ask` unchanged
+  from Telegram, captured live with the volume locked. No new listener, account, group, dependency
+  or unit-file change. `metered`/`credential` reserved for 15.1 and refused until the governor ships.
+
 - **Workspace reorganisation (2026-09-10, ADR-030).** The repository split ADR-029 described was
   carried out on the development machine and on GitHub. The node was deliberately left untouched:
   cloning private repositories onto an unencrypted, unbacked-up root filesystem is the event ADR-015

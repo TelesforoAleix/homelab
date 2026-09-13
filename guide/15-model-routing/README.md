@@ -1,7 +1,7 @@
 # Phase 15.0 — Model registry and routing
 
-**Status:** draft — §Design written in stage 1 (2026-09-13), before any code or node change. The
-remaining sections are written as the phase runs. Brief:
+**Status:** complete 2026-09-13. §Design was written in stage 1 before any code or node change;
+the closing sections after the live tests. Brief:
 [`docs/handovers/15.0-model-registry.md`](../../docs/handovers/15.0-model-registry.md).
 
 ## What we are trying to achieve
@@ -198,12 +198,76 @@ Two decisions the brief did not ask for, recorded because they are choices:
 
 ## Why eligibility sits on the provider
 
-*(to be written at close)*
+A model has no terms of service. A *subscription* does, and so does a metered account. Whether a
+call nobody asked for in person is acceptable is a property of the thing being billed, not of the
+model string passed to it — Claude `haiku` through the owner's Pro subscription and `haiku` through
+a metered gateway are the same model under different terms. So `unattended` is a field on the
+provider entry, and a route that mixes providers is filtered provider by provider.
+
+Putting it there also makes ADR-026 §5's accepted risk **reversible one provider at a time**: if a
+finding ever says one subscription must not serve unattended calls, the change is one boolean in
+root-owned config and the refusal path is already proved. That is the whole reason the field
+exists today, when both entries are `true` and nothing unattended calls yet.
+
+Be clear about what it is not (brief §9): it is not a security boundary against the bot. The bot is
+trusted to declare `unattended` honestly; nothing verifies the claim. It is a control against
+*this project* building a scheduled caller in a later phase and forgetting what that implies — a
+line the code makes it impossible to cross silently.
 
 ## How the refusal was proved
 
-*(to be written at close, from the observed runs)*
+The check will permit every real call this project makes today, so its first refusal had to be
+manufactured. `fixture-tests.py` does that without touching a CLI, a socket, the node's config or
+anyone's allowance:
+
+1. The fixture config is **`config.example.json` with three substitutions** — both binaries
+   replaced by a stub that prints `STUB-ANSWER`, the state file moved to a temp directory, and
+   `unattended` set to the value under test — and it is asserted to have the same recursive key
+   set as the example. A hand-written fixture that drifts from the real format would refuse for
+   the wrong reason and look identical to a finding; this one cannot drift.
+2. `helper.py` is run the way systemd runs it: one JSON line on stdin. It has no socket code, so
+   there is nothing to bypass; the real loader, router, eligibility check, `Limiter` and provider
+   argv code all execute.
+3. **Test 1**: `{"unattended": true}` against `unattended: false` → `kind: "ineligible"`, journal
+   `outcome=ineligible providers=claude,codex`, counter `0 → 0`.
+   **Test 2**, the positive control: the same request against `unattended: true` → `ok`,
+   `claude/haiku`, `STUB-ANSWER`, counter `0 → 1`. Without test 2, test 1 would be a refusal of
+   unknown cause.
+
+OBSERVED 2026-09-13: 19/19 on the MacBook (four consecutive runs, the ten-process race included),
+then 19/19 **on the node, as `aleix`, from the installed code in `/opt`**, inside
+`install-model-helper.sh verify` — which now runs the fixture every time. The first version of the
+fixture passed tests 8 and 11b on *any* error; that was caught by running it against the old code
+first, where "helper misconfigured" satisfied them, and the tests now require the error to name the
+field. The test of the control needed its own control.
+
+The live half: `/ask what is the load on this machine?` from the phone answered `-- claude/haiku`
+with the journal line `route=owner-interactive unattended=false summary_len=0 provider=claude
+model=haiku … outcome=ok`; the same with the data volume locked (the helper lives on root,
+ADR-046 §2). `id homelab-bot` byte-identical, seven listeners, score 3.8, unit file untouched.
+
+What the swap on the node taught (all in the handover's lessons): the installer's own probe landed
+in the code/config window and left one failed instance — the window the runbook said was real,
+observed because the runbook caused it; and `verify` said `UNKNOWN` once because the fixture reads
+`config.example.json` beside itself and the installer had not copied it — the correct failure,
+fixed in the installer.
 
 ## What changes when a metered provider arrives
 
-*(to be written at close, addressed to 15.1)*
+Nothing in the shape; four things in substance (handover, *To Phase 15.1*):
+
+- **A provider class** in `providers.py` — adding a provider is code, adding a model is a line.
+- **`metered: true` and `credential: "<name>"`** on its entry. Today the helper **refuses to
+  load** a config that has either: the governor ADR-033 §5 requires does not exist, and a field
+  that appears to work and does nothing is how a paid call happens without one. 15.1 removes that
+  refusal in the same commit that ships the governor. `credential` is a name resolved through
+  `LoadCredential=` — a unit change, measured against the baseline — never a path.
+- **The governor** — four windows, attended/unattended split, fail-closed, persistent. It is the
+  owner floor's idea over money; it sits beside `Limiter`, which stays a capacity control and was
+  deliberately not taught about cost.
+- **Routes gain a reason to order by price**, and cross-route fallback ("the cheap model is spent,
+  use the good one") becomes a cost decision. It is refused today; 15.1 decides it with prices in
+  hand.
+
+Caps stay per provider, before the call, refused for free — the Phase 09 rule that every layer of
+this phase repeats.

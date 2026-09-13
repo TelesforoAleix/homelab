@@ -355,7 +355,7 @@ Workbench account (**ADR-047**), rootless Docker, `fail2ban`, key expiry. **ADR-
 `docs/standards/service-security-baseline.md` is what Phase 15.0's units must meet. Two rows stay
 PREDICTED and are named in the handover: the ACL's other-device negative (no second tailnet device)
 and the published-port LAN negative (the building Wi-Fi isolates clients, so no host of ours can
-reach the node at L2 to test it). **Phase 15.0 is next.** Handover:
+reach the node at L2 to test it). ~~**Phase 15.0 is next.**~~ Phase 15.0 complete 2026-09-13. Handover:
 `docs/handovers/13-security-hardening-handover.md`.
 
 ## Phase 14 — Reproducibility / Infrastructure as Code
@@ -385,7 +385,7 @@ pieces, in running order:
 
 | | Scope |
 |---|---|
-| **15.0** | Model registry as configuration; `unattended` eligibility enforced structurally. **Briefed.** Costs nothing — it uses the two subscription CLIs that already exist |
+| **15.0** | Model registry as configuration; `unattended` eligibility enforced structurally. **Complete 2026-09-13** — refusal proved against a positive control on the node; owner floor; hints logged, never selecting; `/ask` unchanged. Cost nothing. Handover: `docs/handovers/15.0-model-registry-handover.md` |
 | **15.1** | Metered provider integration **and the spend governor, together** — ADR-033 §5 says they ship together or not at all. No metered call is possible before it |
 | **15** | Routing proper: deterministic first, deterministic retained as the fallback, AI-assisted as the target rather than this phase's completion criterion |
 

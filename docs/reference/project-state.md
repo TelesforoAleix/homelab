@@ -27,15 +27,19 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 13 — Security hardening (**in progress**, 2026-09-12; S1 audit and S2 software
-  controls complete, S3 credentials-and-the-box pending). S2 landed, all OBSERVED: sshd `AllowUsers
-  aleix`/`MaxAuthTries 3`/no X11/no agent forwarding; a `DOCKER-USER` chain that keeps published
-  container ports behind ufw; a tty-only console timeout; the model helper can no longer read the
-  node's GitHub key; `wifi-powersave-off` bounded to `CAP_NET_ADMIN`; `aleix` out of `lxd`; a second
-  SSH key `age`-encrypted on the card; a Tailscale ACL allowing only tcp/22 to the node. Seven
-  sockets, unchanged. ADR-047 decides the Workbench's account question (declined; sandbox is the
-  boundary). See `guide/13-security-hardening/`.
-- **Previous phase:** 18.2 — Migration to the server (**complete**, 2026-09-12). **The four layers are
+- **Current phase:** 15.0 — Model registry and routing (**complete**, 2026-09-13). Models are
+  configuration: `config.json` is `providers → models`, a `routes` table and a `default_route`; the
+  caller asks by routing key (`role`), never by model; `unattended` eligibility per provider is
+  enforced before the cap reservation and **proved by refusal against a positive control**, on the
+  MacBook and on the node; an owner floor (`caps.owner_reserve`, half) that unattended work cannot
+  spend; hints on the wire logged and provably unable to select. `/ask` unchanged from Telegram,
+  captured live, including with the volume locked. No new listener, account, group, dependency or
+  unit-file change (score 3.8). Handover addressed to 15.1, 23.0 and 14:
+  [`15.0-model-registry-handover.md`](../handovers/15.0-model-registry-handover.md).
+- **Previous phase:** 13 — Security hardening (**complete**, 2026-09-13). See
+  [`13-security-hardening-handover.md`](../handovers/13-security-hardening-handover.md) and the
+  Phase 13 section below.
+- **Earlier:** 18.2 — Migration to the server (**complete**, 2026-09-12). **The four layers are
   on the node inside the encrypted volume, and the Factory Workbench runs there as a service on
   loopback, reached only through `ssh homelab-workbench`.** Five clones at `/srv/homelab`, one
   node-side GitHub key, one new listening socket (`127.0.0.1:8765`, named); the 18.1 probe is
@@ -363,6 +367,22 @@ service account is its decision to make deliberately, not to inherit.
 `systemctl`), and `AF_UNIX` is permitted (needed to reach PID 1). Neither opens the Docker socket,
 which is `root:docker 0660` to an account in no group but its own.
 
+## Phase 15.0 status
+
+**Complete 2026-09-13.** Brief committed before implementation (`7c2fc3b`), one §9 bullet amended
+during S1 with the reason. Nothing metered, no cost.
+
+| Item | State |
+|---|---|
+| Registry | ✅ `/etc/homelab-model-helper/config.json`: `providers{claude, codex} → models`, `routes{owner-interactive}`, `default_route`. The Phase 09 shape is refused, not migrated; `.bak-2026-09-13` beside it |
+| Routing | ✅ `role` on the wire → `resolve_route()` — the one function, receives the key alone. Bot sends none → `owner-interactive`. Unknown → `unknown_role`, no cap |
+| Eligibility | ✅ `unattended` per provider, checked before the cap reservation. **Refusal proved** (test 1) against a positive control (test 2), zero cap (test 3) — MacBook 19/19 ×4, node 19/19 as `aleix` |
+| Owner floor | ✅ `caps.owner_reserve = {3/h, 15/d}` of `{6, 30}`, per provider on the same count. Tests 5 and 7 observed |
+| Hints | ✅ `priority`, `severity`, `complexity`, `summary` accepted, validated, logged; same `provider/model` with and without (test 11). Unknown fields refused by name (test 8) |
+| `/ask` | ✅ Unchanged; two live replies `-- claude/haiku`, one with the volume locked (test 14) |
+| Boundary | ✅ `id homelab-bot` byte-identical; seven listeners; score **3.8**, unit file untouched; `verify` all nine checks |
+| `metered` / `credential` | Reserved for 15.1; **presence refused** until the governor ships (handover, *To 15.1*, item 1) |
+
 ## Phase 09 status
 
 **Complete 2026-09-09.** Brief committed before implementation per ADR-017 (`351f825`).
@@ -532,6 +552,9 @@ executed on branch `phase/12-work` in a separate worktree.
   in ADR-026 §5 rather than smoothed over — rate limiting bounds *capacity*, not terms, and the
   residual exposure is account action or throttling. **The control that makes this reversible is the
   `unattended` field, which must not be removed** just because every current entry is `true`.
+  **Phase 15.0 (2026-09-13): the control now exists and has been proved** — a fixture provider set
+  `unattended: false` is refused before any cap is spent, against a positive control, on the node;
+  reversing the accepted risk for one provider is one boolean in root-owned config.
 - **Data now leaves the machine on every `/ask`** — the owner's question plus the five `/status`
   figures, to Anthropic or OpenAI. Bounded deliberately: no logs, no file contents, no journal.
   Widening that context needs its own ADR, because anything able to write a log line could
@@ -732,7 +755,7 @@ Re-verified 2026-09-09 at the close of **Phase 09**.
 | **Services** | **`homelab-telegram-bot.service`** — active, enabled, **0 restarts**. **`homelab-model-helper.socket`** — active, enabled; templated service instantiated per connection. **`homelab-watchdog.timer`** — active, enabled, once per boot (Phase 12, 2026-09-12); `OnFailure=` drop-ins on the bot, the model helper and the Workbench → `homelab-notify@<alias>.service`. **`homelab-workbench.service`** — active, enabled via `homelab-data.target` (Phase 18.2, 2026-09-12); `User=aleix`, `1.3 OK`; skipped while the volume is locked, started by unlock |
 | **Volume contents** | `/srv/homelab` `aleix:aleix 0750`: `homelab/`, `factory/`, `brain/`, `projects/oncla/`, `projects/factory/` — clones, SSH remotes, 47 M (Phase 18.2). Node GitHub key at `~aleix/.ssh/id_ed25519_github` |
 | Model helper socket | `/run/homelab-model-helper.sock`, `aleix:homelab-bot`, mode `660` |
-| Model access | `/ask` works. Claude `haiku`, Codex `gpt-5.6-luna`; caps 6/hour, 30/day per provider |
+| Model access | `/ask` works. Registry: Claude `haiku`, Codex `gpt-5.6-luna` (Phase 15.0); route `owner-interactive`; caps 6/hour, 30/day per provider, owner reserve 3/15; `unattended` eligibility proved |
 | Restart limit | **`StartLimitIntervalUSec=5min`** on the running unit — was silently 10s until Phase 09 fixed it |
 | Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |
 | Service hardening | `systemd-analyze security` → **1.3 OK** |
