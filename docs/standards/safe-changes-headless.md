@@ -33,6 +33,7 @@ A change is **lockout-class** if it touches any of:
 | Authentication | `/etc/passwd`, `/etc/shadow`, `/etc/sudoers`, `/etc/sudoers.d/`, PAM, the `sudo` group |
 | Boot | GRUB, `/etc/fstab`, initramfs, kernel packages, anything `WantedBy=multi-user.target` |
 | The admin account | `aleix` — its shell, home directory, groups, or UID |
+| **Sudoers, specifically** | any file under `/etc/sudoers.d/` — and here session 2 (§2) **holds a root shell** (`sudo -i`) opened before the change, because a parse error in any included file disables `sudo` for every account and `sudo rm` can then not undo it. `visudo -c -f` before it lands; the rollback typed in the root shell is `rm -f /etc/sudoers.d/<file> && visudo -c` (Phase 13.1) |
 
 Everything else is ordinary work. Everything in the table gets the rest of this document.
 
@@ -136,6 +137,9 @@ sudo cp /etc/ssh/sshd_config.d/10-homelab-hardening.conf.bak \
 
 If you cannot write the rollback, you do not yet understand the change well enough to make it.
 
+And make sure the rollback can *run*: a rollback that begins with `sudo` is no rollback for a change
+that breaks `sudo`. For anything under `/etc/sudoers.d/`, session 2 is a root shell.
+
 ## 7. Verify the running system, not the file you wrote
 
 This is the lesson Phase 03 paid for.
@@ -171,7 +175,7 @@ Functional success does not imply a healthy system.
 
 ```text
 1. Is this lockout-class?  network / sshd / auth / boot / the admin account
-2. Second session open, idle.
+2. Second session open, idle.  (a ROOT shell if the change touches sudoers)
 3. Both routes proved, with BatchMode=yes.
 4. Validator run.            sshd -t · netplan try · visudo -c · systemd-analyze verify
 5. Rollback typed, unexecuted, in session 2.
