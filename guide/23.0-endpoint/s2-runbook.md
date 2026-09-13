@@ -131,8 +131,10 @@ sudo systemd-analyze security 'homelab-model-helper@probe.service' --no-pager | 
 ## 3 — Routes and the question limit in config.json (6.8, S1 q4) (S1)
 
 One route, `execution-agent`, to the same list as `owner-interactive`; `max_question_chars` 4000.
-No wildcard. The previous file is kept as `.bak-<date>` and the script refuses to overwrite an
-existing backup from the same day.
+No wildcard. The previous file is kept as `.bak-<date>-p230` — suffixed because Phase 15.0's S2 ran
+the same morning and its `.bak-2026-09-13` already exists; the first run of this step refused to
+overwrite it and changed nothing (OBSERVED 12:4x). The date-only convention assumes one phase per
+day; a same-day second phase adds a suffix.
 
 ```bash
 # S1 — prints the resulting routes and limit; nothing else in the file changes
@@ -140,7 +142,7 @@ echo "== editing /etc/homelab-model-helper/config.json (backup first, then one r
 sudo python3 - <<'PY'
 import json, datetime, os, shutil
 p = "/etc/homelab-model-helper/config.json"
-bak = f"{p}.bak-{datetime.date.today().isoformat()}"
+bak = f"{p}.bak-{datetime.date.today().isoformat()}-p230"   # a 15.0 .bak from the same morning exists (OBSERVED)
 if os.path.exists(bak):
     raise SystemExit(f"{bak} exists -- refusing to overwrite (baseline §7)")
 shutil.copy2(p, bak); print(f"kept {bak}")
@@ -378,7 +380,7 @@ stat -c '%U:%G:%a' /run/homelab-model-helper.sock    # aleix:homelab-bot:660
 (The group itself may stay; an empty group is harmless. `groupdel homelab-model` once nothing
 references it.) After a reboot `/tmp` is gone — use `/etc/systemd/system/homelab-model-helper.socket.bak-<date>`.
 
-**B — undo the config change** (step 3): `sudo cp -p /etc/homelab-model-helper/config.json.bak-<date> /etc/homelab-model-helper/config.json`.
+**B — undo the config change** (step 3): `sudo cp -p /etc/homelab-model-helper/config.json.bak-<date>-p230 /etc/homelab-model-helper/config.json`.
 
 **C — undo the notifier** (step 4): `sudo install -m 0755 /usr/local/sbin/homelab-notify.sh.bak-<date> /usr/local/sbin/homelab-notify.sh`.
 
