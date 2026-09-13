@@ -1,8 +1,7 @@
 # Phase 13 — Security hardening
 
-> **Work in progress — S1 (audit) and S2 (software controls) complete; S3 (credentials and the
-> box) and S4 (documentation) pending.** Rows below are OBSERVED where S2 closed them; the rest say
-> what stage closes them.
+> **S1 (audit), S2 (software controls) and S3 (credentials and the box) complete; S4 (documentation
+> and close) in progress.** Every row below is OBSERVED unless it says PREDICTED.
 
 Brief: [`docs/handovers/13-security-hardening.md`](../../docs/handovers/13-security-hardening.md).
 Audit runbooks: [`scripts/server/security-audit.sh`](../../scripts/server/security-audit.sh) (node,
@@ -161,6 +160,27 @@ after sshd, the firewall, the wifi unit and the ACL. No node change was made out
 7. `p13-s2.sh`'s second round overwrote the first round's same-day backup; harmless here (identical
    content) and fixed so a backup is never overwritten.
 
+## S3 — what was done (2026-09-13, 06:43–07:22 UTC; runbook `s3-runbook.md`; owner at the box)
+
+| Step | OBSERVED result |
+|---|---|
+| 2b published port | Container up (`0.0.0.0:8080->80`, `HTTP 200` locally); tailnet `nc` timed out (the ACL); **LAN `nc` → `No route to host`, `DOCKER-USER` drop counter 0** — the MacBook cannot reach the node at L2 on the building Wi-Fi (client isolation), so the packet never arrived and the rule was **not exercised**. Row 6's negative half stays **PREDICTED**, with that reason. Image removed, `docker system df` all zero |
+| TMOUT tty | tty1 login 06:43:52 UTC, `TMOUT=900`; at 07:00 the monitor showed `homelab login:` again; S2 (SSH) answered `echo ok` after the same interval. **Row 9 OBSERVED** |
+| 6.6 seal | `has-tpm2` yes; `token.cred` 551 bytes `root:root 0600`, round-trip identical; three `credential.conf` drop-ins installed (bot, notifier, **watchdog**); bot restarted, polling; `/status` answered; notifier started by hand delivered a Telegram message on the sealed credential |
+| real reboot | `sudo systemctl reboot` 06:59:37; boot 06:59:54; **watchdog message "back up, volume LOCKED" and `/status` at uptime 1 min with no manual step** — condition 3. `postboot`: 0 failed, `running`, Workbench `inactive` (locked) → `active` after unlock, **wifi `Power save: off` from cold** (4b's boot proof). Plaintext token shredded; `token.cred` the only copy on the node. **Row 12 OBSERVED** |
+| BIOS | Administrator password set (password manager only); Secure Boot left enabled; boot sequence Ubuntu first, **Boot Order Lock enabled**; **Boot Agent, PXE IPv4 and PXE IPv6 disabled** (Onboard Ethernet Controller left enabled — `eno1` stays a dead end by decision, not by firmware); After Power Loss already *Power On*; Windows entry left. F1 on reboot → password prompt; Esc → booted unattended. **Row 10 OBSERVED** |
+| power-cycle | `poweroff` 07:17:14; cord pulled 10 s; boot 07:18:07 by itself; watchdog reported (locked); unlock; Workbench active; wifi off; `BootOrder: 0001,0004,0005,0000` — **the two PXE entries are gone**; alias rc 0. **Row 11 OBSERVED** |
+| helper from cold | `/ask` after the power-cycle → answered (`outcome=ok`), the hardened unit loaded from cold *(pending paste)* |
+
+Two watchdog "back up" messages (09:17 and 09:19 local) looked like a double boot; `journalctl
+--list-boots` shows one boot per event — the first was the row-10 boot after the BIOS visit, ended by
+the owner's `poweroff` for the cord pull. Withdrawn, recorded because it was asked.
+
+**What went wrong in S3:** `/tmp` is cleared at boot and the runbook staged its script there — one
+`scp` after each boot; fixed in the runbook (stage under `/tmp/p13` is fine, re-copy is a step).
+`systemctl show` on a template name failed again in `p13-s3.sh`'s status line — cosmetic. Nothing
+else.
+
 ## The debt table — outcomes
 
 Sources: **18.2** = 18.2 handover *Phase 13 by name* items 1–7; **18.1** = 18.1 handover §Phase 13;
@@ -170,13 +190,13 @@ Sources: **18.2** = 18.2 handover *Phase 13 by name* items 1–7; **18.1** = 18.
 | # | Item | Source | OBSERVED state | Outcome | § |
 |---|---|---|---|---|---|
 | 1 | Socket baseline: seven, each named | 18.2 #1 | Seven, identical to the list; **re-measured at S2 close: seven, identical** | **Closed (OBSERVED)** — baseline goes into the standard in S4 | 4.5 |
-| 2 | GitHub key on the node, passphrase-less, account-level | 18.2 #2 | `0600`, one `Host` block, `IdentitiesOnly`; not in ADR-046's table; `gh` listing pending | **Narrowed (6.2b) — pending S3 for the ADR-046 row:** keep; audited by title from the MacBook (one key, OBSERVED); 6.2(a) recorded as Phase 14's change if it picks unattended push | 6.2 |
+| 2 | GitHub key on the node, passphrase-less, account-level | 18.2 #2 | `0600`, one `Host` block, `IdentitiesOnly`; not in ADR-046's table; `gh` listing pending | **Narrowed (6.2b, closed):** kept; ADR-046 row 6 with revocation path; audited by title from the MacBook (one key, OBSERVED); the helper can no longer read it; 6.2(a) recorded as Phase 14's change if it picks unattended push | 6.2 |
 | 3 | Workbench as `aleix` vs dedicated account | 18.2 #3 | Sandbox exactly as believed: `ProtectHome=yes`, no `AF_UNIX`, `NoNewPrivileges`, RW only `/srv/homelab`; 1.3 | **Declined — ADR-047 written (S4 pre-write)**; boundary is the sandbox, five triggers | 6.1 |
 | 4 | Docker `data-root` on root | 18.2 #4 | `/var/lib/docker`, inventory zero, `docker0` down | **Declined (keep)** — trigger has not fired; recorded here and in the handover | 6.4 |
-| 5 | BIOS password | 18 #5, 18.1, 18.2 #5 | None; Secure Boot on; PXE ×2, USB, CD entries in boot order; stale Windows entry | **Pending S3 (at the box):** supervisor password, boot order locked, network boot off, Windows entry left, Secure Boot left on | 6.5 |
-| 6 | Console idle timeout | 18.1, 18.2 #5 | No `TMOUT` | **Installed (S2, OBSERVED unset on pts)**; tty positive proof at the box in S3 | 6.5 |
-| 7 | `systemd-creds` TPM2 binding of the bot token | 18.1, 18.2 #5, ADR-046 | `has-tpm2` yes; token `root:root 0600`; Secure Boot on | **Pending S3** — condition 1 holds; rollback written (`p13-s3.sh creds-undo`); condition 3 is the real reboot. **Three units, not two** (the watchdog loads it too) — all or none | 6.6 |
-| 8 | ADR-046 revisit triggers as a checklist | 18.1, 18.2 #5 | Checks 1 PASS, 2 PASS-with-defect, 3 FAIL (sixth row) | **Pending S3:** amend ADR — sixth row, token row rewritten if 6.6 lands, check-2 grep, trigger 3 fired, dated re-run | 4.3 |
+| 5 | BIOS password | 18 #5, 18.1, 18.2 #5 | None; Secure Boot on; PXE ×2, USB, CD entries in boot order; stale Windows entry | **Closed (S3, OBSERVED):** supervisor password (row 10), Boot Order Lock, PXE off, Secure Boot on, Windows entry left; unattended boot through a cord pull (row 11) | 6.5 |
+| 6 | Console idle timeout | 18.1, 18.2 #5 | No `TMOUT` | **Closed (S2+S3, OBSERVED both halves):** tty session ended at 15 min, SSH session untouched (row 9) | 6.5 |
+| 7 | `systemd-creds` TPM2 binding of the bot token | 18.1, 18.2 #5, ADR-046 | `has-tpm2` yes; token `root:root 0600`; Secure Boot on | **Taken (S3, OBSERVED):** all three conditions held — TPM2 present, rollback written and kept (`creds-undo`), sealed credential loaded by bot + notifier + **watchdog** across a real reboot and a power-cycle. No PCRs (narrows pulled disk only). Plaintext shredded | 6.6 |
+| 8 | ADR-046 revisit triggers as a checklist | 18.1, 18.2 #5 | Checks 1 PASS, 2 PASS-with-defect, 3 FAIL (sixth row) | **Closed (S4):** ADR-046 amended — sixth row, token row rewritten, check-2 grep corrected, trigger 3 fired twice, checks 1–3 re-run PASS | 4.3 |
 | 9 | Two SSH aliases keep working | 18.2 #6 | Both work concurrently, tunnel 200 | **Closed (OBSERVED)** — repeated after sshd and after the ACL, rc 0 + HTTP 200 both times | §5 |
 | 10 | Password exposure → rule | 18.2 #7 | Not yet a rule | **Closed (S4 pre-write):** `service-security-baseline.md` §7; every Phase 13 runbook applied it | 6.3 |
 | 11 | Single SSH client key | RM, PS | One key in `authorized_keys`, one on the MacBook | **Closed (S2, OBSERVED):** second Ed25519 pair accepted (rc 0, no agent), `age`-encrypted on the card, plaintext destroyed | 6.8 |
@@ -229,7 +249,7 @@ break login. If yes: same treatment as `docker` under ADR-022, stated.
 today; but the BIOS step in 6.5 should disable network boot as well as lock the order, and the stale
 `Windows Boot Manager` entry can go (`efibootmgr -b 0000 -B`, or leave — cosmetic). Folded into 6.5's
 checklist for the orchestrator to confirm.
-**Outcome:** network boot off — yes; Windows entry — left (pending S3 at the box).
+**Outcome (S3):** PXE off (Boot Agent + IPv4 + IPv6), Boot Order Lock on, Windows entry left; `efibootmgr` confirms the PXE entries gone.
 
 **6.16 §8 row 8 (ACL negative test) has no second device.** The tailnet is two devices. Either a
 phone joins for one test or the row is PREDICTED and named as debt in the handover.
@@ -237,7 +257,7 @@ phone joins for one test or the row is PREDICTED and named as debt in the handov
 
 **6.17 ADR-046 check 2 has a false positive.** Its grep matches its own documentation in the watchdog.
 Amend the check to `grep -rhv '^\s*#' … | grep -l …` or narrow the pattern to `key-file=|keyfile=`. S3.
-**Outcome:** pending S3 (ADR-046 amendment); the audit script already runs the comment-free variant.
+**Outcome (S4):** ADR-046 check 2 rewritten with the comment guard; the audit script runs it.
 
 ## Corrections to the brief made in S1
 
