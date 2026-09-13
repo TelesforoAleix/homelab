@@ -1,0 +1,259 @@
+# Home Lab -- the executor agent's sudo grant. ADR-049, Phase 13.1.
+#
+# Applied to : /etc/sudoers.d/homelab-agent
+# Ownership  : root:root
+# Mode       : 0440
+# Installed  : scripts/server/install-homelab-agent.sh, which runs
+#              `visudo -c -f` on this file BEFORE it lands. A parse error in
+#              any file under /etc/sudoers.d/ disables sudo for EVERY account,
+#              aleix included -- landing this file is lockout-class
+#              (safe-changes-headless.md section 1, its own row).
+#
+# THE ONE THING TO UNDERSTAND ABOUT THIS FILE
+# -------------------------------------------
+# The node runs sudo-rs, and sudo-rs matches a command's arguments EXACTLY,
+# token by token. The only wildcard it accepts in an argument is a lone
+# trailing `*`, meaning "any arguments from here". OBSERVED 2026-09-13, S2
+# step 1: the first draft of this file, written in C-sudo idiom
+# (`systemctl restart homelab-*`, `cat /etc/homelab-*/*.json`, deny lines
+# for `* *` and `*..*`), was refused by the node's visudo with
+# "wildcards are not allowed in command arguments" -- before it landed, as
+# the installer is built to do. The MacBook's C-sudo visudo had said
+# "parsed OK" to the same file. Two parsers; the node's is the gate.
+#
+# So this file is a LIST, not a pattern: every unit, every config file and
+# every ledger the agent may touch is named. That is stricter than ADR-049's
+# globs and needs no "matching deny" for a third argument, a later option or
+# `..` -- an exact match admits nothing extra. (The C-sudo hazard those
+# denies were written for -- `*` matching a space -- is real for C sudo and
+# recorded in the S2 report; it does not apply here.) A new unit or config
+# file means a new line here, visudo'd and committed, which is the right
+# amount of friction for widening a root grant.
+#
+# ORDER MATTERS: sudoers is LAST-MATCH-WINS. The deny aliases are listed AFTER
+# the allow aliases on the grant line so that where both match (`getent
+# shadow` is inside `getent *`), the deny holds.
+#
+# WHAT THIS GRANTS, IN ONE LINE: start/stop/restart/inspect the project's own
+# units, read the journal and sockets, replace a named .json config from the
+# agent's staging directory, copy the two ledgers within their own directory,
+# read the volume's lock state. Nothing that can lock the owner out, nothing
+# that reads or writes a secret, nothing that opens or closes the volume,
+# nothing that spends outside the governor's config, and nothing that widens
+# this grant.
+#
+# `sudo -l -U homelab-agent` on the node is the ground truth, not this file.
+
+# --- Allowed: the routine operator set (ADR-049 section 2) ------------------
+
+# The seven units the agent may operate. A template instance
+# (homelab-model-helper@<n>, homelab-notify@<n>) is per-connection and is not
+# something a runbook restarts; the socket is.
+Cmnd_Alias HOMELAB_AGENT_UNITS = \
+    /usr/bin/systemctl start homelab-telegram-bot.service, \
+    /usr/bin/systemctl start homelab-model-helper.socket, \
+    /usr/bin/systemctl start homelab-harness.service, \
+    /usr/bin/systemctl start homelab-workbench.service, \
+    /usr/bin/systemctl start homelab-watchdog.timer, \
+    /usr/bin/systemctl start homelab-watchdog.service, \
+    /usr/bin/systemctl start homelab-data.target, \
+    /usr/bin/systemctl stop homelab-telegram-bot.service, \
+    /usr/bin/systemctl stop homelab-model-helper.socket, \
+    /usr/bin/systemctl stop homelab-harness.service, \
+    /usr/bin/systemctl stop homelab-workbench.service, \
+    /usr/bin/systemctl stop homelab-watchdog.timer, \
+    /usr/bin/systemctl stop homelab-watchdog.service, \
+    /usr/bin/systemctl stop homelab-data.target, \
+    /usr/bin/systemctl restart homelab-telegram-bot.service, \
+    /usr/bin/systemctl restart homelab-model-helper.socket, \
+    /usr/bin/systemctl restart homelab-harness.service, \
+    /usr/bin/systemctl restart homelab-workbench.service, \
+    /usr/bin/systemctl restart homelab-watchdog.timer, \
+    /usr/bin/systemctl restart homelab-watchdog.service, \
+    /usr/bin/systemctl restart homelab-data.target, \
+    /usr/bin/systemctl reset-failed homelab-telegram-bot.service, \
+    /usr/bin/systemctl reset-failed homelab-model-helper.socket, \
+    /usr/bin/systemctl reset-failed homelab-harness.service, \
+    /usr/bin/systemctl reset-failed homelab-workbench.service, \
+    /usr/bin/systemctl reset-failed homelab-watchdog.timer, \
+    /usr/bin/systemctl reset-failed homelab-watchdog.service, \
+    /usr/bin/systemctl reset-failed homelab-data.target, \
+    /usr/bin/systemctl daemon-reload
+
+Cmnd_Alias HOMELAB_AGENT_READ = \
+    /usr/bin/systemctl is-active homelab-telegram-bot.service, \
+    /usr/bin/systemctl is-active homelab-model-helper.socket, \
+    /usr/bin/systemctl is-active homelab-harness.service, \
+    /usr/bin/systemctl is-active homelab-workbench.service, \
+    /usr/bin/systemctl is-active homelab-watchdog.timer, \
+    /usr/bin/systemctl is-active homelab-watchdog.service, \
+    /usr/bin/systemctl is-active homelab-data.target, \
+    /usr/bin/systemctl is-enabled homelab-telegram-bot.service, \
+    /usr/bin/systemctl is-enabled homelab-model-helper.socket, \
+    /usr/bin/systemctl is-enabled homelab-harness.service, \
+    /usr/bin/systemctl is-enabled homelab-workbench.service, \
+    /usr/bin/systemctl is-enabled homelab-watchdog.timer, \
+    /usr/bin/systemctl is-enabled homelab-watchdog.service, \
+    /usr/bin/systemctl is-enabled homelab-data.target, \
+    /usr/bin/systemctl show homelab-telegram-bot.service, \
+    /usr/bin/systemctl show homelab-model-helper.socket, \
+    /usr/bin/systemctl show homelab-harness.service, \
+    /usr/bin/systemctl show homelab-workbench.service, \
+    /usr/bin/systemctl show homelab-watchdog.timer, \
+    /usr/bin/systemctl show homelab-watchdog.service, \
+    /usr/bin/systemctl show homelab-data.target, \
+    /usr/bin/systemctl status homelab-telegram-bot.service, \
+    /usr/bin/systemctl status homelab-model-helper.socket, \
+    /usr/bin/systemctl status homelab-harness.service, \
+    /usr/bin/systemctl status homelab-workbench.service, \
+    /usr/bin/systemctl status homelab-watchdog.timer, \
+    /usr/bin/systemctl status homelab-watchdog.service, \
+    /usr/bin/systemctl status homelab-data.target, \
+    /usr/bin/systemctl cat homelab-telegram-bot.service, \
+    /usr/bin/systemctl cat homelab-model-helper.socket, \
+    /usr/bin/systemctl cat homelab-harness.service, \
+    /usr/bin/systemctl cat homelab-workbench.service, \
+    /usr/bin/systemctl cat homelab-watchdog.timer, \
+    /usr/bin/systemctl cat homelab-watchdog.service, \
+    /usr/bin/systemctl cat homelab-data.target, \
+    /usr/bin/systemctl list-units, \
+    /usr/bin/systemctl list-units *, \
+    /usr/bin/systemctl list-timers, \
+    /usr/bin/systemctl list-timers *, \
+    /usr/bin/systemctl --failed, \
+    /usr/bin/systemctl is-system-running, \
+    /usr/bin/journalctl, \
+    /usr/bin/journalctl *, \
+    /usr/bin/ss -tlnp, \
+    /usr/bin/systemd-analyze security *, \
+    /usr/bin/systemd-analyze verify *, \
+    /usr/bin/stat *, \
+    /usr/bin/ls *, \
+    /usr/bin/getent *, \
+    /usr/bin/id *, \
+    /usr/local/sbin/data-volume.sh status, \
+    /usr/bin/cat /etc/homelab-model-helper/config.json, \
+    /usr/bin/cat /etc/homelab-harness/config.json
+
+# The staging directory is /tmp/homelab-agent/, created by the agent per
+# session; /tmp is cleared at boot (brief 6.2). Mode 644, not 600: both
+# installers write config.json as root:root 0644 because the helper runs as
+# aleix and the harness as homelab-harness -- a 0600 root:root config blinds
+# the service on its next start, and this account has no chmod.
+# cp -p, not cp: root's cp without -p would leave the ledger root-owned and
+# the helper (aleix) unable to write it -- the 15.1 S3 ledger-restore defect.
+# The .bak name is fixed: a runbook that wants a dated copy names it in a
+# new line here.
+Cmnd_Alias HOMELAB_AGENT_FILES = \
+    /usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/model-helper-config.json /etc/homelab-model-helper/config.json, \
+    /usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/harness-config.json /etc/homelab-harness/config.json, \
+    /usr/bin/cp -p /var/lib/homelab-model-helper/spend.json /var/lib/homelab-model-helper/spend.json.bak, \
+    /usr/bin/mv /var/lib/homelab-model-helper/spend.json.bak /var/lib/homelab-model-helper/spend.json, \
+    /usr/bin/cp -p /var/lib/homelab-model-helper/calls.json /var/lib/homelab-model-helper/calls.json.bak, \
+    /usr/bin/mv /var/lib/homelab-model-helper/calls.json.bak /var/lib/homelab-model-helper/calls.json
+
+# --- Denied by explicit line (ADR-049 section 3) ----------------------------
+# Everything not allowed above is already denied by omission -- exactly, since
+# nothing here is a pattern. These lines exist so the intent survives a later
+# edit, and so `sudo -l` shows the boundary rather than only the grant.
+
+# Lockout-class: remote access, network, authentication, boot.
+Cmnd_Alias HOMELAB_AGENT_DENY_LOCKOUT = \
+    /usr/sbin/sshd, \
+    /usr/sbin/sshd *, \
+    /usr/sbin/ufw, \
+    /usr/sbin/ufw *, \
+    /usr/sbin/iptables, \
+    /usr/sbin/iptables *, \
+    /usr/sbin/ip6tables, \
+    /usr/sbin/ip6tables *, \
+    /usr/sbin/nft, \
+    /usr/sbin/nft *, \
+    /usr/bin/tailscale, \
+    /usr/bin/tailscale *, \
+    /usr/sbin/netplan, \
+    /usr/sbin/netplan *, \
+    /usr/sbin/visudo, \
+    /usr/sbin/visudo *, \
+    /usr/sbin/cryptsetup, \
+    /usr/sbin/cryptsetup *, \
+    /usr/sbin/usermod, \
+    /usr/sbin/usermod *, \
+    /usr/sbin/useradd, \
+    /usr/sbin/useradd *, \
+    /usr/sbin/userdel, \
+    /usr/sbin/userdel *, \
+    /usr/bin/passwd, \
+    /usr/bin/passwd *, \
+    /usr/sbin/chpasswd, \
+    /usr/sbin/chpasswd *, \
+    /usr/bin/apt, \
+    /usr/bin/apt *, \
+    /usr/bin/apt-get, \
+    /usr/bin/apt-get *, \
+    /usr/bin/dpkg, \
+    /usr/bin/dpkg *, \
+    /usr/bin/snap, \
+    /usr/bin/snap *, \
+    /usr/sbin/reboot, \
+    /usr/sbin/reboot *, \
+    /usr/sbin/shutdown, \
+    /usr/sbin/shutdown *, \
+    /usr/bin/systemd-creds, \
+    /usr/bin/systemd-creds *, \
+    /usr/bin/systemctl reboot, \
+    /usr/bin/systemctl reboot *, \
+    /usr/bin/systemctl poweroff, \
+    /usr/bin/systemctl poweroff *, \
+    /usr/bin/systemctl halt, \
+    /usr/bin/systemctl halt *, \
+    /usr/bin/systemctl kexec, \
+    /usr/bin/systemctl kexec *, \
+    /usr/bin/systemctl isolate, \
+    /usr/bin/systemctl isolate *, \
+    /usr/bin/systemctl rescue, \
+    /usr/bin/systemctl rescue *, \
+    /usr/bin/systemctl emergency, \
+    /usr/bin/systemctl emergency *, \
+    /usr/bin/systemctl default, \
+    /usr/bin/systemctl default *, \
+    /usr/bin/systemctl suspend, \
+    /usr/bin/systemctl suspend *, \
+    /usr/bin/systemctl hibernate, \
+    /usr/bin/systemctl hibernate *, \
+    /usr/bin/systemctl edit, \
+    /usr/bin/systemctl edit *
+
+# The volume: status only (ADR-046 section 3).
+Cmnd_Alias HOMELAB_AGENT_DENY_VOLUME = \
+    /usr/local/sbin/data-volume.sh lock, \
+    /usr/local/sbin/data-volume.sh lock *, \
+    /usr/local/sbin/data-volume.sh unlock, \
+    /usr/local/sbin/data-volume.sh unlock *
+
+# Secrets: the credential files on root (ADR-046's table), the owner's home,
+# password hashes. `getent shadow` is the one that an allow above (`getent *`)
+# would otherwise admit; the rest are documentation of the line.
+Cmnd_Alias HOMELAB_AGENT_DENY_SECRETS = \
+    /usr/bin/cat /etc/homelab-model-helper/gateway-key, \
+    /usr/bin/cat /etc/homelab-telegram-bot/token.cred, \
+    /usr/bin/cat /etc/homelab-telegram-bot/token, \
+    /usr/bin/cat /home/aleix/.claude/.credentials.json, \
+    /usr/bin/cat /home/aleix/.codex/auth.json, \
+    /usr/bin/cat /home/aleix/.ssh/id_ed25519_github, \
+    /usr/bin/cat /etc/shadow, \
+    /usr/bin/cat /etc/gshadow, \
+    /usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/model-helper-config.json /etc/homelab-model-helper/gateway-key, \
+    /usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/model-helper-config.json /etc/homelab-telegram-bot/token.cred, \
+    /usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/harness-config.json /etc/homelab-model-helper/gateway-key, \
+    /usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/harness-config.json /etc/homelab-telegram-bot/token.cred, \
+    /usr/bin/getent shadow, \
+    /usr/bin/getent shadow *, \
+    /usr/bin/getent gshadow, \
+    /usr/bin/getent gshadow *
+
+# --- The grant --------------------------------------------------------------
+# Allow first, deny last: last match wins.
+homelab-agent ALL=(root) NOPASSWD: \
+    HOMELAB_AGENT_UNITS, HOMELAB_AGENT_READ, HOMELAB_AGENT_FILES, \
+    !HOMELAB_AGENT_DENY_LOCKOUT, !HOMELAB_AGENT_DENY_VOLUME, !HOMELAB_AGENT_DENY_SECRETS

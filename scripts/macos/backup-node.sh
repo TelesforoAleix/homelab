@@ -159,6 +159,14 @@ NODE_PATHS=(
     /etc/systemd/system/homelab-telegram-bot.service.d/credential.conf
     /etc/systemd/system/homelab-notify@.service.d/credential.conf
     /etc/systemd/system/homelab-watchdog.service.d/credential.conf
+    # Phase 13.1 (ADR-049): the executor agent's sudo grant and its one
+    # authorized key line (a PUBLIC key -- not secret). The private half lives
+    # on the MacBook at ~/.ssh/id_ed25519_homelab_agent and is never on the
+    # node, so there is nothing to exclude here; verify-node-backup.sh fails
+    # if it ever appears. A restored node gets the grant back and the owner
+    # re-runs only the sshd AllowUsers step.
+    /etc/sudoers.d/homelab-agent
+    /home/homelab-agent/.ssh/authorized_keys
 )
 
 # DELIBERATELY NOT BACKED UP, so that these are decisions rather than omissions:

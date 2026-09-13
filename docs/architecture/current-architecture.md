@@ -118,6 +118,13 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
         StateDirectory on ROOT (audit.jsonl, no content); WantedBy=multi-user.target — up while locked
         LISTENS on 127.0.0.1:8766 only; AF_UNIX for the helper's socket (# WHY); score 1.3 OK
         ──socket──▶ homelab-model-helper as one more capped consumer; holds no credential
+    homelab-agent (uid 994) — the executor agent's OPERATOR account (Phase 13.1, ADR-049)
+        /bin/bash, no password, own group only, runs no unit, holds no credential
+        reached by its own key + `ssh homelab-agent` (BatchMode, no tty); sshd AllowUsers aleix homelab-agent
+        /etc/sudoers.d/homelab-agent: a NOPASSWD LIST (172 entries; sudo-rs matches arguments exactly) —
+        seven homelab-* units × nine verbs, journal/sockets/status reads, two named .json configs from
+        /tmp/homelab-agent/, two named ledgers (cp -p), data-volume.sh status; every lockout-class
+        binary and credential path denied by name. `sudo -l -U homelab-agent` is the truth
     NO MONITOR, NO KEYBOARD — all DRM connectors report disconnected
     Cold-boots headless to a reachable state in ~26 seconds
 ```
