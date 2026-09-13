@@ -134,27 +134,25 @@ One route, `execution-agent`, to the same list as `owner-interactive`; `max_ques
 No wildcard. The previous file is kept as `.bak-<date>-p230` — suffixed because Phase 15.0's S2 ran
 the same morning and its `.bak-2026-09-13` already exists; the first run of this step refused to
 overwrite it and changed nothing (OBSERVED 12:4x). The date-only convention assumes one phase per
-day; a same-day second phase adds a suffix.
+day; a same-day second phase adds a suffix. Written as `python3 -c`, not a heredoc: a heredoc
+pasted with indentation never terminates (OBSERVED, the owner had to ^C).
 
 ```bash
 # S1 — prints the resulting routes and limit; nothing else in the file changes
 echo "== editing /etc/homelab-model-helper/config.json (backup first, then one route + one limit) =="
-sudo python3 - <<'PY'
+sudo python3 -c '
 import json, datetime, os, shutil
 p = "/etc/homelab-model-helper/config.json"
-bak = f"{p}.bak-{datetime.date.today().isoformat()}-p230"   # a 15.0 .bak from the same morning exists (OBSERVED)
-if os.path.exists(bak):
-    raise SystemExit(f"{bak} exists -- refusing to overwrite (baseline §7)")
-shutil.copy2(p, bak); print(f"kept {bak}")
+bak = p + ".bak-" + datetime.date.today().isoformat() + "-p230"   # a 15.0 .bak from the same morning exists (OBSERVED)
+if os.path.exists(bak): raise SystemExit(bak + " exists -- refusing to overwrite (baseline 7)")
+shutil.copy2(p, bak); print("kept", bak)
 c = json.load(open(p))
 c["routes"]["execution-agent"] = list(c["routes"][c["default_route"]])
 c["max_question_chars"] = 4000
-with open(p + ".new", "w") as fh:
-    json.dump(c, fh, indent=2); fh.write("\n")
+fh = open(p + ".new", "w"); json.dump(c, fh, indent=2); fh.write("\n"); fh.close()
 os.chmod(p + ".new", 0o644); os.replace(p + ".new", p)
-print(json.dumps({"routes": c["routes"], "default_route": c["default_route"],
-                  "max_question_chars": c["max_question_chars"]}, indent=2))
-PY
+print(json.dumps({"routes": c["routes"], "default_route": c["default_route"], "max_question_chars": c["max_question_chars"]}, indent=2))
+'
 echo "== the helper still loads it: ping (no model call) =="
 python3 /opt/homelab-model-helper/socket-probe.py
 ```
