@@ -27,7 +27,15 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 23.0 — The endpoint (**complete**, 2026-09-13). `homelab-harness.service` — its
+- **Current phase:** 13.1 — Agent operator access (**in progress**, 2026-09-13; ADR-049 Proposed).
+  Phase 15.1 is paused at S3 on `phase/15.1-work` and resumes after this lands, its S3 runbook
+  rewritten in the AGENT/OWNER form. S1 landed on `phase/13.1-work`: `config/sudoers.d/homelab-agent`
+  (`visudo -c -f` parsed OK on the MacBook's C sudo; the node's sudo-rs is the gate),
+  `install-homelab-agent.sh install|verify|uninstall`, the `homelab-agent` alias, backup coverage,
+  both standards, guide skeleton and S2 runbook. Three amendments to the brief found while writing
+  the grant, recorded in `13.1-s1-stage-report.md`: config installs at mode 644 not 600, ledger copies
+  use `cp -p`, and the glob holes get deny lines. Node changes so far: 0.
+- **Previous phase:** 23.0 — The endpoint (**complete**, 2026-09-13). `homelab-harness.service` — its
   own account on `127.0.0.1:8766`, the eighth socket, score 1.3, up after a locked reboot. Layer 1
   attaches origin and refuses identity claims by name; layer 2 classifies deterministically into four
   classes and serves one; layer 9 forwards with `role` as the only routing key and writes a

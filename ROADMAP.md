@@ -358,6 +358,17 @@ and the published-port LAN negative (the building Wi-Fi isolates clients, so no 
 reach the node at L2 to test it). ~~**Phase 15.0 is next.**~~ ~~Phase 15.0 complete 2026-09-13; **Phase 23.0 is next**~~ Phase 23.0 complete 2026-09-13; **Phase 15.1 is next** (ADR-045 order: 15.0 → 23.0 → 15.1 → 23.1), once the owner has created the Vercel AI Gateway account and key. Handover:
 `docs/handovers/13-security-hardening-handover.md`.
 
+### Phase 13.1 — Agent operator access
+
+A sub-phase of 13: an account and a bounded, passwordless command set for executor agents
+(**ADR-049**), so a runbook's routine steps are run and read by the agent and the owner does only
+what needs a password, a secret, a browser, a phone, or a lockout-class change. One account
+(`homelab-agent`), one key, one sudoers file, one SSH alias, one backup update, and the AGENT/OWNER
+runbook convention written into the standard. **Status: In progress (2026-09-13).** S1 (files,
+local `visudo` proof, standards, runbook) landed; S2 (the node — one lockout window covering the
+sudoers file and the sshd `AllowUsers` line) is next, and it is the last phase run by owner-paste.
+Brief: `docs/handovers/13.1-agent-operator-access.md`.
+
 ## Phase 14 — Reproducibility / Infrastructure as Code
 
 Move toward rebuilding/replacing the M700 with minimal manual configuration using appropriate provisioning and deployment automation.
