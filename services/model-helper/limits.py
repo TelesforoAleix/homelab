@@ -30,6 +30,16 @@ The reservation is taken BEFORE the call, and it is not refunded if the provider
 turns out to be exhausted. An attempt is an attempt: it was made, it took time,
 and counting it is the honest accounting. A fallback that tries Claude and then
 Codex therefore spends one call from each -- which is what actually happened.
+
+THE OWNER'S FLOOR -- Phase 15.0, ADR-026 §6
+--------------------------------------------
+Unattended work draws from the same bucket the owner needs. So an unattended
+call may only be reserved while the count is below `cap - reserve`; the last
+`reserve` calls in each window belong to the owner. It is ONE count per
+provider -- the same key the caps use, deliberately not a second scheme -- so
+the file format is unchanged and the owner's own use crowds out unattended
+work, never the reverse. The refusal says which limit it hit, so a stuck
+scheduler and the owner's own afternoon read differently in the reply.
 """
 
 from __future__ import annotations
@@ -44,10 +54,13 @@ DAY = 86400
 
 
 class Limiter:
-    def __init__(self, path: str, per_hour: int, per_day: int) -> None:
+    def __init__(self, path: str, per_hour: int, per_day: int,
+                 reserve_hour: int = 0, reserve_day: int = 0) -> None:
         self.path = path
         self.per_hour = per_hour
         self.per_day = per_day
+        self.reserve_hour = reserve_hour
+        self.reserve_day = reserve_day
 
     def _load(self, fh) -> dict:
         fh.seek(0)
@@ -64,9 +77,13 @@ class Limiter:
             return {}
         return data if isinstance(data, dict) else {}
 
-    def check_and_reserve(self, provider: str) -> tuple[bool, str]:
+    def check_and_reserve(self, provider: str, *,
+                          unattended: bool = False) -> tuple[bool, str]:
         """
         Returns (allowed, message). On success the call is already counted.
+
+        `unattended` lowers the ceiling by the owner reserve. It does not
+        change what is counted, only how much of the count this caller may use.
 
         Opened O_RDWR|O_CREAT rather than "w" -- "w" truncates before the lock
         is taken, which would erase the counter of whoever holds it.
@@ -82,6 +99,20 @@ class Limiter:
 
                 in_hour = sum(1 for t in stamps if now - t < HOUR)
                 in_day = len(stamps)
+
+                if unattended:
+                    cap_hour = self.per_hour - self.reserve_hour
+                    cap_day = self.per_day - self.reserve_day
+                    if in_hour >= cap_hour:
+                        return False, (
+                            f"{provider}: unattended hourly budget reached "
+                            f"({in_hour}/{cap_hour}, {self.reserve_hour} reserved for the owner)."
+                        )
+                    if in_day >= cap_day:
+                        return False, (
+                            f"{provider}: unattended daily budget reached "
+                            f"({in_day}/{cap_day}, {self.reserve_day} reserved for the owner)."
+                        )
 
                 if in_hour >= self.per_hour:
                     oldest = min(t for t in stamps if now - t < HOUR)

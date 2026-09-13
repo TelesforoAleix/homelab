@@ -14,8 +14,9 @@ over a UNIX socket.
 |---|---|
 | `helper.py` | The socket handler. Two operations: `ping`, `ask`. Not a shell. |
 | `providers.py` | The provider abstraction plus Claude and Codex implementations |
-| `limits.py` | Per-hour and per-day call caps, file-backed, `flock`-protected |
-| `config.example.json` | Copy to `/etc/homelab-model-helper/config.json` |
+| `limits.py` | Per-hour and per-day call caps, file-backed, `flock`-protected; the owner reserve (15.0) |
+| `config.example.json` | The registry. Copy to `/etc/homelab-model-helper/config.json` |
+| `fixture-tests.py` | Proves the refusals against a fixture and a stub CLI; no allowance spent (15.0) |
 
 ## The protocol
 
@@ -25,20 +26,30 @@ Request — one JSON object, one line, then EOF:
 {"v": 1, "op": "ask", "user_id": 123, "question": "...", "context": "..."}
 ```
 
+Since Phase 15.0, `ask` also accepts — all optional, all validated —
+`role` (the routing key; absent means the config's `default_route`),
+`unattended` (default `false`), `summary` (≤ 200 chars, logged as a length),
+and the hints `priority`, `severity`, `complexity` (closed enums, logged,
+never selecting). **Any other field is refused by name.**
+
 Response — one JSON object, one line:
 
 ```json
 {"ok": true,  "provider": "claude", "model": "haiku", "text": "..."}
-{"ok": false, "kind": "exhausted", "message": "...", "detail": ["..."]}
-{"ok": false, "kind": "error", "message": "..."}
+{"ok": false, "kind": "exhausted",    "message": "...", "detail": ["..."]}
+{"ok": false, "kind": "ineligible",   "message": "no provider on route '...' may serve unattended calls"}
+{"ok": false, "kind": "unknown_role", "message": "no route for role '...'"}
+{"ok": false, "kind": "error",        "message": "..."}
 ```
 
 `op: "ping"` proves the socket works **without making a model call**, so the
 install-time connectivity check costs no allowance.
 
 Note what the caller cannot say: it cannot name a provider, a model, a binary,
-a file or a path. All of those come from the root-owned config file. The wire
-carries a question and nothing that selects behaviour.
+a file or a path. All of those come from the root-owned config file. The only
+thing on the wire that selects anything is `role`, and it is a lookup key into
+that file — `resolve_route()` in `helper.py` is the one place a route is chosen
+and it receives the key alone.
 
 ## Cheapest models, and why these
 
