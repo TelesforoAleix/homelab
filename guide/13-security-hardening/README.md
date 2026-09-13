@@ -170,7 +170,7 @@ after sshd, the firewall, the wifi unit and the ACL. No node change was made out
 | real reboot | `sudo systemctl reboot` 06:59:37; boot 06:59:54; **watchdog message "back up, volume LOCKED" and `/status` at uptime 1 min with no manual step** — condition 3. `postboot`: 0 failed, `running`, Workbench `inactive` (locked) → `active` after unlock, **wifi `Power save: off` from cold** (4b's boot proof). Plaintext token shredded; `token.cred` the only copy on the node. **Row 12 OBSERVED** |
 | BIOS | Administrator password set (password manager only); Secure Boot left enabled; boot sequence Ubuntu first, **Boot Order Lock enabled**; **Boot Agent, PXE IPv4 and PXE IPv6 disabled** (Onboard Ethernet Controller left enabled — `eno1` stays a dead end by decision, not by firmware); After Power Loss already *Power On*; Windows entry left. F1 on reboot → password prompt; Esc → booted unattended. **Row 10 OBSERVED** |
 | power-cycle | `poweroff` 07:17:14; cord pulled 10 s; boot 07:18:07 by itself; watchdog reported (locked); unlock; Workbench active; wifi off; `BootOrder: 0001,0004,0005,0000` — **the two PXE entries are gone**; alias rc 0. **Row 11 OBSERVED** |
-| helper from cold | `/ask` after the power-cycle → answered (`outcome=ok`), the hardened unit loaded from cold *(pending paste)* |
+| helper from cold | `/ask what is 2+2` at 07:25 UTC after the power-cycle → `2 + 2 = 4 -- claude/haiku`; the hardened helper unit served from a cold boot. OBSERVED |
 
 Two watchdog "back up" messages (09:17 and 09:19 local) looked like a double boot; `journalctl
 --list-boots` shows one boot per event — the first was the row-10 boot after the BIOS visit, ended by

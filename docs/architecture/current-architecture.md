@@ -1,6 +1,6 @@
 # Current Architecture
 
-**State:** Phases 01–09, 12, 18, 18.1, 18.2 and 20.0 complete — the reference node runs Ubuntu Server, is
+**State:** Phases 01–09, 12, 13, 18, 18.1, 18.2 and 20.0 complete — the reference node runs Ubuntu Server, is
 administered remotely over Tailscale with key-only SSH, and has Docker Engine/Compose plus two
 subscription-authenticated AI operator CLIs. **The monitor and keyboard are detached**; the node runs
 headless, with a console available on demand — the connectors are present and console login is tested
@@ -18,6 +18,24 @@ owned `aleix:aleix`, and the **Factory Workbench runs there as `homelab-workbenc
 The MacBook is a client and a terminal; nothing runs from its clones. The node holds one new secret —
 an SSH key to GitHub with write access to the three private repositories — and one new listening
 socket, on loopback. ADR-038 §5's rule is now the measured statement: **seven sockets, seven names.**
+
+**The security boundary is written down and measured** (Phase 13, 2026-09-13). From the outside in:
+**Tailscale ACL** (only a tailnet member's device may reach the node, and only on tcp/22 —
+`config/tailscale/acl.hujson`) → **ufw** (default deny; `tailscale0` and the WireGuard port only) +
+**`DOCKER-USER`** (a published container port is dropped from `wlp1s0`/`eno1` before Docker accepts
+it) → **sshd** (key-only, `AllowUsers aleix`, `MaxAuthTries 3`, no X11, no agent forwarding; two
+authorised keys — the MacBook's and a recovery key whose private half lives `age`-encrypted on the
+card) → **`aleix`** (sudo, `docker`; no longer `lxd`) → **the units**, each scored and each waiver a
+`# WHY` in the unit: bot / watchdog / notifier / Workbench 1.3, model helper 3.8 (it cannot see
+`~/.ssh`), `wifi-powersave-off` 5.1 (`CAP_NET_ADMIN` only). **At the box:** a BIOS supervisor
+password, boot order locked to the internal disk, PXE off, Secure Boot on, a 15-minute console
+timeout on tty logins only. **On disk:** the bot token is sealed to the TPM2 (no PCRs) and loaded by
+the bot, the notifier and the watchdog — proved across a real reboot and a cord-pull; the plaintext
+lives in the password manager. What each control does and does not protect is in ADR-046's
+amendment: the TPM seal narrows a pulled disk, the BIOS password a USB boot, and nothing protects
+the running machine. The Workbench's boundary is its sandbox, not an account (ADR-047). The
+standard every later unit meets on day one is
+[`docs/standards/service-security-baseline.md`](../standards/service-security-baseline.md).
 
 **`Interface → Router → Executor → Model` now exists as code**, not as a diagram. Phase 07 built the
 Interface; Phase 08 built the Router and the Executors; Phase 09 connected the model.
@@ -91,13 +109,13 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | Component | State |
 |---|---|
 | Ubuntu Server 26.04.1 LTS | **Active** |
-| OpenSSH server (socket-activated) | **Active** — key-only; passwords and root login refused (ADR-018) |
-| Tailscale 1.102.3 | **Active** — MagicDNS primary route, node key expiry disabled (ADR-019) |
-| ufw (firewall) | **Active** since 2026-09-10 — default deny inbound; allows `tailscale0` and Tailscale's UDP port on `wlp1s0` |
+| OpenSSH server (socket-activated) | **Active** — key-only; passwords and root login refused (ADR-018); `AllowUsers aleix`, `MaxAuthTries 3`, X11 and agent forwarding off (Phase 13); two authorised keys |
+| Tailscale 1.102.3 | **Active** — MagicDNS primary route, node key expiry disabled (ADR-019, kept by Phase 13); **ACL: members → node tcp/22 only** (`config/tailscale/acl.hujson`, Phase 13) |
+| ufw (firewall) | **Active** since 2026-09-10 — default deny inbound; allows `tailscale0` and Tailscale's UDP port on `wlp1s0`. **`DOCKER-USER`** block in `after{,6}.rules` since 2026-09-12 (Phase 13): published container ports dropped from physical interfaces. `apply-firewall.sh` resets it — run `apply-docker-user-rules.sh` after |
 | VS Code Remote SSH | **Active** — `~/.vscode-server` on the node |
 | netplan + wpasupplicant (Wi-Fi) | **Active** |
-| unattended-upgrades | **Active** |
-| Wi-Fi power-save suppression | **Active** — `config/systemd/` |
+| unattended-upgrades | **Active** — security pockets only; `Automatic-Reboot` off (audited Phase 13); reboots are the owner's |
+| Wi-Fi power-save suppression | **Active** — `config/systemd/wifi-powersave-off.service`; root bounded to `CAP_NET_ADMIN`, score 5.1 (Phase 13), proved from cold |
 | Docker Engine / Compose | **Active** — no persistent containers; explicit-interface port publishing required (ADR-022) |
 | Claude Code 2.1.236 | **Active** — `aleix`-scoped operator CLI using Claude Pro subscription OAuth; no daemon |
 | Codex CLI 0.153.4 | **Active** — `aleix`-scoped operator CLI using Sign in with ChatGPT; no daemon |
@@ -105,10 +123,10 @@ Lenovo ThinkCentre M700 Tiny  —  "homelab"
 | **Router / executors** | **Active** — registry-based, in the bot process. Six executors at three capability levels; authorisation in one function; two allowlists with privileged enforced as a subset (ADR-024) |
 | **Escalation grant** | **Active** — polkit, one user / one unit / one verb, plus a second allowlist inside the bot. Zero sudoers entries; `NoNewPrivileges` retained |
 | **Telegram status bot** | **Active** — `homelab-telegram-bot.service`, the project's first service. Read-only, standard library only, never forks a process. Long polling means **no listening socket**; isolation proved by attempted access (ADR-023) |
-| **Model helper** | **Active** — `homelab-model-helper.socket` + templated service. Runs as `aleix` because it must reach the credentials the bot cannot; socket-activated, one process per connection, so nothing holds an OAuth token between requests. Access control is the socket's group and mode, not code (ADR-025) |
+| **Model helper** | **Active** — `homelab-model-helper.socket` + templated service. Runs as `aleix` because it must reach the credentials the bot cannot; **cannot see `~/.ssh`** (`InaccessiblePaths`, Phase 13; score 3.8, syscall filter declined after SIGSYS); socket-activated, one process per connection, so nothing holds an OAuth token between requests. Access control is the socket's group and mode, not code (ADR-025) |
 | **Model executor** | **Active** — `/ask`, two providers with independent usage limits and automatic fallback, cheapest model by default. The model gets **no tools** (verified with a canary), and its output is never dispatched |
 | **Encrypted data volume** | **Active, locked at boot** — `ubuntu-vg/data` (LUKS2, 128 GiB) → mapper `homelab-data` → ext4, mounted at `/srv/homelab`. Unlocked manually over SSH via `data-volume.sh unlock`; `noauto` in `/etc/crypttab` and `/etc/fstab` keeps boot from waiting on it (ADR-037, Phase 18.1) |
-| **Watchdog / notifier** | **Active** — `homelab-watchdog.timer` (`OnBootSec=90s`, `WantedBy=timers.target`) → `homelab-watchdog.service` (oneshot, `User=homelab-bot`, `SupplementaryGroups=systemd-journal`, `LoadCredential=` on the bot's token, `RestrictAddressFamilies=AF_INET AF_INET6`). Classifies the previous stop from PID 1's journal (`Shutting down.` present → clean, absent → unplanned), computes downtime from `journalctl --list-boots`, reads lock state from `/etc/crypttab` + `findmnt`. `homelab-notify@.service` is the single send primitive and the `OnFailure=` target for the bot (drop-in), the model helper (drop-in) and the watchdog; it has no `OnFailure=` of its own. Three boots observed 2026-09-12: enable, clean reboot, power cut — all reported correctly (Phase 12) |
+| **Watchdog / notifier** | **Active** — token via `LoadCredentialEncrypted=` (TPM2-sealed, Phase 13) in both, as in the bot; `homelab-watchdog.timer` (`OnBootSec=90s`, `WantedBy=timers.target`) → `homelab-watchdog.service` (oneshot, `User=homelab-bot`, `SupplementaryGroups=systemd-journal`, `LoadCredential=` on the bot's token, `RestrictAddressFamilies=AF_INET AF_INET6`). Classifies the previous stop from PID 1's journal (`Shutting down.` present → clean, absent → unplanned), computes downtime from `journalctl --list-boots`, reads lock state from `/etc/crypttab` + `findmnt`. `homelab-notify@.service` is the single send primitive and the `OnFailure=` target for the bot (drop-in), the model helper (drop-in) and the watchdog; it has no `OnFailure=` of its own. Three boots observed 2026-09-12: enable, clean reboot, power cut — all reported correctly (Phase 12) |
 | **`homelab-data.target` + `homelab-workbench.service`** | **Active pattern** — `ConditionPathIsMountPoint=/srv/homelab`, `PartOf=`/`WantedBy=homelab-data.target`, and **no `WorkingDirectory=` on the volume** (implicit `RequiresMountsFor=` would run before the Condition — found by a false alert, Phase 18.2). A dependent unit started while locked is skipped, not failed; `is-system-running` stays `running` either way. The Workbench is the canary; the 18.1 probe is removed. Contract: `docs/standards/volume-dependent-services.md` |
 | **Factory Workbench** | **Active** — `homelab-workbench.service`, `User=aleix`, `python3 -m workbench.cli --project /srv/homelab/projects/factory serve` from `/srv/homelab/factory` via `PYTHONPATH`. Binds `127.0.0.1:8765` only (refused otherwise in `server.py`); reached through `ssh homelab-workbench`; no application login — the OS user is the boundary (ADR-035 §7, ADR-036 §5, ADR-038). `OnFailure=homelab-notify@workbench.service`. Score 1.3 OK. **Writes records into `projects/factory/ops/` and never commits** — the owner commits by hand (Phase 18.2) |
 | **The four layers in the volume** | **Active** — five clones at `/srv/homelab/{homelab,factory,brain,projects/oncla,projects/factory}`, SSH remotes, cloned with `~aleix/.ssh/id_ed25519_github` (owner-account key, write to the three private repos; excluded from `backup-node.sh` by design). The MacBook's clones remain as working copies (Phase 18.2) |
@@ -170,3 +188,15 @@ as an **accepted judgement with its reasoning**, not as resolved.
   declines the upgrade with a reason (Phase 18.2)
 
 Update this document when a phase changes the actually deployed architecture.
+
+## Phase 13 additions (2026-09-13)
+
+| Component | State |
+|---|---|
+| **BIOS supervisor password, Boot Order Lock, PXE off** | **Active** — set at the box; boot proceeds unattended (rows 10–11 observed); password in the password manager only |
+| **TPM2-sealed bot token** | **Active** — `/etc/homelab-telegram-bot/token.cred`, `systemd-creds --with-key=tpm2 --tpm2-pcrs=""`; `credential.conf` drop-ins on bot, notifier, watchdog; no plaintext on the node; rollback `p13-s3.sh creds-undo` |
+| **Console idle timeout** | **Active** — `/etc/profile.d/homelab-console-timeout.sh`, `TMOUT=900` readonly on `/dev/ttyN` only; SSH unaffected (both halves observed) |
+| **Recovery SSH key** | **Active** — second line in `authorized_keys`; private half `age`-encrypted at `homelab-backup/recovery-key/` on the card; never on the node |
+| **Tailscale ACL** | **Active** — `config/tailscale/acl.hujson`; a new reachable listener adds its port there in the same commit as its socket-table row |
+| **Service security baseline** | **Standard** — `docs/standards/service-security-baseline.md`; scores recorded per unit; 15.0's units meet it on day one |
+
