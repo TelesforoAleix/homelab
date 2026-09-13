@@ -23,6 +23,7 @@
   },
   "default_route": "owner-interactive",
 
+  "_caps": "Per provider, keyed on the provider name, one count each (Phase 09). owner_reserve is the floor of ADR-026 §6: unattended calls stop at per_x - owner_reserve.per_x of the SAME per-provider count; the last owner_reserve calls belong to the owner. Half, by choice: tune here, not in code.",
   "caps": {
     "per_hour": 6,
     "per_day": 30,

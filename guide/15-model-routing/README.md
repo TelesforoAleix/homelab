@@ -73,7 +73,7 @@ Reading it top down:
 | routes | *(key)* | The **routing key**. Its value in the agent world is the agent's role (ADR-034 §5); today there is exactly one, the bot's |
 | routes | value | Ordered `provider/model` pairs. The order is the fallback order — the same rule Phase 09's provider list expressed |
 | `default_route` | | Which route a request with no key gets. Must name a route |
-| `caps.owner_reserve` | | The floor (§6.6). Unattended calls may reach at most `per_x − owner_reserve.per_x` in each window, per provider; the remainder is the owner's |
+| `caps.owner_reserve` | | The floor (§6.6). Unattended calls may reach at most `per_x − owner_reserve.per_x` in each window; the remainder is the owner's. **Keyed exactly as the caps are: per provider, one count each** — the reserve is not a second counting scheme, it is a lower ceiling on the same count |
 
 Every route entry is validated at load: the provider exists, the model key exists under it. The
 Phase 09 shape (`"providers": [...]`) is **refused** with a config error, not migrated silently —
@@ -171,9 +171,11 @@ test 1 refused on the reason; a counter at zero because the helper crashed is no
 
 **OBSERVED 2026-09-13, stage 1, against the unchanged Phase 09 code:** 18 of 19 checks fail, the
 one pass being the fixture-shape assertion; the Phase 09 helper answers `STUB-ANSWER` through the
-old config shape, which proves the stub and the driver, not the control. After stage 2 the same run
-is **PREDICTED** to pass 19 of 19; on the node, `install-model-helper.sh verify` will run the same
-file as `aleix`.
+old config shape, which proves the stub and the driver, not the control.
+**OBSERVED 2026-09-13, stage 2, on the MacBook (Python 3.13.5), against the new code: 19 of 19
+pass, four consecutive runs** (the race in test 7 included). On the node,
+`install-model-helper.sh verify` runs the same file as `aleix` from `/opt` — PREDICTED to match
+until the runbook is run.
 
 ### The decisions (brief §6)
 
@@ -184,7 +186,7 @@ file as `aleix`.
 | 6.3 | **Accepted.** `unattended` defaults `false`; explicit opt-in | A field that must be set to become dangerous |
 | 6.4 | **Accepted.** Fallback walks the route's own list only | No cross-route fallback; `Limiter` is unchanged in that respect |
 | 6.5 | **Accepted.** The bot sends no key; `default_route` in root-owned config; hints accepted, validated, logged, ignored | Plus: unknown fields refused, not ignored (stricter than the brief; stated above) |
-| 6.6 | **Accepted: a floor.** `caps.owner_reserve`, proposed `3/hour, 15/day` of `6/30` | Numbers are an open question for the orchestrator |
+| 6.6 | **Accepted: a floor.** `caps.owner_reserve` = `3/hour, 15/day` of `6/30` — half | Accepted by the orchestrator after S1. It is config; the owner tunes it there |
 
 Two decisions the brief did not ask for, recorded because they are choices:
 

@@ -150,6 +150,9 @@ def ask(config_path: str, req: dict) -> tuple[dict, str]:
 
 
 def base_ask(**extra) -> dict:
+    # The bot's exact payload, read from services/telegram-bot/model_client.py
+    # ask(): v, op, user_id, question, context. Test 6 sends this and nothing
+    # else, so a change to the bot's client shows up here as a failure.
     return {"v": 1, "op": "ask", "user_id": 1, "question": QUESTION,
             "context": "fixture", **extra}
 

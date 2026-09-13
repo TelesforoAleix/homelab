@@ -171,7 +171,13 @@ def _classify(blob: str, provider: str, model: str, code: int = -1) -> Answer:
 
 
 class Provider:
-    """Base class. Subclasses build argv and read the answer back."""
+    """
+    Base class. Subclasses build argv and read the answer back.
+
+    `model` is the registry model's `id` -- the vendor string the CLI receives
+    (Phase 15.0). It arrives from helper.build_provider(), which read it from
+    root-owned config; nothing on the wire can reach this argument.
+    """
 
     name = ""
 

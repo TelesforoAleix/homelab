@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# install-model-helper.sh — Phase 09, ADR-025.
+# install-model-helper.sh — Phase 09, ADR-025. Phase 15.0: registry, fixture.
 #
 # Installs the model helper: the service that makes model calls on the bot's
 # behalf because the bot cannot read either AI credential and must not gain the
@@ -22,6 +22,9 @@
 #   - a process running AS homelab-bot, INSIDE the bot's sandbox, can reach it
 #   - homelab-bot still cannot read either credential file
 #   - homelab-bot's group membership is unchanged
+#   - (15.0) the eligibility refusal, the unknown-key refusal and the
+#     hints-do-not-select check pass against a fixture, as the helper's own
+#     account, spending no allowance (fixture-tests.py)
 #
 # The sandbox part matters. ProtectSystem=strict mounts / read-only, /run
 # included, and whether connect(2) to a socket on a read-only mount is permitted
@@ -61,9 +64,12 @@ Usage: install-model-helper.sh <install|verify>
   install   deploy code, config and units, then prove the boundary
   verify    re-run every check without changing anything
 
-Expects the Phase 09 source files in $SRC (default /tmp/homelab-phase09):
-  helper.py providers.py limits.py socket-probe.py config.example.json
-  homelab-model-helper.socket homelab-model-helper@.service
+Expects the helper source files in $SRC (default /tmp/homelab-phase09):
+  helper.py providers.py limits.py socket-probe.py fixture-tests.py
+  config.example.json homelab-model-helper.socket homelab-model-helper@.service
+
+Phase 15.0: an existing /etc/homelab-model-helper/config.json in the Phase 09
+shape is NOT migrated by this script -- see guide/15-model-routing/s2-runbook.md.
 USAGE
 }
 
@@ -184,6 +190,57 @@ check_code_not_writable_by_runtime_user() {
     return $bad
 }
 
+check_fixture_tests() {
+    # Phase 15.0. The eligibility check permits every real call today, so the
+    # refusal is proved against a fixture provider set unattended:false, next
+    # to a positive control. Run as the helper's own account, from the
+    # installed code, with a stub in place of both CLIs: no allowance spent.
+    # The temp dir is created here (root) and handed to $OWNER because
+    # setpriv's target cannot rely on a writable $TMPDIR under PrivateTmp.
+    local out rc tmp
+    if [[ ! -f "${CODE_DIR}/fixture-tests.py" ]]; then
+        echo "UNKNOWN  ${CODE_DIR}/fixture-tests.py is not installed; nothing was tested"
+        return 1
+    fi
+    tmp=$(mktemp -d /tmp/homelab-p150-fixture.XXXXXX)
+    chown "$OWNER:$OWNER" "$tmp"
+    set +e
+    out=$(setpriv --reuid="$OWNER" --regid="$OWNER" --clear-groups \
+            env TMPDIR="$tmp" /usr/bin/python3 "${CODE_DIR}/fixture-tests.py" 2>&1)
+    rc=$?
+    set -e
+    rm -rf "$tmp"
+    if [[ $rc -eq 0 ]] && grep -q "^All .* checks passed" <<<"$out"; then
+        ok "fixture tests passed as ${OWNER} (refusal, control, no cap, hints, unknown key)"
+        grep -E '^ok +test (1|2|3|11|12):' <<<"$out" | sed 's/ --.*//; s/^/      /'
+        return 0
+    fi
+    if grep -qE '^(ok|FAIL) ' <<<"$out"; then
+        echo "FAIL  fixture tests did not all pass"
+    else
+        echo "UNKNOWN  the fixture tests did not run"
+    fi
+    sed 's/^/      /' <<<"$out"
+    return 1
+}
+
+check_config_is_registry() {
+    # The helper refuses the Phase 09 shape. Say so here, in words, rather
+    # than letting the first /ask discover it.
+    local shape
+    if [[ ! -f "${CONF_DIR}/config.json" ]]; then
+        echo "UNKNOWN  ${CONF_DIR}/config.json does not exist"
+        return 1
+    fi
+    shape=$(python3 -c "import json;c=json.load(open('${CONF_DIR}/config.json'));print(type(c.get('providers')).__name__)" 2>&1)
+    if [[ "$shape" == "dict" ]]; then
+        ok "config.json is in the Phase 15.0 registry shape"
+        return 0
+    fi
+    echo "FAIL  config.json 'providers' is ${shape}, not an object — Phase 09 shape; every /ask will fail until it is migrated (s2-runbook)"
+    return 1
+}
+
 check_no_new_listener() {
     # A UNIX socket is not a listening TCP socket, and this proves it rather
     # than asserting it. `ss -tln` is what the Phase 09 brief committed to being
@@ -196,13 +253,15 @@ check_no_new_listener() {
 
 run_verify() {
     local rc=0
-    echo "=== Phase 09 model helper — verification ==="
+    echo "=== Model helper — verification (Phase 09 + 15.0) ==="
     echo
     check_socket_permissions            || rc=1
     check_bot_can_reach_socket          || rc=1
     check_credential_boundary           || rc=1
     check_bot_groups_unchanged          || rc=1
     check_code_not_writable_by_runtime_user || rc=1
+    check_config_is_registry            || rc=1
+    check_fixture_tests                 || rc=1
     check_no_new_listener
     echo
     if [[ $rc -eq 0 ]]; then
@@ -216,10 +275,10 @@ run_verify() {
 
 run_install() {
     local f
-    for f in helper.py providers.py limits.py socket-probe.py \
+    for f in helper.py providers.py limits.py socket-probe.py fixture-tests.py \
              config.example.json homelab-model-helper.socket \
              'homelab-model-helper@.service'; do
-        [[ -f "${SRC}/${f}" ]] || fail "missing ${SRC}/${f} — scp the Phase 09 files first"
+        [[ -f "${SRC}/${f}" ]] || fail "missing ${SRC}/${f} — scp the helper files first"
     done
 
     id "$OWNER"    >/dev/null 2>&1 || fail "user ${OWNER} does not exist"
@@ -229,8 +288,9 @@ run_install() {
     # nothing: root can execute things the service user cannot, and the whole
     # point is what happens as `aleix`.
     local claude_bin codex_bin
-    claude_bin=$(python3 -c "import json,sys;print(json.load(open('${SRC}/config.example.json'))['claude']['bin'])")
-    codex_bin=$(python3 -c "import json,sys;print(json.load(open('${SRC}/config.example.json'))['codex']['bin'])")
+    # Phase 15.0: the registry nests provider entries under "providers".
+    claude_bin=$(python3 -c "import json,sys;print(json.load(open('${SRC}/config.example.json'))['providers']['claude']['bin'])")
+    codex_bin=$(python3 -c "import json,sys;print(json.load(open('${SRC}/config.example.json'))['providers']['codex']['bin'])")
     for f in "$claude_bin" "$codex_bin"; do
         setpriv --reuid="$OWNER" --regid="$OWNER" --clear-groups \
             /usr/bin/test -x "$f" || fail "${OWNER} cannot execute ${f}"
@@ -238,7 +298,7 @@ run_install() {
     done
 
     install -d -o root -g root -m 0755 "$CODE_DIR"
-    for f in helper.py providers.py limits.py socket-probe.py; do
+    for f in helper.py providers.py limits.py socket-probe.py fixture-tests.py; do
         install -o root -g root -m 0644 "${SRC}/${f}" "${CODE_DIR}/${f}"
     done
     ok "code installed to ${CODE_DIR}, root-owned and not writable by ${OWNER}"
