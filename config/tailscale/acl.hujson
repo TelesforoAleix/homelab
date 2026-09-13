@@ -1,0 +1,33 @@
+// Home Lab tailnet policy — Phase 13 §6.7. Applied by hand in the admin console:
+//   https://login.tailscale.com/admin/acls/file
+// Configuration, not a secret (brief §9). Tailscale SSH stays declined (ADR-019):
+// the default "ssh" block is removed on purpose — tailscaled runs without --ssh
+// and nothing should suggest otherwise.
+//
+// What this does: any device logged in as a member of this (single-user) tailnet
+// may reach the node on TCP 22, and nothing else may reach the node at all.
+// Before Phase 13 the policy was the stock {"src":["*"],"dst":["*"],"ip":["*"]}.
+//
+// What it does NOT do: it is a device-level boundary in FRONT of sshd, not a
+// replacement for it. Keys still authenticate (ADR-018). WireGuard/DERP transport
+// on UDP 41641 is not subject to grants. A new listener that must be reachable
+// from the MacBook (e.g. Phase 23.0's endpoint if it is not tunnelled) gets its
+// port added to the "ip" list here in the same commit as its socket-table row.
+//
+// Recovery: a wrong policy locks the MacBook out of the node while leaving the
+// node itself fine. Fix it from any browser at the URL above; the console
+// (ADR-041) is the fallback if the MacBook cannot reach anything.
+{
+	"hosts": {
+		"homelab": "100.71.62.71",
+	},
+
+	"grants": [
+		{"src": ["autogroup:member"], "dst": ["homelab"], "ip": ["tcp:22"]},
+	],
+
+	// No "tests" block: the console rejects autogroup:member as a test source
+	// ("unknown user or host", OBSERVED 2026-09-12) and the single-user tailnet
+	// has no other principal to name without committing an e-mail address.
+	// The proof is the runbook's nc: port 22 answers, port 2222 times out.
+}

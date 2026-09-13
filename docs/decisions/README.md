@@ -257,4 +257,17 @@ were decided as one, and several only make sense together.
   unattended reboot, and moving it would make the node come back silent. The acceptance holds only so
   long as nothing on root can open the volume — no keyfile, no TPM enrolment, no cached passphrase,
   the header backup kept off the node — which is a rule, not a preference, and a five-step loss
-  procedure exists for if the disk or machine is ever lost.
+  procedure exists for if the disk or machine is ever lost. **Amended 2026-09-13 by Phase 13:** sixth
+  row (the GitHub node key); the bot token is now TPM2-sealed on disk (narrows the pulled-disk threat
+  only) and a BIOS supervisor password is set (narrows the same-machine USB-boot threat only); check 2's
+  grep corrected; all three checks re-run and passing.
+
+- **[ADR-047](ADR-047-workbench-account-boundary.md) — The Workbench's trust boundary is its systemd
+  sandbox, not a dedicated account** (2026-09-12, Phase 13). **Accepted.** Declines 18.2's
+  dedicated-account upgrade on observed facts: the Workbench sees no `/home` (`ProtectHome=yes`),
+  writes only the volume, cannot gain privileges and cannot open a UNIX socket — so a compromise
+  reaches working trees on the volume and nothing else. A `workbench` account would buy narrower
+  writes at the price of group-writable git trees the owner commits from. Five triggers reopen it (a
+  second human, an automated writing client, commit ability, a weakened sandbox, a score over 2.0);
+  Phase 23.0's endpoint runs as its own account over loopback either way.
+

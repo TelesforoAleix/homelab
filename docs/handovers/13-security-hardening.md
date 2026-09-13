@@ -72,8 +72,12 @@ and must not weaken.
 
 **Docker.** Rootful, no userns-remap, `data-root` on root by decision (18.2 brief §6.5), inventory
 believed to be zero. Docker and Tailscale both own packet-filtering chains; Docker's DNAT runs before
-`ufw`'s `INPUT`, so a published container port would bypass the firewall. IPv4 `FORWARD` is `DROP`,
-IPv6 `FORWARD` is `ACCEPT` (unreachable today; not to be assumed symmetric).
+`ufw`'s `INPUT`, so a published container port would bypass the firewall. ~~IPv4 `FORWARD` is `DROP`,
+IPv6 `FORWARD` is `ACCEPT`~~ **Corrected in S1 (OBSERVED 2026-09-12):** both `FORWARD` policies are
+already `DROP` — `ufw`'s `deny (routed)` default set them on 2026-09-10; project-state's
+"asymmetric" bullet was stale. `DOCKER-USER` exists and is empty; `DOCKER-FORWARD` is consulted
+before `ufw`'s forward chains, so the bypass for a *published* port is real and the `DOCKER-USER`
+rule below is still the control.
 
 **Physical.** No BIOS password — a USB stick yields root on the installed system in about a minute
 (the same path 18.1 used legitimately for rescue). No console idle timeout. The console is the
@@ -108,8 +112,9 @@ remediated the same evening, recorded in the guide, not yet a rule.
 1. Every item addressed to Phase 13 by name in the 18.2, 18.1 and 18 handovers, the roadmap's Phase
    13 entry and `project-state.md` §Security debt has an OBSERVED outcome: closed, narrowed or
    declined with a reason. A table in the guide lists them all with the outcome.
-2. `systemd-analyze security` scores recorded for **all** units on the node, with each finding above
-   the unit's stated threshold either fixed or explained.
+2. `systemd-analyze security` scores recorded for **all service units** on the node (six: the tool
+   refuses timers, sockets and targets — S1 correction), with each finding above the unit's stated
+   threshold either fixed or explained.
 3. ADR-046 revalidated: its three checks run and pass; its credential table gains the GitHub key
    row; its revisit triggers checked and the results recorded in the ADR.
 4. A written **service security baseline** in `docs/standards/` that every later unit (15.0's, 23.x's)
@@ -193,7 +198,8 @@ today. Confirm inventory with `docker system df` in S1 and record it. **Rootless
 decline with a reason** — no container runs; the decision has nothing to protect yet and should be
 taken by the first phase that ships one (record which phase that is likely to be). **Firewall: take
 it.** Add a `DOCKER-USER` rule set that drops anything not from `tailscale0` or loopback, so a future
-published port cannot bypass `ufw`; set IPv6 `FORWARD` policy to `DROP` to match IPv4. Both through
+published port cannot bypass `ufw`; ~~set IPv6 `FORWARD` policy to `DROP` to match IPv4~~ (already `DROP` — S1 correction above;
+§8 row 6's second half becomes a re-proof). Through
 `scripts/server/apply-firewall.sh` with the timed self-revert that script already has, and under
 `safe-changes-headless.md`. Verify from the MacBook that SSH and the tunnel still work.
 

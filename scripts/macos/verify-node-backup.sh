@@ -201,7 +201,12 @@ step "4b/5  Coverage  --  are the things that matter actually in there?"
 # A fidelity check cannot notice something that was never backed up. These are
 # the files whose absence would make a rebuild impossible or insecure.
 CRITICAL=(
-    etc/homelab-telegram-bot/token
+    # Phase 13 §6.6: the bot token at rest is the TPM2-sealed token.cred; the
+    # plaintext `token` is gone from the node after creds-shred. The .cred is
+    # in the archive for completeness but is USELESS off this machine's TPM:
+    # the real backup of the token is the owner's password manager, and a
+    # restore re-creates /etc/homelab-telegram-bot/token from there (Phase 14).
+    etc/homelab-telegram-bot/token.cred
     etc/homelab-telegram-bot/allowlist
     etc/homelab-telegram-bot/privileged-allowlist
     etc/homelab-telegram-bot/restart-allowlist
@@ -229,12 +234,31 @@ CRITICAL=(
     # Phase 18.2: matches backup-node.sh, same commit. The probe is gone.
     etc/systemd/system/homelab-workbench.service
     etc/systemd/system/homelab-workbench.service.d/onfailure.conf
+    # Phase 13: matches backup-node.sh, same commit.
+    etc/ssh/sshd_config.d/10-homelab-hardening.conf
+    etc/ufw/after.rules
+    etc/ufw/after6.rules
+    etc/profile.d/homelab-console-timeout.sh
+    etc/systemd/system/wifi-powersave-off.service
+    etc/systemd/system/homelab-telegram-bot.service.d/credential.conf
+    etc/systemd/system/homelab-notify@.service.d/credential.conf
+    etc/systemd/system/homelab-watchdog.service.d/credential.conf
 )
 MISSING=0
 for c in "${CRITICAL[@]}"; do
     if grep -qxF "/${c}" "${WORK}/filelist.txt"; then ok "$c"; else bad "ABSENT: $c"; MISSING=$((MISSING+1)); fi
 done
 [ "$MISSING" -eq 0 ] || fail "${MISSING} critical file(s) are not in this backup."
+
+# Phase 13 §8 row 19: things that must NOT be in the archive. The node's GitHub
+# key is excluded by backup-node.sh; the plaintext bot token no longer exists on
+# the node after S3 (its backup is the password manager); the recovery SSH key's
+# private half never touches the node at all. Any of these present is a FAIL.
+for absent in home/aleix/.ssh/id_ed25519_github etc/homelab-telegram-bot/token \
+              home/aleix/.ssh/id_ed25519_homelab_recovery; do
+    if grep -qxF "/${absent}" "${WORK}/filelist.txt"; then bad "PRESENT, must be absent: $absent"; MISSING=$((MISSING+1)); else ok "absent as required: $absent"; fi
+done
+[ "$MISSING" -eq 0 ] || fail "secret material that must not be in the archive is in it."
 
 # ---------------------------------------------------------------------------
 step "5/5  Planted positive control  --  the check must fail on purpose"

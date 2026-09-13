@@ -129,6 +129,22 @@ NODE_PATHS=(
     # and the owner registers it; the old one is revoked on GitHub (brief §9).
     /etc/systemd/system/homelab-workbench.service
     /etc/systemd/system/homelab-workbench.service.d/onfailure.conf
+    # Phase 13: every /etc file the hardening phase created or changed, plus
+    # two that had never been captured -- the Phase 03 sshd drop-in and ufw's
+    # rule files (a restored node came back with password auth and no
+    # firewall; found while listing what Phase 13 touched, not by a test).
+    # The three credential.conf drop-ins exist only if S3's 6.6 landed; a
+    # path that does not exist on the node is reported by rsync, not fatal.
+    /etc/ssh/sshd_config.d/10-homelab-hardening.conf
+    /etc/ufw/after.rules
+    /etc/ufw/after6.rules
+    /etc/ufw/user.rules
+    /etc/ufw/user6.rules
+    /etc/profile.d/homelab-console-timeout.sh
+    /etc/systemd/system/wifi-powersave-off.service
+    /etc/systemd/system/homelab-telegram-bot.service.d/credential.conf
+    /etc/systemd/system/homelab-notify@.service.d/credential.conf
+    /etc/systemd/system/homelab-watchdog.service.d/credential.conf
 )
 
 # DELIBERATELY NOT BACKED UP, so that these are decisions rather than omissions:

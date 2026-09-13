@@ -20,10 +20,14 @@
 #   write them as the same owner, or the owner's next `git commit` there
 #   trips over root-owned files. A dedicated `workbench` account would need
 #   its own repo ownership for no boundary gain while there is one person and
-#   no automated client; Phase 13 takes or declines that upgrade with a
-#   reason, and Phase 23.0's endpoint runs as its own account and reaches this
-#   service over loopback, not the filesystem. NoNewPrivileges= below is what
-#   keeps "runs as the sudo-capable account" from meaning "can become root".
+#   no automated client. Phase 13 DECLINED that upgrade in ADR-047 with the
+#   S1 sandbox facts: this process sees no /home (ProtectHome), writes only
+#   the volume, cannot gain privileges, cannot open a UNIX socket. Those
+#   directives are the boundary; ADR-047 lists the triggers that reopen the
+#   account question. Phase 23.0's endpoint runs as its own account and
+#   reaches this service over loopback, not the filesystem. NoNewPrivileges=
+#   below is what keeps "runs as the sudo-capable account" from meaning "can
+#   become root".
 #
 # WHY NO AF_UNIX (S1 observation, 2026-09-12)
 #
