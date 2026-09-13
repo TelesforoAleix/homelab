@@ -248,6 +248,11 @@ CRITICAL=(
     etc/systemd/system/homelab-telegram-bot.service.d/credential.conf
     etc/systemd/system/homelab-notify@.service.d/credential.conf
     etc/systemd/system/homelab-watchdog.service.d/credential.conf
+    # Phase 13.1: matches backup-node.sh, same commit. The agent's grant and
+    # its public key line; without them a restored node has no agent access
+    # and the owner is back to pasting.
+    etc/sudoers.d/homelab-agent
+    home/homelab-agent/.ssh/authorized_keys
 )
 MISSING=0
 for c in "${CRITICAL[@]}"; do
@@ -259,8 +264,10 @@ done
 # key is excluded by backup-node.sh; the plaintext bot token no longer exists on
 # the node after S3 (its backup is the password manager); the recovery SSH key's
 # private half never touches the node at all. Any of these present is a FAIL.
+# Phase 13.1: the agent's private key is on the MacBook only, never the node.
 for absent in home/aleix/.ssh/id_ed25519_github etc/homelab-telegram-bot/token \
-              home/aleix/.ssh/id_ed25519_homelab_recovery; do
+              home/aleix/.ssh/id_ed25519_homelab_recovery \
+              home/homelab-agent/.ssh/id_ed25519_homelab_agent; do
     if grep -qxF "/${absent}" "${WORK}/filelist.txt"; then bad "PRESENT, must be absent: $absent"; MISSING=$((MISSING+1)); else ok "absent as required: $absent"; fi
 done
 [ "$MISSING" -eq 0 ] || fail "secret material that must not be in the archive is in it."

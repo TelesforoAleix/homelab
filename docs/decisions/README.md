@@ -285,7 +285,7 @@ were decided as one, and several only make sense together.
   across the change and a locked reboot; 15.0 fixture 19/19).
 
 - **[ADR-049](ADR-049-agent-operator-access.md) — Agents operate the node through their own account
-  with a bounded, passwordless command set** (2026-09-13, Proposed with the Phase 13.1 brief). A
+  with a bounded, passwordless command set** (2026-09-13, Accepted at the Phase 13.1 close with five §2 amendments). A
   `homelab-agent` account, its own key and alias, one `sudoers.d` file granting routine operator
   commands on `homelab-*` services and denying every lockout-class, secret and volume path by
   explicit line. Runbooks split into AGENT and OWNER blocks.
