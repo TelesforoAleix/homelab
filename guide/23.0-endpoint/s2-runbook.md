@@ -280,7 +280,8 @@ curl -sS http://127.0.0.1:8766/health/helper; echo
 curl -sS -H 'X-Homelab-Client: runbook' -d '{"v":1,"kind":"task","role":"execution-agent","question":"still here while locked"}' http://127.0.0.1:8766/v1/request; echo
 ```
 
-**Phone:** `/status` → reports the volume locked.
+**Phone:** `/status` → host, uptime, load, memory, disk — **no volume line** (OBSERVED; the brief's row 12
+expected one and was corrected). The volume state is `data-volume.sh status` on the node, no sudo.
 
 ```bash
 # S1 — unlock (passphrase goes to cryptsetup's own visible prompt)
@@ -299,7 +300,8 @@ echo "== failed units before reboot (expect none) =="; systemctl --failed
 echo "== rebooting in 5 s (ctrl-c to abort) =="; sleep 5; sudo reboot
 ```
 
-Wait ~90 s. **Phone:** the watchdog's boot notice arrives (Phase 12), then `/status` → volume locked.
+Wait ~90 s. **Phone:** the watchdog's boot notice arrives (Phase 12); `/status` answers (the bot is up
+before the volume is — ADR-046's point).
 
 ```bash
 # T — reopen S1 and S2
@@ -309,6 +311,7 @@ ssh homelab
 ```bash
 # S1 (new) — the four states of row 12
 echo "== refreshing sudo (password prompt follows) =="; sudo -v
+echo "== volume state after boot (expect: locked / mapper absent) =="; data-volume.sh status
 echo "== harness: expect active; workbench: expect inactive (Condition), NOT failed =="
 systemctl is-active homelab-harness.service homelab-workbench.service
 echo "== the Condition line (the refusal working, not a bug) =="
