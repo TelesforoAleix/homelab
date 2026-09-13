@@ -148,6 +148,18 @@ for f in helper providers limits; do sudo install -o root -g root -m 0644 /tmp/p
 sudo ls -l /opt/homelab-model-helper/ /etc/homelab-model-helper/
 ```
 
+## 3b — Clear the window's failed instance (S1)
+
+The installer's own probe in step 3 lands inside the window by construction (it runs `verify`
+before the `mv`), so one helper instance exits 1 and stays `failed`; `OnFailure` also sends one
+Telegram notice. Both are the window made visible, not a fault. Clear it:
+
+```bash
+# S1
+echo "== the failed instance from the window (expect one homelab-model-helper@… line) =="; systemctl --failed
+echo "== reset it =="; sudo systemctl reset-failed 'homelab-model-helper@*'; systemctl is-system-running
+```
+
 ## 4 — Verify (S1)
 
 ```bash

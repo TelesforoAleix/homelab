@@ -298,7 +298,11 @@ run_install() {
     done
 
     install -d -o root -g root -m 0755 "$CODE_DIR"
-    for f in helper.py providers.py limits.py socket-probe.py fixture-tests.py; do
+    # config.example.json goes beside the code too: fixture-tests.py derives
+    # its fixture from it (OBSERVED 2026-09-13: without it, verify said
+    # UNKNOWN, correctly). It is the format reference, not the live config.
+    for f in helper.py providers.py limits.py socket-probe.py fixture-tests.py \
+             config.example.json; do
         install -o root -g root -m 0644 "${SRC}/${f}" "${CODE_DIR}/${f}"
     done
     ok "code installed to ${CODE_DIR}, root-owned and not writable by ${OWNER}"
