@@ -3,6 +3,14 @@
 # Run on the node as aleix only after p151-s2-runbook.md rows 1-9 pass.
 set -uo pipefail
 
+RETRY=false
+if [[ "${1:-}" == "--authorized-retry-after-credit" ]]; then
+    RETRY=true
+elif [[ $# -ne 0 ]]; then
+    echo "usage: $0 [--authorized-retry-after-credit]"
+    exit 2
+fi
+
 ENDPOINT="http://127.0.0.1:8766/v1/request"
 MARKER="/tmp/p151-row10-attempted"
 RESULT="/tmp/p151-row10-result.json"
@@ -11,34 +19,64 @@ LEDGER="/var/lib/homelab-model-helper/spend.json"
 echo "== row 10 preflight: refreshing sudo (password prompt follows) =="
 sudo -v || exit 1
 
-echo "== row 10 machine preconditions: live route, empty ledger, active services =="
+echo "== row 10 machine preconditions: live route, expected ledger, active services =="
 systemctl is-active --quiet homelab-model-helper.socket \
     homelab-harness.service homelab-telegram-bot.service || {
     echo "STOP: a required service is not active"
     exit 2
 }
-sudo python3 -c '
+EXPECTED_CALLS=0
+if [[ "$RETRY" == true ]]; then EXPECTED_CALLS=1; fi
+sudo env P151_EXPECTED_CALLS="$EXPECTED_CALLS" python3 -c '
+import os
 import json
 c=json.load(open("/etc/homelab-model-helper/config.json"))
 d=json.load(open("/var/lib/homelab-model-helper/spend.json"))
 assert c["routes"]["utility"] == ["gateway/luna"]
 assert c["providers"]["gateway"]["models"]["luna"]["id"].startswith("openai/")
 assert "vercel-ai-gateway:openai" in c["providers_approved"]
-assert d.get("version") == 1 and d.get("calls") == []
-print("ok: utility route pinned to approved OpenAI vendor; live ledger empty")
+expected = int(os.environ["P151_EXPECTED_CALLS"])
+assert d.get("version") == 1 and len(d.get("calls", [])) == expected
+if expected:
+    prior = d["calls"][-1]
+    assert prior.get("status") == "settled"
+    assert prior.get("provider") == "gateway" and prior.get("model") == "luna"
+    assert prior.get("settle_note") == "call outcome or charge uncertain"
+print("ok: utility route pinned to approved OpenAI vendor; expected ledger state present")
 ' || {
     echo "STOP: row 10 preconditions failed"
     exit 2
 }
 
-if [[ -e "$MARKER" ]]; then
+if [[ "$RETRY" == true ]]; then
+    PRIOR_MARKER="${MARKER}.prior-403-credit"
+    if [[ ! -e "$MARKER" ]]; then
+        echo "STOP: no prior marker exists; authorized retry requires the recorded 403 attempt"
+        exit 2
+    fi
+    if [[ -e "$PRIOR_MARKER" ]]; then
+        echo "STOP: retry marker archive already exists; this retry was already prepared"
+        exit 2
+    fi
+    mv "$MARKER" "$PRIOR_MARKER" || exit 1
+    {
+        echo "authorized-retry-reset $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+        echo "reason=credits-added-and-diagnostic-commit-4a0c9c4"
+        echo "prior_marker=$PRIOR_MARKER"
+    } > "$MARKER" || exit 1
+    echo "ok: prior marker archived; retry reason recorded in $MARKER"
+elif [[ -e "$MARKER" ]]; then
     echo "STOP: $MARKER exists. Row 10 has already been attempted on this boot."
     echo "Do not retry: a failed response can still represent billed work."
     exit 2
 fi
 
 echo "== recording the one-attempt marker before any request leaves =="
-date -u '+attempted %Y-%m-%dT%H:%M:%SZ' > "$MARKER" || exit 1
+if [[ "$RETRY" == true ]]; then
+    date -u '+retry-attempted %Y-%m-%dT%H:%M:%SZ' >> "$MARKER" || exit 1
+else
+    date -u '+attempted %Y-%m-%dT%H:%M:%SZ' > "$MARKER" || exit 1
+fi
 T0=$(date '+%Y-%m-%d %H:%M:%S')
 echo "journal mark: $T0"
 

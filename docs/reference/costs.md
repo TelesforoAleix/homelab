@@ -240,3 +240,12 @@ state, not an actual project expense.
 `$0.25/$1.00/$4.00/$8.00`; unattended are `$0.10/$0.40/$1.50/$3.00`. **PREDICTED:** the brief's
 expected first non-zero cost row remains unmet until a successful metered call is explicitly
 authorized and observed.
+
+**OBSERVED — prepaid gateway balance and one-off overhead:** the owner added `$10.00` of prepaid AI
+Gateway credit on 2026-09-13. The resulting balance is `$10.00`; no balance existed beforehand. The
+owner was charged `$13.24` total, comprising the `$10.00` balance plus `$3.24` VAT/processing
+overhead. The `$3.24` is a one-off non-inference cost; the `$10.00` is prepaid balance, not usage
+spend. The currency is USD as displayed by the dashboard; no DKK conversion is asserted.
+
+**OBSERVED — gateway key control:** the existing `homelab` key remains unchanged, with a `$10/week`
+budget and no other scope shown in the dashboard.

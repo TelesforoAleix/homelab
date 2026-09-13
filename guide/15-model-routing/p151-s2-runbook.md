@@ -291,6 +291,51 @@ Afterward:
 2. Phone: send `/spend`. Expected metered calls this week `1` and attended spend above zero.
 3. Paste the script output, dashboard before/after figures, and `/spend` reply.
 
+### Authorized retry after the 403 diagnostic
+
+This is a separate owner authorization from the first row-10 attempt. It is allowed only after the
+dashboard facts are recorded: **OBSERVED** on 2026-09-13, the team had no prepaid balance; the owner
+added `$10.00`; the resulting balance is `$10.00` prepaid; and the `homelab` key remains at its
+`$10/week` budget with no other displayed scope. Zero Data Retention is not required under the
+accepted ADR-039 §1 decision.
+
+On T, transfer only the committed diagnostic code and fixture. This contains no credential:
+
+```bash
+scp services/model-helper/helper.py services/model-helper/providers.py \
+    services/model-helper/fixture-tests.py \
+    homelab:/tmp/homelab-p151/helper/
+scp guide/15-model-routing/p151-s2-row10.sh homelab:/tmp/homelab-p151/
+```
+
+On S1, install and verify before any request leaves the node:
+
+```bash
+echo "== install diagnostic helper code; no network call =="
+for f in helper.py providers.py fixture-tests.py; do
+  sudo install -o root -g root -m 0644 "/tmp/homelab-p151/helper/$f" "/opt/homelab-model-helper/$f"
+done
+sudo env SRC=/tmp/homelab-p151/helper \
+  bash /tmp/homelab-p151/helper/install-model-helper.sh verify
+```
+
+Expected: the helper verifier's fixture ends `All 36 checks passed`, including the synthetic error
+redaction check. Stop if it fails. The verifier makes no gateway call.
+
+Before the retry, record the dashboard's current request count (`1`) and spend (`$0.0000`). Then
+run this exactly once; the argument archives the prior marker and records the credit-fix reason in
+the new marker. It requires exactly one prior uncertain settled gateway record and refuses any
+second retry:
+
+```bash
+echo "== ONE AUTHORIZED RETRY after prepaid credit and diagnostic commit =="
+bash /tmp/homelab-p151/helper/p151-s2-row10.sh --authorized-retry-after-credit
+```
+
+Refresh the dashboard once and send `/spend`. Paste the script output, the dashboard request/usage/
+cost figures, and the `/spend` reply. If this attempt returns any error, stop; paste only the
+journal's validated `gateway_error_type` and `gateway_error_code`. No third attempt is authorized.
+
 ## 9 — Health and paste-back (S1, T)
 
 ```bash
