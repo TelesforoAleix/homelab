@@ -186,7 +186,10 @@ on 2026-09-09; DKK values are approximate conversions at the ledger's 7.46 DKK/E
 
 ## Usage-based services
 
-None recorded yet.
+| Provider / model | Billing unit | Rates (per million tokens, OpenAI-served, observed 2026-09-13) | Period | Actual project spend | Notes |
+|---|---|---|---|---|---|
+| Vercel AI Gateway → `openai/gpt-5.6-luna` | tokens (input / output incl. reasoning / cache read / cache write) | $0.20 / $1.20 / $0.02 / $0.25 | Phase 15.1, 2026-09-13 | **$0.0000422** (dashboard; 3 billed requests) | Ledger fail-closed total beside it: `$0.002615850` — budget state from two uncertain outcomes (403, 400), not billing. Standing ceilings: attended $0.25/$1.00/$4.00/$8.00, unattended $0.10/$0.40/$1.50/$3.00 (hour/day/week/month); the key's own **$10/week** is the backstop |
+| Vercel AI Gateway → `openai/gpt-5.6-sol` | tokens | $2.00 / $10.00 / $0.20 / $2.50 | — | $0 | registered, unrouted |
 
 When APIs/gateways are introduced, record provider/model, billing unit, token/input/output costs where relevant, usage period, and actual project spend.
 
@@ -223,30 +226,29 @@ hardware. Reference-build running total unchanged at **899 DKK (~121 EUR)**.
 The next phase, 15.1, is the first with money behind it: the Vercel AI Gateway key. Its usage is
 recorded here under the accounting rules above when it lands.
 
-## Phase 15.1 — Metered provider and spend governor (in progress)
+## Phase 15.1 — Metered provider and spend governor
 
-**OBSERVED — S2 dashboard spend: `$0.00001` (displayed USD).** The first gateway request returned
-HTTP 403 with no usage and `$0.0000` cost. The one authorized retry succeeded with 22 input and 5
-output tokens; the dashboard displayed inference and total cost `$0.00001`. The reference-build
-running total remains **899 DKK (~121 EUR)**; no DKK conversion is asserted for this fractional USD
-usage.
+**Phase 15.1 actual usage spend: $0.0000422 (USD, from the dashboard).** The first non-zero
+usage row in this ledger. Three billed requests: the first attempt (HTTP 403, $0 — the account had
+no prepaid credit), the retry ($0.0000104, 22 in / 5 out), and the post-rotation call ($0.0000318,
+21 in / 13 out + 10 reasoning). The deleted-key attempt (HTTP 400) produced no dashboard row. Both
+figures round to **$0.00**; no DKK conversion is asserted for fractional USD usage. Reference-build
+running total unchanged at **899 DKK (~121 EUR)**.
 
-**OBSERVED — conservative local accounting:** the spend governor retained the failed request and
-settled its maximum reservation of `$0.001310300`, because the request had left the node and charge
-status was not yet known. The dashboard later established that actual spend was zero. The local
-amount deliberately remains charged against all attended rolling windows; it is fail-closed budget
-state, not an actual project expense. The successful retry's exact local settlement was
-`$0.000010400`; the dashboard rounded it to `$0.00001`.
+**Beside it, the ledger's fail-closed total: `$0.002615850`** — two lines the governor settled at
+the reserved maximum because the outcome after egress was uncertain (the 403 at `$0.001310300`,
+the 400 at `$0.001305550`). They count against the attended windows for a month and are **not** a
+claim that the gateway billed them. Ledger minus those two = `$0.000042200` = the dashboard, to
+nine decimals (row 12).
 
-**OBSERVED — standing repository ceilings:** attended hour/day/week/month are
-`$0.25/$1.00/$4.00/$8.00`; unattended are `$0.10/$0.40/$1.50/$3.00`. **OBSERVED:** the first
-successful metered call is now recorded above.
+| Date | Item | Category | One-time / recurring / usage | Actual | Notes |
+|---|---|---|---|---:|---|
+| 2026-09-13 | AI Gateway prepaid credit | AI | One-time top-up | **$10.00** | Balance, not usage. Charged **$13.24** in total |
+| 2026-09-13 | VAT / processing on the top-up | AI | One-time | **$3.24** | The only real money the phase cost; non-inference overhead |
+| 2026-09-13 | Promotional credit | AI | — | +$5.00 (gifted) | Balance **$15.00** at close |
+| 2026-09-13 | Metered inference, phase total | AI | Usage | **$0.0000422** | Row above |
 
-**OBSERVED — prepaid gateway balance and one-off overhead:** the owner added `$10.00` of prepaid AI
-Gateway credit on 2026-09-13. The resulting balance is `$10.00`; no balance existed beforehand. The
-owner was charged `$13.24` total, comprising the `$10.00` balance plus `$3.24` VAT/processing
-overhead. The `$3.24` is a one-off non-inference cost; the `$10.00` is prepaid balance, not usage
-spend. The currency is USD as displayed by the dashboard; no DKK conversion is asserted.
-
-**OBSERVED — gateway key control:** the existing `homelab` key remains unchanged, with a `$10/week`
-budget and no other scope shown in the dashboard.
+**Standing repository ceilings** (config, `spend.budgets`): attended `$0.25/$1.00/$4.00/$8.00`,
+unattended `$0.10/$0.40/$1.50/$3.00`, hour/day/week/month. **Gateway key control:** `homelab`,
+`$10/week`, recreated 2026-09-13 in the revocation rehearsal; the previous key is deleted.
+Weekly reconciliation procedure: `guide/15.1-gateway-and-spend-governor/README.md`.
