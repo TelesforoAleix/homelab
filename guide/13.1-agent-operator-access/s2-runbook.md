@@ -36,13 +36,15 @@ bash scripts/macos/preflight.sh --check sshd
 echo "== the agent's key: passphrase-less on purpose (an agent cannot type one); 0600; never in a backup =="
 [ -f ~/.ssh/id_ed25519_homelab_agent ] && echo "exists — not regenerating" || \
   ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_homelab_agent -N '' -C 'homelab-agent (ADR-049)'
-ls -l ~/.ssh/id_ed25519_homelab_agent*        # -rw------- for the private half
+ls -l ~/.ssh/id_ed25519_homelab_agent*
 grep -q 'PRIVATE' ~/.ssh/id_ed25519_homelab_agent.pub && echo "WRONG FILE" || echo "public half ok"
 
 echo "== the alias: append Host homelab-agent from the example, then fix HostName =="
 grep -q '^Host homelab-agent' ~/.ssh/config && echo "alias exists" || \
   sed -n '/^# The executor agent.s door/,$p' config/ssh/homelab.ssh-config.example >> ~/.ssh/config
-grep -n 'CHANGE-ME' ~/.ssh/config && echo ">> edit HostName to match the homelab alias, then re-run this grep until it is empty"
+HN=$(ssh -G homelab | awk '/^hostname /{print $2}'); echo "using $HN"
+sed -i '' "s/homelab\.CHANGE-ME\.ts\.net/$HN/" ~/.ssh/config
+grep -c 'CHANGE-ME' ~/.ssh/config
 ssh -G homelab-agent | grep -E '^(user|identityfile|batchmode|connecttimeout|requesttty) '
 
 echo "== copy every S2 file to the node in one go (PUBLIC key only) =="
@@ -53,11 +55,15 @@ scp ~/.ssh/id_ed25519_homelab_agent.pub \
     config/ssh/10-homelab-hardening.conf \
     scripts/server/apply-ssh-hardening.sh \
     homelab:/tmp/p131/
-ssh homelab 'ls -l /tmp/p131; grep -c PRIVATE /tmp/p131/*.pub'    # the grep must print 0
+ssh homelab 'ls -l /tmp/p131; grep -c PRIVATE /tmp/p131/*.pub'
 ```
 
-Expected: preflight ok except the LAN route; one key pair; `ssh -G` shows `user homelab-agent`,
-`batchmode yes`, `connecttimeout 10`, `requesttty no`; five files in `/tmp/p131`; `0`.
+Expected: preflight ok except the LAN route; one key pair, `-rw-------` on the private half; the
+`CHANGE-ME` count `0` (OBSERVED: the first run skipped this and row 1 failed on the MacBook with
+*Could not resolve hostname homelab.change-me.ts.net* — nothing to do with the node); `ssh -G` shows
+`user homelab-agent`, `batchmode yes`, `connecttimeout 10`, `requesttty false`; five files in
+`/tmp/p131`; the last line `0`. No trailing `# comments` in any pasted block: zsh runs them as
+arguments (15.1's lesson, met again here).
 
 ## 1 — Install the account and the grant (S1, with S2 holding a root shell)
 
@@ -68,11 +74,14 @@ Expected: preflight ok except the LAN route; one key pair; `ssh -G` shows `user 
 > the block below is the second attempt. Re-copy first: `scp config/sudoers.d/homelab-agent
 > scripts/server/install-homelab-agent.sh homelab:/tmp/p131/` from T.
 
+In S2 — open it now, become root, and type the rollback WITHOUT pressing Enter:
+
 ```bash
-# S2 — open it now, become root, and type the rollback WITHOUT pressing Enter:
 ssh homelab
 sudo -i
-# rm -f /etc/sudoers.d/homelab-agent && visudo -c          <- typed, unexecuted
+```
+```text
+rm -f /etc/sudoers.d/homelab-agent && visudo -c
 ```
 
 ```bash
@@ -96,9 +105,10 @@ homelab-agent`, verbatim into the guide) are in this log.
 
 ## 2 — sshd `AllowUsers` (S1, S2 idle; the one remote-access change)
 
-```bash
-# S2 — replace the typed rollback with this one, still unexecuted:
-# cp -p /root/10-homelab-hardening.conf.bak-13.1 /etc/ssh/sshd_config.d/10-homelab-hardening.conf && sshd -t && systemctl reload ssh
+In S2, replace the typed rollback with this one, still unexecuted:
+
+```text
+cp -p /root/10-homelab-hardening.conf.bak-13.1 /etc/ssh/sshd_config.d/10-homelab-hardening.conf && sshd -t && systemctl reload ssh
 ```
 
 ```bash
@@ -107,7 +117,7 @@ sudo -v
 echo "== keep the current drop-in outside sshd's include glob =="
 sudo cp -p /etc/ssh/sshd_config.d/10-homelab-hardening.conf /root/10-homelab-hardening.conf.bak-13.1
 echo "== the only line that changes =="
-diff /root/10-homelab-hardening.conf.bak-13.1 /tmp/p131/10-homelab-hardening.conf; true
+sudo diff /root/10-homelab-hardening.conf.bak-13.1 /tmp/p131/10-homelab-hardening.conf; true
 echo "== apply: sshd -t, install 0600, reload (never restart) =="
 sudo bash /tmp/p131/apply-ssh-hardening.sh /tmp/p131/10-homelab-hardening.conf
 echo "== what sshd resolved =="
@@ -116,7 +126,10 @@ systemctl show ssh.service -p StateChangeTimestamp
 ```
 
 Expected: the diff shows only the `AllowUsers` comment block and `AllowUsers aleix homelab-agent`;
-`sshd -t accepted`; `allowusers aleix homelab-agent`; `StateChangeTimestamp` is now.
+`sshd -t accepted`; `sshd -T` prints **one line per name** — `allowusers aleix` then
+`allowusers homelab-agent` (OBSERVED; not the single line the brief's row 13 wrote);
+`StateChangeTimestamp` is now. The apply script also leaves a `.bak.<timestamp>` inside
+`sshd_config.d/` — harmless (sshd includes `*.conf` only); the `/root` copy is the rollback.
 
 ```bash
 # T — the running system, from the other machine, the way a real user arrives
@@ -127,7 +140,7 @@ ssh homelab-agent id
 echo "== row 2 again, WHILE an agent session is open =="
 ssh homelab-agent 'sleep 20' & sleep 2; ssh -o BatchMode=yes homelab true && echo "owner ok with agent session open"; wait
 echo "== row 13 =="
-ssh homelab 'grep -c "^AllowUsers.*homelab-agent" /etc/ssh/sshd_config.d/10-homelab-hardening.conf'   # sshd -T was printed in S1 above
+ssh homelab 'sudo -n grep -c "^AllowUsers.*homelab-agent" /etc/ssh/sshd_config.d/10-homelab-hardening.conf || echo "(0600 root: run it in S1 with sudo)"'
 echo "== a THIRD fresh connection, then S2 may close =="
 ssh homelab 'echo third connection ok'
 ```
@@ -155,7 +168,7 @@ Every row's evidence and where it is:
 |---|---|---|
 | 1, 2, 13 | step 2, T | |
 | 3, 4 | `verify.log`: `visudo -c -f accepts it`; the `sudo -l` block | paste row 4 verbatim into the guide |
-| 5 | `ALLOW systemctl restart homelab-harness.service`, `is-active homelab-harness.service`; then `sudo journalctl _COMM=sudo -n 5 --no-pager` shows the restart under `homelab-agent` | |
+| 5 | `ALLOW systemctl restart homelab-harness.service`, `is-active homelab-harness.service`; then `sudo journalctl _COMM=sudo --no-pager \| grep 'homelab-agent :' \| tail -4` shows the restart under `homelab-agent` (`-n 5` alone shows your own `sudo` lines — OBSERVED) | |
 | 6 | `ALLOW journalctl`, `ss -tlnp`, `systemd-analyze security` | eight listeners; 1.3 |
 | 7 | `ALLOW install model-helper-config.json from /tmp/homelab-agent` + `byte-identical … still root:root:644`; `DENY install to gateway-key` | **644, not 600** — the helper runs as `aleix` and the harness as `homelab-harness`; a 600 root:root config blinds both. ADR §2 is amended at acceptance |
 | 8 | `DENY cat gateway-key`, `DENY cat token.cred` | output discarded by the script on purpose |
@@ -170,11 +183,19 @@ fallback is the owner's judgement, not an attempt.
 
 ## 4 — Backup and verify (T)
 
+T, the card mounted; two prompts (node sudo, age passphrase), as always; `tee`, never `tail`.
+If a backup was already taken today, **rename it first** (never `--force`: a same-day backup is
+never overwritten), and give the verifier the directory **by path** — its "newest" is
+`sort | tail -1`, and `2026-09-13-anything` sorts after `2026-09-13`, so it would verify the
+wrong one (OBSERVED: it picked `2026-09-13-p13-p150` and reported 14 "mismatches" that were just
+the node having moved on).
+
 ```bash
-# T — the card mounted; two prompts (node sudo, age passphrase), as always
-bash scripts/macos/backup-node.sh 2>&1 | tee /tmp/p131-backup.log       # tee, never tail
-bash scripts/macos/verify-node-backup.sh 2>&1 | tee /tmp/p131-verify.log
-grep -E 'sudoers.d/homelab-agent|homelab-agent/.ssh|id_ed25519_homelab_agent|PASS' /tmp/p131-verify.log
+ls "/Volumes/SD Card/homelab-backup/"
+mv "/Volumes/SD Card/homelab-backup/$(date +%F)" "/Volumes/SD Card/homelab-backup/$(date +%F)-earlier"
+bash scripts/macos/backup-node.sh 2>&1 | tee /tmp/p131-backup.log
+bash scripts/macos/verify-node-backup.sh "/Volumes/SD Card/homelab-backup/$(date +%F)" 2>&1 | tee /tmp/p131-verify.log
+grep -E 'sudoers.d/homelab-agent|homelab-agent/.ssh|id_ed25519_homelab_agent|PASS|FAIL' /tmp/p131-verify.log
 ```
 
 Expected (row 14): both new paths `ok`; `absent as required: home/homelab-agent/.ssh/id_ed25519_homelab_agent`;
@@ -186,12 +207,16 @@ Expected (row 14): both new paths `ok`; `absent as required: home/homelab-agent/
 # S1
 echo "== row 15: nothing failed, nothing changed that should not have =="
 systemctl --failed --no-legend; systemctl is-system-running
-sudo -v; sudo ss -tlnp | tail -n +2 | wc -l          # 8
+sudo -v; sudo ss -tlnp | tail -n +2 | wc -l
 id homelab-bot; id homelab-harness; id aleix; id homelab-agent
-echo "== row 16: ADR-046 checks 1–2 (nothing on root can open the volume) =="
+echo "== row 16: ADR-046 checks 1-2 (nothing on root can open the volume) =="
 sudo cryptsetup luksDump /dev/ubuntu-vg/data | grep -A3 -E '^Keyslots|^Tokens'
-grep -rl 'key-file\|keyfile' /etc/crypttab /etc/systemd/system /usr/local/sbin | xargs -r grep -n 'key-file\|keyfile' | grep -v '^\S*:\s*#'
+grep -rl 'key-file\|keyfile' /etc/crypttab /etc/systemd/system /usr/local/sbin > /tmp/p131/kf.txt
+xargs -r grep -n 'key-file\|keyfile' < /tmp/p131/kf.txt
 ```
+
+(Short lines on purpose: the one-line form wrapped in the paste and zsh ran the tail of the regex
+as a command. Whatever the last grep prints must be comment lines only.)
 
 Expected: empty; `running`; `8`; the three service ids byte-identical to Phase 13's close;
 `homelab-agent` in its own group only; passphrase keyslots only, `Tokens:` empty; the grep prints
@@ -203,12 +228,17 @@ OWNER: say "your turn". Then the executor, from its own session on the MacBook, 
 and reports OBSERVED in its own words with the raw output:
 
 ```bash
-# AGENT
 ssh homelab-agent 'sudo -n systemctl restart homelab-harness.service && sudo -n systemctl is-active homelab-harness.service'
-ssh homelab-agent 'sudo -n journalctl -u homelab-harness -n 3 --no-pager; sudo -n ss -tlnp; sudo -n systemd-analyze security homelab-harness.service --no-pager | tail -1'
+ssh homelab-agent 'sudo -n journalctl -u homelab-harness -n 3 --no-pager; sudo -n ss -tlnp | tail -n +2 | wc -l; sudo -n systemd-analyze security homelab-harness.service --no-pager | tail -1'
 ssh homelab-agent 'sudo -n /usr/local/sbin/data-volume.sh status'
-ssh homelab-agent 'sudo -n cat /etc/homelab-model-helper/gateway-key >/dev/null; echo "rc=$?"'   # the control: must be refused (stdout dropped, so a broken deny cannot print the key)
+ssh homelab-agent 'sudo -n cat /etc/homelab-model-helper/gateway-key >/dev/null; echo "rc=$?"; id'
 ```
+
+The last line is the control: stdout dropped so a broken deny cannot print the key; the refusal
+arrives on stderr; `id` says who asked. **OBSERVED 2026-09-13 17:03 UTC**, by the executor:
+`active`; `Stopped` → `Started` → `listening on 127.0.0.1:8766`; `8`; `1.3 OK`; mapper present,
+mounted, target active; `sudo: I'm sorry homelab-agent. I'm afraid I can't do that`, `rc=1`,
+`uid=994(homelab-agent) gid=979(homelab-agent) groups=979(homelab-agent)`.
 
 That last line is the positive control for the whole phase: the agent asks for the one thing it
 must never get, and is refused, in its own session, with no owner in the loop.

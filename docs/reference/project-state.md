@@ -27,14 +27,17 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 13.1 — Agent operator access (**in progress**, 2026-09-13; ADR-049 Proposed).
-  Phase 15.1 is paused at S3 on `phase/15.1-work` and resumes after this lands, its S3 runbook
-  rewritten in the AGENT/OWNER form. S1 landed on `phase/13.1-work`: `config/sudoers.d/homelab-agent`
-  (`visudo -c -f` parsed OK on the MacBook's C sudo; the node's sudo-rs is the gate),
-  `install-homelab-agent.sh install|verify|uninstall`, the `homelab-agent` alias, backup coverage,
-  both standards, guide skeleton and S2 runbook. Three amendments to the brief found while writing
-  the grant, recorded in `13.1-s1-stage-report.md`: config installs at mode 644 not 600, ledger copies
-  use `cp -p`, and the glob holes get deny lines. Node changes so far: 0.
+- **Current phase:** 13.1 — Agent operator access (**complete**, 2026-09-13). **The executor runs
+  the node's routine steps itself.** `homelab-agent` (uid 994): its own key, `ssh homelab-agent`,
+  `/bin/bash`, no password, own group only, `AllowUsers aleix homelab-agent`; `/etc/sudoers.d/homelab-agent`
+  is a `NOPASSWD` **list** of 172 entries — sudo-rs allows no wildcard inside an argument, which the
+  installer's pre-landing `visudo` proved by refusing the first draft — covering seven `homelab-*`
+  units, the read set, two configs, two ledgers, `data-volume.sh status`, with every lockout-class
+  and credential path denied by name. Sixteen rows OBSERVED; **row 12 by the executor in its own
+  session**, including the refused `cat gateway-key`. Backup PASS with the two new paths. Runbooks
+  are now AGENT/OWNER (`service-security-baseline.md` §7); landing a sudoers file has its own row in
+  `safe-changes-headless.md`. **Phase 15.1 resumes at S3**, its runbook rewritten in that form.
+  Handover: [`13.1-agent-operator-access-handover.md`](../handovers/13.1-agent-operator-access-handover.md).
 - **Previous phase:** 23.0 — The endpoint (**complete**, 2026-09-13). `homelab-harness.service` — its
   own account on `127.0.0.1:8766`, the eighth socket, score 1.3, up after a locked reboot. Layer 1
   attaches origin and refuses identity claims by name; layer 2 classifies deterministically into four

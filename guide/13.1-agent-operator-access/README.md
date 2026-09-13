@@ -1,7 +1,7 @@
 # Phase 13.1 — Agent operator access
 
-> **Phase in progress.** S1 (files, local proof) landed 2026-09-13; S2 (the node) is next. Every
-> line below is PREDICTED until the S2 runbook's row says otherwise.
+> **Phase complete 2026-09-13.** Every row OBSERVED; row 12 by the executor in its own session.
+> Handover: [`docs/handovers/13.1-agent-operator-access-handover.md`](../../docs/handovers/13.1-agent-operator-access-handover.md).
 
 Brief: [`docs/handovers/13.1-agent-operator-access.md`](../../docs/handovers/13.1-agent-operator-access.md).
 Decision: [ADR-049](../../docs/decisions/ADR-049-agent-operator-access.md). Runbook:
@@ -64,11 +64,14 @@ logging). If a future unit logs a secret, that unit is the defect.
 
 ## `sudo -l -U homelab-agent` — the ground truth
 
-PREDICTED until S2 row 4. Paste the node's output here verbatim at every phase close that touches
-the file.
+OBSERVED 2026-09-13 (S2 step 1, `install-homelab-agent.sh install`, sudo-rs 0.2.13). Note how
+sudo-rs prints a lone trailing `*` as nothing (`journalctl` appears twice; `stat`, `ls`, `getent`,
+`id` show no argument) but keeps a `*` that follows another argument (`systemctl reboot *`). Paste
+the node's output here again at every phase close that touches the file.
 
 ```text
-(row 4 output goes here)
+User homelab-agent may run the following commands on homelab:
+    (root) NOPASSWD: /usr/bin/systemctl start homelab-telegram-bot.service, /usr/bin/systemctl start homelab-model-helper.socket, /usr/bin/systemctl start homelab-harness.service, /usr/bin/systemctl start homelab-workbench.service, /usr/bin/systemctl start homelab-watchdog.timer, /usr/bin/systemctl start homelab-watchdog.service, /usr/bin/systemctl start homelab-data.target, /usr/bin/systemctl stop homelab-telegram-bot.service, /usr/bin/systemctl stop homelab-model-helper.socket, /usr/bin/systemctl stop homelab-harness.service, /usr/bin/systemctl stop homelab-workbench.service, /usr/bin/systemctl stop homelab-watchdog.timer, /usr/bin/systemctl stop homelab-watchdog.service, /usr/bin/systemctl stop homelab-data.target, /usr/bin/systemctl restart homelab-telegram-bot.service, /usr/bin/systemctl restart homelab-model-helper.socket, /usr/bin/systemctl restart homelab-harness.service, /usr/bin/systemctl restart homelab-workbench.service, /usr/bin/systemctl restart homelab-watchdog.timer, /usr/bin/systemctl restart homelab-watchdog.service, /usr/bin/systemctl restart homelab-data.target, /usr/bin/systemctl reset-failed homelab-telegram-bot.service, /usr/bin/systemctl reset-failed homelab-model-helper.socket, /usr/bin/systemctl reset-failed homelab-harness.service, /usr/bin/systemctl reset-failed homelab-workbench.service, /usr/bin/systemctl reset-failed homelab-watchdog.timer, /usr/bin/systemctl reset-failed homelab-watchdog.service, /usr/bin/systemctl reset-failed homelab-data.target, /usr/bin/systemctl daemon-reload, /usr/bin/systemctl is-active homelab-telegram-bot.service, /usr/bin/systemctl is-active homelab-model-helper.socket, /usr/bin/systemctl is-active homelab-harness.service, /usr/bin/systemctl is-active homelab-workbench.service, /usr/bin/systemctl is-active homelab-watchdog.timer, /usr/bin/systemctl is-active homelab-watchdog.service, /usr/bin/systemctl is-active homelab-data.target, /usr/bin/systemctl is-enabled homelab-telegram-bot.service, /usr/bin/systemctl is-enabled homelab-model-helper.socket, /usr/bin/systemctl is-enabled homelab-harness.service, /usr/bin/systemctl is-enabled homelab-workbench.service, /usr/bin/systemctl is-enabled homelab-watchdog.timer, /usr/bin/systemctl is-enabled homelab-watchdog.service, /usr/bin/systemctl is-enabled homelab-data.target, /usr/bin/systemctl show homelab-telegram-bot.service, /usr/bin/systemctl show homelab-model-helper.socket, /usr/bin/systemctl show homelab-harness.service, /usr/bin/systemctl show homelab-workbench.service, /usr/bin/systemctl show homelab-watchdog.timer, /usr/bin/systemctl show homelab-watchdog.service, /usr/bin/systemctl show homelab-data.target, /usr/bin/systemctl status homelab-telegram-bot.service, /usr/bin/systemctl status homelab-model-helper.socket, /usr/bin/systemctl status homelab-harness.service, /usr/bin/systemctl status homelab-workbench.service, /usr/bin/systemctl status homelab-watchdog.timer, /usr/bin/systemctl status homelab-watchdog.service, /usr/bin/systemctl status homelab-data.target, /usr/bin/systemctl cat homelab-telegram-bot.service, /usr/bin/systemctl cat homelab-model-helper.socket, /usr/bin/systemctl cat homelab-harness.service, /usr/bin/systemctl cat homelab-workbench.service, /usr/bin/systemctl cat homelab-watchdog.timer, /usr/bin/systemctl cat homelab-watchdog.service, /usr/bin/systemctl cat homelab-data.target, /usr/bin/systemctl list-units, /usr/bin/systemctl list-units *, /usr/bin/systemctl list-timers, /usr/bin/systemctl list-timers *, /usr/bin/systemctl --failed, /usr/bin/systemctl is-system-running, /usr/bin/journalctl, /usr/bin/journalctl, /usr/bin/ss -tlnp, /usr/bin/systemd-analyze security *, /usr/bin/systemd-analyze verify *, /usr/bin/stat, /usr/bin/ls, /usr/bin/getent, /usr/bin/id, /usr/local/sbin/data-volume.sh status, /usr/bin/cat /etc/homelab-model-helper/config.json, /usr/bin/cat /etc/homelab-harness/config.json, /usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/model-helper-config.json /etc/homelab-model-helper/config.json, /usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/harness-config.json /etc/homelab-harness/config.json, /usr/bin/cp -p /var/lib/homelab-model-helper/spend.json /var/lib/homelab-model-helper/spend.json.bak, /usr/bin/mv /var/lib/homelab-model-helper/spend.json.bak /var/lib/homelab-model-helper/spend.json, /usr/bin/cp -p /var/lib/homelab-model-helper/calls.json /var/lib/homelab-model-helper/calls.json.bak, /usr/bin/mv /var/lib/homelab-model-helper/calls.json.bak /var/lib/homelab-model-helper/calls.json, !/usr/sbin/sshd, !/usr/sbin/sshd, !/usr/sbin/ufw, !/usr/sbin/ufw, !/usr/sbin/iptables, !/usr/sbin/iptables, !/usr/sbin/ip6tables, !/usr/sbin/ip6tables, !/usr/sbin/nft, !/usr/sbin/nft, !/usr/bin/tailscale, !/usr/bin/tailscale, !/usr/sbin/netplan, !/usr/sbin/netplan, !/usr/sbin/visudo, !/usr/sbin/visudo, !/usr/sbin/cryptsetup, !/usr/sbin/cryptsetup, !/usr/sbin/usermod, !/usr/sbin/usermod, !/usr/sbin/useradd, !/usr/sbin/useradd, !/usr/sbin/userdel, !/usr/sbin/userdel, !/usr/bin/passwd, !/usr/bin/passwd, !/usr/sbin/chpasswd, !/usr/sbin/chpasswd, !/usr/bin/apt, !/usr/bin/apt, !/usr/bin/apt-get, !/usr/bin/apt-get, !/usr/bin/dpkg, !/usr/bin/dpkg, !/usr/bin/snap, !/usr/bin/snap, !/usr/sbin/reboot, !/usr/sbin/reboot, !/usr/sbin/shutdown, !/usr/sbin/shutdown, !/usr/bin/systemd-creds, !/usr/bin/systemd-creds, !/usr/bin/systemctl reboot, !/usr/bin/systemctl reboot *, !/usr/bin/systemctl poweroff, !/usr/bin/systemctl poweroff *, !/usr/bin/systemctl halt, !/usr/bin/systemctl halt *, !/usr/bin/systemctl kexec, !/usr/bin/systemctl kexec *, !/usr/bin/systemctl isolate, !/usr/bin/systemctl isolate *, !/usr/bin/systemctl rescue, !/usr/bin/systemctl rescue *, !/usr/bin/systemctl emergency, !/usr/bin/systemctl emergency *, !/usr/bin/systemctl default, !/usr/bin/systemctl default *, !/usr/bin/systemctl suspend, !/usr/bin/systemctl suspend *, !/usr/bin/systemctl hibernate, !/usr/bin/systemctl hibernate *, !/usr/bin/systemctl edit, !/usr/bin/systemctl edit *, !/usr/local/sbin/data-volume.sh lock, !/usr/local/sbin/data-volume.sh lock *, !/usr/local/sbin/data-volume.sh unlock, !/usr/local/sbin/data-volume.sh unlock *, !/usr/bin/cat /etc/homelab-model-helper/gateway-key, !/usr/bin/cat /etc/homelab-telegram-bot/token.cred, !/usr/bin/cat /etc/homelab-telegram-bot/token, !/usr/bin/cat /home/aleix/.claude/.credentials.json, !/usr/bin/cat /home/aleix/.codex/auth.json, !/usr/bin/cat /home/aleix/.ssh/id_ed25519_github, !/usr/bin/cat /etc/shadow, !/usr/bin/cat /etc/gshadow, !/usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/model-helper-config.json /etc/homelab-model-helper/gateway-key, !/usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/model-helper-config.json /etc/homelab-telegram-bot/token.cred, !/usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/harness-config.json /etc/homelab-model-helper/gateway-key, !/usr/bin/install -m 644 -o root -g root /tmp/homelab-agent/harness-config.json /etc/homelab-telegram-bot/token.cred, !/usr/bin/getent shadow, !/usr/bin/getent shadow *, !/usr/bin/getent gshadow, !/usr/bin/getent gshadow *
 ```
 
 ## The runbook convention: AGENT and OWNER
@@ -119,14 +122,34 @@ Not in ADR-046's table on purpose: the key is on the MacBook, not on root (brief
 - **Root pager.** `sudo systemctl status` and `sudo journalctl` on a tty open `less` as root, and
   `less` has shell escapes. systemd sets `LESSSECURE=1` whenever `SUDO_UID` is set (escapes off), and
   the `homelab-agent` alias says `RequestTTY no` so the executor path never has a pager at all.
-  PREDICTED; owner check: `ssh -t homelab-agent sudo -n systemctl status homelab-harness`, then
-  `!id` inside `less` → "Command not available".
+  PREDICTED; owner check: `ssh -t homelab-agent sudo -n systemctl status homelab-harness.service`,
+  then `!id` inside `less` → "Command not available". Not run this phase; the alias never asks
+  for a tty and `verify` runs without one.
 - **Two parsers.** The node runs `sudo-rs`; the MacBook's `visudo` is C sudo, and it accepts
   things sudo-rs refuses (see above). The local `visudo -c -f` is a syntax check; the node's own,
   inside `install` before the file lands, is the gate — and it fired.
 
-## Status by row
+## Status by row (all OBSERVED 2026-09-13)
 
-| Row | State |
+| Row | Evidence |
 |---|---|
-| 1–16 | PREDICTED — S2 |
+| 1 | `ssh homelab-agent id` → `uid=994(homelab-agent) gid=979(homelab-agent) groups=979(homelab-agent)` |
+| 2 | `ssh -o BatchMode=yes homelab true` → 0, fresh, before and while an agent session was open |
+| 3 | `visudo -c -f /etc/sudoers.d/homelab-agent` → `parsed OK` (installer, twice; `verify`, twice) |
+| 4 | above, verbatim |
+| 5 | 27 allows `ok`; `journalctl _COMM=sudo` → `homelab-agent : … COMMAND=/usr/bin/systemctl restart homelab-harness.service` ×3 |
+| 6 | `journalctl`, `ss -tlnp` (8), `systemd-analyze security` → `1.3 OK` |
+| 7 | re-install of `config.json` from `/tmp/homelab-agent/model-helper-config.json`: byte-identical, `root:root:644`; to `gateway-key`: refused |
+| 8 | `cat gateway-key`, `cat token.cred`: refused (`I'm sorry homelab-agent. I'm afraid I can't do that`) |
+| 9 | `sshd -t`, `ufw`, `tailscale`, `visudo -c`, `apt-get`, `systemd-creds`: refused by attempt; `reboot`, `systemctl reboot`, `usermod -aG sudo`, `data-volume.sh lock`/`unlock`: refused by `sudo -l` |
+| 10 | `data-volume.sh status` → mapper present, mounted, target active |
+| 11 | `cp -p spend.json spend.json.bak`, `mv` back: owner/mode `aleix:aleix:600` preserved; `cp` to `/tmp` and `cp` without `-p`: refused |
+| 12 | **the executor, over `ssh homelab-agent`:** restart → `active`; journal; 8 listeners; `1.3 OK`; volume status; `cat gateway-key` → rc 1 |
+| 13 | `grep -c '^AllowUsers.*homelab-agent'` → 1; `sshd -T` → `allowusers aleix` / `allowusers homelab-agent` (one line per name) |
+| 14 | `backup-node.sh` 360K, 165 files; `verify-node-backup.sh` **PASS**, both new paths present, private key absent, planted control fires |
+| 15 | `--failed` empty; `running`; 8; `id` of bot / harness / aleix unchanged; agent in its own group only |
+| 16 | keyslot 0 only, `Tokens:` empty; the `keyfile` grep finds one comment line (as Phase 13) |
+
+Also OBSERVED, not in the table: a third fresh connection before session 2 closed; `sudo -n true`
+as `aleix` after each sudoers event; the four exact-match probes refused (extra argument, `..`,
+two units, a unit without its suffix).

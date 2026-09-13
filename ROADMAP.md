@@ -364,10 +364,12 @@ A sub-phase of 13: an account and a bounded, passwordless command set for execut
 (**ADR-049**), so a runbook's routine steps are run and read by the agent and the owner does only
 what needs a password, a secret, a browser, a phone, or a lockout-class change. One account
 (`homelab-agent`), one key, one sudoers file, one SSH alias, one backup update, and the AGENT/OWNER
-runbook convention written into the standard. **Status: In progress (2026-09-13).** S1 (files,
-local `visudo` proof, standards, runbook) landed; S2 (the node — one lockout window covering the
-sudoers file and the sshd `AllowUsers` line) is next, and it is the last phase run by owner-paste.
-Brief: `docs/handovers/13.1-agent-operator-access.md`.
+runbook convention written into the standard. **Status: Complete (2026-09-13).** All sixteen
+rows OBSERVED, row 12 by the executor over `ssh homelab-agent`. The grant is an explicit list —
+sudo-rs allows no wildcard inside an argument, which the installer's pre-landing `visudo` proved
+by refusing the first draft before anything landed. The last phase run by owner-paste; from here
+runbooks are AGENT/OWNER. **Phase 15.1 resumes at S3.** Handover:
+`docs/handovers/13.1-agent-operator-access-handover.md`.
 
 ## Phase 14 — Reproducibility / Infrastructure as Code
 
