@@ -1,6 +1,7 @@
 # ADR-046: Service credentials stay on the unencrypted root — an accepted risk
 
-- **Status:** Accepted
+- **Status:** Accepted — **amended 2026-09-13 by Phase 13** (§Amendment below: sixth table row, the
+  token row rewritten, trigger 3 fired twice, check 2 corrected, all three checks re-run)
 - **Date:** 2026-09-12
 - **Supersedes:** none. **Closes the gap ADR-037 §6 recorded and explicitly did not close.** Extends
   ADR-032 §3's naming of what root holds into a decision about it. Proposed alongside the Phase 18.1
@@ -31,9 +32,10 @@ unencrypted filesystem, so nobody discovers a fifth later:
 |---|---|---|---|
 | Claude OAuth | `/home/aleix/.claude/.credentials.json`, `0600` | Use the owner's Claude subscription until revoked | Sign out of the session at claude.ai; re-authenticate the node |
 | Codex OAuth | `/home/aleix/.codex/auth.json`, `0600` | Use the owner's ChatGPT subscription until revoked | Same, at chatgpt.com |
-| Telegram bot token | `/etc/homelab-telegram-bot/token`, `root:root 0600`, via `LoadCredential=` | *Be* the bot: read what the allowlisted owner sends it, answer as it, from anywhere | `@BotFather` → `/revoke`; the old token dies instantly; the node gets the new one |
+| Telegram bot token | ~~`/etc/homelab-telegram-bot/token`, `root:root 0600`, via `LoadCredential=`~~ **Since 2026-09-13:** `/etc/homelab-telegram-bot/token.cred`, `root:root 0600`, **sealed to this machine's TPM2** (`systemd-creds encrypt --with-key=tpm2 --tpm2-pcrs=""`), via `LoadCredentialEncrypted=` in the bot, the notifier **and the watchdog**; no plaintext on the node | *Be* the bot — **only from this machine**: a pulled disk yields a blob the TPM is not there to unseal; a USB boot on the same machine still can (same TPM, no PCRs, by design — see §Amendment) | `@BotFather` → `/revoke`; the old token dies instantly; the plaintext for re-sealing is in the owner's password manager, not on the node |
 | Wi-Fi passphrase | `/etc/netplan/`, `0600` | Join the home network | Change it on the router; re-run netplan on the node |
 | Tailscale node identity | `/var/lib/tailscale/tailscaled.state` | Present a machine as `homelab` on the tailnet until removed | Delete the node in the Tailscale admin console; re-authenticate |
+| **GitHub node key** (added 2026-09-13, Phase 13 — existed since 18.2) | `/home/aleix/.ssh/id_ed25519_github`, `0600 aleix:aleix`, **passphrase-less**, account-level, selected by `Host github.com` + `IdentitiesOnly yes` | Pull all five repositories; **push to `oncla`, `factory-ops`, `brain`** as the owner. Blast radius: those repositories' contents and history; not the node | GitHub → Settings → SSH and GPG keys → `homelab node — 2026-09-12` → Delete. Audited by title from the MacBook: `gh api user/keys` (one key, OBSERVED 2026-09-12). Not in the backup (`backup-node.sh` excludes it); a rebuilt node makes a new one |
 
 Two things are true of all five. **Each is revocable from the laptop in minutes**, and the revocation
 is complete — none is a durable secret whose exposure survives the revocation. And **none of them can
@@ -203,10 +205,20 @@ another reason — at which point it is nearly free, and this ADR should be revi
 
 1. `sudo cryptsetup luksDump /dev/ubuntu-vg/data` shows only passphrase keyslots — no token,
    no TPM2 token, no keyfile-shaped slot — and `/etc/crypttab`'s key field is `none`.
-2. `grep -rl 'key-file\|keyfile' /etc/crypttab /etc/systemd/system /usr/local/sbin` on the node
-   returns nothing for the data volume.
+2. `sudo grep -rlE '^[^#]*(key-file|keyfile)' /etc/crypttab /etc/systemd/system /usr/local/sbin`
+   on the node returns nothing. *(Corrected 2026-09-13: the original pattern without the
+   comment guard matched its own explanation in `homelab-watchdog.sh` line 71 — a false positive
+   found by Phase 13 S1.)*
 3. Every credential on root is in the table above; a new one is added to the table with its revocation
-   path, or this ADR is reopened.
+   path, or this ADR is reopened. The inventory that decides it: `find /etc /root /home /var/lib/tailscale /usr/local -xdev -type f \( -name '*.pem' -o -name '*.key' -o -name 'id_*' -o -name '*token*' -o -name '*secret*' -o -name '*.credentials*' -o -name 'auth.json' \)` — anything credential-shaped not in the table is a finding.
+
+Both scripts that run these live in the repository: `scripts/server/security-audit.sh` blocks A and I.
+
+**Re-run 2026-09-12/13 (Phase 13):** check 1 **PASS** (keyslots 0 and 1, argon2id, `Tokens:` empty,
+crypttab `none`); check 2 **PASS** with the corrected pattern (the old one hit the comment); check 3
+**FAILED as written** — the GitHub key was on root and not in the table — and **passes now** that the
+sixth row exists. Nothing on root can open the volume: unchanged, re-verified, and the `systemd-creds`
+seal below is of the *bot token*, not the LUKS key — the TPM still has no part in the volume.
 
 **Revisit if:**
 
@@ -214,8 +226,8 @@ another reason — at which point it is nearly free, and this ADR should be revi
    longer describes it.
 2. **A credential that is not revocable, or that could open the volume, lands on root.** §3 says this
    must not happen; if a phase finds it needs to, that is the trigger, not a tuning.
-3. **Phase 13 sets a BIOS password or adopts `systemd-creds` for the token.** The acceptance stands;
-   §4's consequence table narrows, and this ADR gains a pointer.
+3. ~~**Phase 13 sets a BIOS password or adopts `systemd-creds` for the token.**~~ **Fired, both halves,
+   2026-09-13.** The acceptance stands; §4's consequences narrow as the Amendment states.
 4. **The harness moves model access into the volume** (Phase 23.3 / ADR-034 §13). The OAuth pair's
    reasons for staying on root weaken to one — revocability — and moving them should be reconsidered.
 5. **A reinstall happens for any other reason.** Root encryption is then a checkbox in the installer
@@ -223,3 +235,44 @@ another reason — at which point it is nearly free, and this ADR should be revi
 6. **The owner's threat model changes** — the content in the volume, or what root's services can do,
    changes character enough that *"revocable in minutes"* stops being a sufficient description of the
    downside.
+
+## Amendment — Phase 13, 2026-09-13
+
+Trigger 3 fired twice in one phase. What each control narrows, stated so nobody later reads
+"TPM-bound" as "protected from physical access":
+
+**The sealed token narrows the pulled-disk threat only.** `token.cred` is
+`systemd-creds encrypt --with-key=tpm2 --tpm2-pcrs=""`: sealed to this machine's TPM2 and bound to
+**no PCRs**. A disk pulled and read elsewhere yields a blob without the TPM to unseal it. **A USB
+boot on the same machine still unseals it** — same TPM, no PCR policy — and that is by design: PCR 7
+(Secure Boot policy) would add nothing against either threat (a signed rescue USB leaves PCR 7 as
+it is) and would turn a firmware update or a Secure Boot toggle into a silent bot, the failure mode
+§2 exists to prevent. The host key is not mixed in (`auto` would), because it lives on the pulled
+disk. Proved: the bot, the notifier and the watchdog all loaded the sealed credential across a real
+reboot and a cord-pull power-cycle with no hand on the box; the watchdog reported the locked volume
+both times. **The watchdog was found to load the token only by the S1 audit** — the brief said "bot
+and notifier"; sealing those two alone would have left the recovery notice reading a file that no
+longer existed, on the first unattended reboot after a power cut.
+
+**The BIOS supervisor password narrows the USB-boot threat.** Setup now asks for it; the boot order
+is locked to the internal disk (`BootOrder 0001,0004,0005,0000`); PXE is off (the two network entries
+are gone); Secure Boot stays on as found; **no power-on password** — the box booted unattended
+through a real power-cycle afterwards. It does not protect a pulled disk. The password is in the
+owner's password manager and nowhere in this repository or on the node.
+
+**Complementary, and which does which:** TPM seal → pulled disk. BIOS password → same-machine USB
+boot. Neither protects the running machine (§4, unchanged). The other four credentials on root are
+where they were; the two OAuth files are also no longer visible to the model helper's neighbour,
+`~/.ssh` (`InaccessiblePaths`, Phase 13 §6.12), which is the sixth row's own narrowing.
+
+**Failure mode added, and its rollback:** a TPM state change (firmware update that clears it, a
+board swap, "clear TPM" in setup) makes `token.cred` unreadable and the bot silent at the next boot.
+Rollback: `p13-s3.sh creds-undo` restores the plaintext from the sealed copy while this TPM still
+unseals it; otherwise the plaintext comes from the password manager by editor, and the same script
+re-seals. The `.cred` in the backup archive is useless off this TPM; **the password manager is the
+real backup of the token** (Phase 14 restore runbook).
+
+**Loss procedure (§Consequences) — one step changes:** step 2 stays `@BotFather → /revoke`; the
+replacement token is sealed with `p13-s3.sh creds-encrypt`, never written to `token` in plaintext
+except transiently on the way in.
+
