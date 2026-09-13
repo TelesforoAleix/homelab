@@ -37,14 +37,16 @@ OBSERVED in S2 and their checks are unchanged.
 ls "/Volumes/SD Card/homelab-backup/"
 mv "/Volumes/SD Card/homelab-backup/2026-09-13" "/Volumes/SD Card/homelab-backup/2026-09-13-p13-p150"
 ./scripts/macos/backup-node.sh
-./scripts/macos/verify-node-backup.sh
+./scripts/macos/verify-node-backup.sh "/Volumes/SD Card/homelab-backup/2026-09-13"
 ```
 
 Why the `mv`: today's directory already holds Phase 13/15.0's close, and `backup-node.sh` refuses a
 same-day overwrite without `--force` (correctly). A phase-named `DEST` was tried first and refused
 too — the script requires `DEST` to be a mount point (OBSERVED). Renaming the morning's directory
-keeps both archives; `verify-node-backup.sh` with no argument picks the newest `20*` directory, the
-fresh one. The date-only directory name is the same lesson as the `.bak-<date>` collision, for
+keeps both archives. **Pass the path to `verify-node-backup.sh`:** with no argument it takes the
+alphabetically last `20*` directory, and `2026-09-13-p13-p150` sorts after `2026-09-13` — the first
+run verified the morning's archive against the live node and reported today's changes as 13
+mismatches (OBSERVED; a correct result about the wrong archive). The date-only directory name is the same lesson as the `.bak-<date>` collision, for
 Phase 14.
 
 Expected in the verify: `etc/systemd/system/homelab-harness.service`, `…/homelab-harness.service.d/onfailure.conf`,
