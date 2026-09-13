@@ -309,7 +309,9 @@ ssh homelab
 ```
 
 ```bash
-# S1 (new) — the four states of row 12
+# S1 (new) — the four states of row 12. The hostname guard: after a reconnect this block was once
+# pasted into the MacBook shell (OBSERVED); every command failed harmlessly, but check first.
+[ "$(hostname)" = homelab ] || { echo "NOT ON THE NODE -- ssh homelab first"; false; } && {
 echo "== refreshing sudo (password prompt follows) =="; sudo -v
 echo "== volume state after boot (expect: locked / mapper absent) =="; data-volume.sh status
 echo "== harness: expect active; workbench: expect inactive (Condition), NOT failed =="
@@ -321,8 +323,12 @@ echo "== the endpoint on a locked boot =="; curl -sS http://127.0.0.1:8766/healt
 echo "== the socket kept its group across the boot (/run is tmpfs) =="; stat -c '%U:%G:%a' /run/homelab-model-helper.sock
 echo "== unlock (cryptsetup prompt follows) =="; sudo data-volume.sh unlock
 echo "== workbench now active =="; systemctl is-active homelab-workbench.service
-echo "== final: eight listeners, nothing failed =="; sudo ss -tlnp; systemctl --failed
+echo "== final: eight listeners, nothing failed =="; sleep 3; sudo ss -tlnp; systemctl --failed
+}
 ```
+
+(`sleep 3` before `ss`: `is-active` says `active` the moment the Workbench execs; it binds a moment
+later — the first run listed seven, and eight three seconds after. OBSERVED.)
 
 **Phone:** `/ask what is a unix socket` → an answer (row 14, after the reboot).
 
