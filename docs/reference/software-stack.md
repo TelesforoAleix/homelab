@@ -41,6 +41,11 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | ncdu | **Active** | 1.22-1build1 | No | Phase 02. Interactive drill-down for "where has the disk gone", far faster than `du \| sort`. |
 | ripgrep | **Active** | 15.1.0-1ubuntu1 | No | Phase 02. Fast content search; respects `.gitignore` in a repository, which matters from Phase 04. |
 | wpasupplicant | **Active** | 2:2.11-0ubuntu5 | Required for Wi-Fi under `systemd-networkd` | Confirmed active and enabled; without it the networkd renderer cannot drive a wireless link |
+| ufw | **Active** | ships with Ubuntu | Host firewall (2026-09-10) | Phase 13 adds a `DOCKER-USER` block in `/etc/ufw/after{,6}.rules` via `scripts/server/apply-docker-user-rules.sh`. `apply-firewall.sh` resets ufw and erases it — run the DOCKER-USER script after. |
+| systemd-creds (TPM2) | **Active** | systemd 259; TPM 2.0 (Intel PTT) | Bot token sealed at rest (Phase 13 §6.6, ADR-046 amendment) | `--with-key=tpm2 --tpm2-pcrs=""`; loaded by bot, notifier, watchdog via `LoadCredentialEncrypted=`. Proved across a reboot and a power-cycle. |
+| age (MacBook) | **Active** | v1.3.2 | Encrypts the backup and the recovery SSH key on the card | Phase 18; Phase 13 uses it for `recovery-key/id_ed25519_homelab_recovery.age`. |
+| mokutil / efibootmgr | **Active** | ship with Ubuntu | Secure Boot state and EFI boot order (read in the audit) | Phase 13: Secure Boot enabled; PXE entries removed from `BootOrder` via the firmware. |
+| Tailscale ACL | **Active** | policy v2 (`grants`) | Device-level boundary in front of sshd (Phase 13 §6.7) | `config/tailscale/acl.hujson`; members → node tcp/22 only; Tailscale SSH not used (ADR-019). |
 
 ## Version rule
 

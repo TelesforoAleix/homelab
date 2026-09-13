@@ -66,6 +66,13 @@ exist. The choice was made on the project's purpose, not its budget (ADR-021).
 `gitleaks` 8.30.1 was installed on the MacBook via Homebrew; free and open source. No new hardware,
 no subscription, no paid service. Reference-build running total unchanged at **899 DKK (~121 EUR)**.
 
+## Phase 13 — Security hardening
+
+**Phase 13 actual spend: 0 DKK.** Tailscale ACLs are on the free tier; `age`, `systemd-creds`,
+`mokutil` and `efibootmgr` were already present; the BIOS password is a firmware setting; the
+recovery key lives on the existing card. One image pull (`python:3-alpine`, removed again) on the
+existing connection. Reference-build running total unchanged at **899 DKK (~121 EUR)**.
+
 ## Phase 05 — Docker & Docker Compose
 
 **0 DKK.** Recorded explicitly.
