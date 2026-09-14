@@ -27,7 +27,18 @@
   Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
   ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
   recorded and did not close.
-- **Current phase:** 15.1 — The metered provider and the spend governor (**complete**, 2026-09-13).
+- **Current phase:** 00.1 — RAM upgrade (**complete**, 2026-09-14). A hardware sub-phase inserted
+  out of the running order; nothing else is reordered. **The node has 32 GB**: 2 × 16 GB Kingston
+  `KVR26S19D8/16` in both channels at 2133 MT/s, the 8 GB module removed and kept as a spare.
+  Proved by `dmidecode`, `free` (30 GiB), `memtester 20G 1` (all 16 tests `ok`, 2 h 07 min) and a
+  clean kernel log; boot, Wi-Fi, the watchdog notice, the unlock and every service back as before.
+  **Cost 700 DKK**; running total 1,599 DKK. Two things learned: a memory-stress test takes this
+  node off the network (3-minute DHCP leases on the shared network; run such tests from the
+  console), and the first POST after a memory change is slow (17.0 s, memory training). The
+  `poweroff` path, never before observed by the watchdog, classifies as `clean reboot`. **Phase
+  23.1 remains next.** Handover:
+  [`00.1-ram-upgrade-handover.md`](../handovers/00.1-ram-upgrade-handover.md).
+- **Previous phase:** 15.1 — The metered provider and the spend governor (**complete**, 2026-09-13).
   **Metered access exists and costs are no longer zero.** The Vercel AI Gateway is reached by
   `GatewayProvider` with a key under `LoadCredential=` (root, `0600`, revocable in one click —
   revoked and replaced during the phase); one route, `utility` → `openai/gpt-5.6-luna`; `/ask` and
@@ -518,7 +529,7 @@ executed on branch `phase/12-work` in a separate worktree.
 | Backup lists | ✅ All seven deployed files in `NODE_PATHS` and `CRITICAL`, same commit (the brief named three; widened during execution) |
 | ADRs | None required (brief §13) |
 | Cost | 0 DKK |
-| Residual | `homelab-notify@.service`'s own failure is unwatched (recursion guard, by decision); multi-recipient delivery untested (one owner); `systemctl poweroff` path untested (only `reboot` was) |
+| Residual | `homelab-notify@.service`'s own failure is unwatched (recursion guard, by decision); multi-recipient delivery untested (one owner); ~~`systemctl poweroff` path untested (only `reboot` was)~~ — **observed 2026-09-14 (Phase 00.1): `clean reboot. Down ~41m`**, the marker is written on a power-off too |
 
 ## Open risks carried forward
 
@@ -818,8 +829,9 @@ Re-verified 2026-09-09 at the close of **Phase 09**; the socket, harness and ser
 | Service account | `homelab-bot` uid 999; groups: `homelab-bot` only. Not `sudo`, not `docker`, not `adm` |
 | Service hardening | `systemd-analyze security` → **1.3 OK** |
 | Listening | **7 sockets** — the 6 below plus **`127.0.0.1:8765` (python3, `aleix`, the Workbench; loopback only, proved unreachable over the tailnet)** since Phase 18.2, 2026-09-12. **`:22` is FILTERED on the shared Wi-Fi.** `ufw` is active and enabled at boot: default deny inbound, allow on `tailscale0`, plus UDP 41641 on `wlp1s0` for Tailscale direct connections. sshd still *binds* `0.0.0.0:22`; ufw drops the packets before they reach it. **Proved 2026-09-10** — LAN SSH times out while ICMP to the same address succeeds |
-| Swappiness | `vm.swappiness = 10` |
-| Boot | **27.9s** (was 24.4s). Firmware POST rose 10.97s → 13.81s when the fTPM was enabled |
+| **RAM** | **32 GB** — 2 × 16 GB Kingston `KVR26S19D8/16` (DDR4-2666, running at the CPU's 2133 MT/s), ChannelA-DIMM0 + ChannelB-DIMM0, dual-channel (Phase 00.1, 2026-09-14). `free` 30 GiB, `MemTotal 31701556 kB`. Was 1 × 8 GB Samsung `M471A1K43BB0-CPB`; that module is kept as a spare. Stability: `memtester 20G 1` all `ok`; no MCE/EDAC |
+| Swap | `/swap.img` 4 GB, never used; `vm.swappiness = 10`. Left at 4 GB against 32 GB by decision (hardware.md §Swap) |
+| Boot | **31.3s** on the first boot with the new modules (2026-09-14): firmware **17.0s** (memory training; the boot before was 5.7s), loader 3.9s, kernel 0.9s, initrd 3.1s, userspace 6.4s. Earlier: 27.9s (was 24.4s); firmware POST rose 10.97s → 13.81s when the fTPM was enabled |
 | **Console** | **Attached and login-tested 2026-09-11 (Phase 18).** A display is connected on `card1-DP-1`, `getty@tty1` is active. **It is Phase 18's chosen "second way in"**, over a second SSH key, because it survives network, firewall, SSH and Tailscale failure alike. Session 29 (the Phase 18 login test) was **closed deliberately 2026-09-12** at Phase 18.1's step B1, per the rule it established: log out before walking away. No console session was left open at Phase 18.1's close; monitor and keyboard were detached again after its power-cut test |
 | **TPM** | **2.0** since 2026-09-10 (Intel PTT / Firmware TPM; was discrete 1.2). `/dev/tpmrm0` present. **Removed from the encryption design by ADR-037 §3** — the data volume unlocks over SSH, not the TPM, which would only have bound to the weaker SHA-1 PCR bank. Handed to Phase 13 as `systemd-creds`'s cheapest narrowing of ADR-046's accepted risk, not adopted |
 

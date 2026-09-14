@@ -10,7 +10,7 @@ Known configuration at repository bootstrap:
 |---|---|
 | CPU | Intel Core i5-6600T |
 | CPU topology | 4 cores / 4 threads |
-| RAM | 8 GB DDR4 |
+| RAM | 32 GB DDR4-2133 (2 × 16 GB) — 8 GB at purchase, upgraded 2026-09-14 ([`00.1-ram-upgrade`](../00.1-ram-upgrade/README.md)) |
 | RAM layout | Not yet verified |
 | Storage | 256 GB SSD |
 | Networking | Built-in Wi-Fi; wired capability to be validated/used as appropriate |
@@ -45,6 +45,11 @@ Ubuntu Server LTS.
 
 ## RAM strategy
 
-The current 8 GB configuration must be inspected before deciding on an upgrade. The reference planning considers 16 GB a sensible working target, while 24 GB may be attractive if the installed module layout and used-market pricing make it economical.
+The reference node started at 8 GB (one module, one slot free — inspected in Phase 01 Part A) and
+was taken to **32 GB, the two-slot platform ceiling**, in Phase 00.1 on 2026-09-14 — see
+[`guide/00.1-ram-upgrade/`](../00.1-ram-upgrade/README.md) for the procedure and the reasoning.
+The planning position had been 16 GB as a sensible working target and 24 GB if pricing favoured it.
 
-Do not buy upgrades merely to reach a round specification; measure actual needs as services are added.
+The rule stands even though the reference build did not follow it to the letter: do not buy upgrades
+merely to reach a round specification. The 32 GB choice was made on the cost of *opening a headless
+machine twice*, not on measured pressure — and that trade-off is recorded, not hidden.
