@@ -10,9 +10,10 @@ Verified in **Phase 01 Part A** on 2026-09-08 from Windows Task Manager, before 
 | CPU | Intel Core i5-6600T @ 2.70 GHz (Skylake, 35 W) | Confirmed — Part A |
 | CPU cores/threads | 4 / 4 | Confirmed — Part A |
 | CPU virtualization | VT-x, VT-d and EPT supported by the CPU; **enabled in firmware 2026-09-08** | ✅ Done in Phase 01 Part D. `lscpu` → `Virtualization: VT-x`; `vmx` on all 8 threads |
-| RAM | 8 GB DDR4 SO-DIMM @ 2133 MHz | Confirmed — Part A |
-| RAM module layout | **1 × 8 GB in ChannelA-DIMM0; ChannelB-DIMM0 empty** | **Resolved** — confirmed by `dmidecode` |
-| RAM module part | Samsung `M471A1K43BB0-CPB`, DDR4-2133 | Confirmed by `dmidecode` |
+| RAM | **32 GB DDR4 SO-DIMM @ 2133 MT/s** (was 8 GB until 2026-09-14) | **Upgraded in Phase 00.1, 2026-09-14** — `MemTotal 31701556 kB`, `free` 30 GiB |
+| RAM module layout | **2 × 16 GB — ChannelA-DIMM0 and ChannelB-DIMM0, both populated** (dual-channel, identical dual-rank modules) | Confirmed by `dmidecode -t 17` after the upgrade |
+| RAM module part | Kingston ValueRAM `KVR26S19D8/16` × 2 (firmware reports Kingston `99U5663-007.A00G`), DDR4-2666 2Rx8 1.2 V, **configured at 2133 MT/s** — the i5-6600T's ceiling | Confirmed by `dmidecode`; stability: `memtester 20G 1` all tests `ok`, no MCE/EDAC |
+| RAM — previous module | Samsung `M471A1K43BB0-CPB` 8 GB DDR4-2133, removed 2026-09-14, **kept as a spare** | Was the sole module from purchase to Phase 00.1 |
 | Storage | Samsung `MZ7TY256HDHP-000L7`, SATA SSD | Confirmed — Part A |
 | Storage capacity | 256 GB nominal / ~239 GiB usable | Confirmed — Part A |
 | Wi-Fi | **Intel Dual Band Wireless-AC 8260**, 802.11ac | **Resolved** — Part A |
@@ -94,32 +95,63 @@ physical trip to the machine later if a phase ever wanted KVM/QEMU virtual machi
 That reasoning has aged well. The console is now gone, so the trip that was hypothetical in Phase 01
 would today mean reattaching hardware from a drawer.
 
-## RAM upgrade path
+## RAM upgrade — ✅ done in Phase 00.1 (2026-09-14)
 
-**Now resolved.** The node has one 8 GB DDR4-2133 SO-DIMM and one free slot.
+**History.** The node shipped with one 8 GB DDR4-2133 SO-DIMM (Samsung `M471A1K43BB0-CPB`) in
+ChannelA-DIMM0 and ChannelB-DIMM0 empty. This section used to say the "planned reference path" was
+adding one 8 GB module for 16 GB, that 32 GB was "not required", and that the upgrade "should be
+driven by observed pressure from real services rather than by reaching a round number". Kept here
+as the reasoning it was (`PROJECT.md` §11); what actually happened is below.
 
-| Path | Result | Status |
+**What was done.** Both slots populated with **2 × 16 GB Kingston ValueRAM `KVR26S19D8/16`**
+(DDR4-2666, 2Rx8, 260-pin, 1.2 V, non-ECC, unbuffered); the 8 GB module removed and kept as a
+spare. Cost 700 DKK. The owner chose the platform ceiling in one step rather than 16 GB now and a
+second trip into the box later — the two-slot limit makes any later step a *replacement*, not an
+addition, and the box is headless and lives in a cupboard. That is a judgement about the cost of
+opening the machine, not a measurement of memory pressure: at the time of the upgrade the node used
+under 1 GiB of its 7.1 GiB.
+
+**As the firmware reports it** (`dmidecode -t 16,17`, 2026-09-14 19:49 UTC):
+
+| Slot | Module | Reported |
 |---|---|---|
-| Add one 8 GB SO-DIMM | 16 GB | **Planned reference path** |
-| Add one 16 GB SO-DIMM | 24 GB | Optional future path if pricing favours it |
-| Replace both | 32 GB | Not required; the board's two slots are the binding limit |
+| ChannelA-DIMM0 (BANK 0) | Kingston `99U5663-007.A00G`, serial 11161410 | 16 GB, DDR4, SODIMM, Rank 2, Speed 2133 MT/s, Configured 2133 MT/s, 1.2 V |
+| ChannelB-DIMM0 (BANK 2) | Kingston `99U5663-007.A00G`, serial 10107215 | 16 GB, DDR4, SODIMM, Rank 2, Speed 2133 MT/s, Configured 2133 MT/s, 1.2 V |
+| Physical array | | Maximum Capacity 32 GB, Number Of Devices 2, Error Correction None |
 
-**No RAM upgrade is required before or during Phase 01.** 8 GB comfortably exceeds Ubuntu Server's
-1.5 GB minimum, and the upgrade should be driven by observed pressure from real services rather than
-by reaching a round number.
+Three things worth knowing when reading that:
 
-The installed module is a **Samsung `M471A1K43BB0-CPB`** (8 GB DDR4-2133). Sourcing an identical
-part for the empty ChannelB slot would give a matched pair, which is the least surprising upgrade —
-though matching is a convenience, not a requirement.
+- **2666 on the box, 2133 in the machine — correct.** The i5-6600T's memory controller supports
+  DDR4-2133 as its maximum; a faster JEDEC module runs at the controller's speed. This BIOS reports
+  `Speed: 2133` (the running speed) rather than the module's SPD maximum, so the 2666 rating is
+  visible only on the label.
+- **Dual-channel has no field.** `dmidecode` reports slots, not channel mode. Two identical modules
+  in `ChannelA-DIMM0` and `ChannelB-DIMM0` on a Skylake controller is symmetric dual-channel; the
+  locators are the evidence.
+- **`99U5663-007.A00G`** is Kingston's internal part code; it is what `KVR26S19D8/16` reports.
 
-Practical notes for when an upgrade does happen:
+**Verified by:** `free -h` 30 GiB / `MemTotal 31701556 kB`; `memtester 20G 1` — all 16 tests `ok`,
+2 h 07 min, run from the console (see below); `journalctl -k` free of MCE/EDAC/memory-error lines
+before and after; `systemctl is-system-running` → `running`, no failed units; boot, Wi-Fi, the
+watchdog notice, the data-volume unlock and every service back as before. Build log:
+[`2026-09-14-phase-00.1-ram-upgrade.md`](../build-log/2026-09-14-phase-00.1-ram-upgrade.md).
 
-- The CPU supports DDR4-2133 as its maximum speed, so a faster module will simply run at 2133 MHz.
-- Matching the existing module's speed avoids surprises; capacities need not match.
-- Mixed capacities (8 GB + 16 GB) run in flex mode — part dual-channel, part single-channel. This is
-  normal and not a fault.
-- The CPU's own limit is 64 GB, but the M700 Tiny has two SO-DIMM slots, so 32 GB is the practical
-  platform ceiling.
+**Two operational facts learned on the way:**
+
+1. **A memory-stress test is a network outage on this node.** `memtester` locking most of RAM made
+   the DHCP renewal fail; the shared building network issues **3-minute leases**
+   (`LIFETIME=3min`, `T1=1min 30s`), so `systemd-networkd` dropped the address within a lease
+   lifetime and the node was unreachable on both routes until the test ended. Run such tests from
+   the console. The Wi-Fi association itself held throughout.
+2. **The firmware POST took 17.0 s on the first boot with the new modules** (memory training)
+   against 5.7 s on the boot before. Expect a slower first POST after any memory change.
+
+**Opening the machine.** Lenovo HMM (M700/M900/M900x Tiny) ch. 9: the SO-DIMM slots are **under the
+2.5-inch storage-drive bracket**. Cover screw at the rear → slide the cover forward, lift → bracket
+screw, slide, lift (the front Wi-Fi antenna cable may need to come off the card and *must* go back:
+it is the node's only network path) → modules → reverse. The cover is a slide-and-hook fit: set it
+down well forward of closed with the rear lip *under* the rear panel edge, then slide it back. Set
+down too far back it jams a few millimetres short; do not force it.
 
 ## Swap
 
@@ -127,15 +159,18 @@ Practical notes for when an upgrade does happen:
 |---|---|
 | Type | Swapfile, `/swap.img` |
 | Size | 4 GB |
-| In use | 0 B at first measurement (RAM 542 MB / 7.1 GB used) |
+| In use | 0 B at first measurement (RAM 542 MB / 7.1 GB used); still 0 B after the 32 GB upgrade |
 
 **Decision: accept the installer default** (closes the open item in Phase 01 brief §6). 4 GB against
 8 GB of RAM is a reasonable ratio, and a *file* rather than a partition can be resized later without
 disturbing the disk layout — which complements the LVM choice in ADR-015.
 
-No tuning applied. `vm.swappiness` remains at the distribution default of 60, which is more eager to
-swap than a server typically wants. That is worth revisiting only if real memory pressure appears —
-likely Phase 05, when containers arrive — rather than pre-emptively.
+**Revisited 2026-09-14 (Phase 00.1), unchanged.** Against 32 GB the 4 GB swapfile is small as a
+proportion, but swap on this node is a safety margin, not a memory extension: it has never been
+touched, and `vm.swappiness` is 10 (Phase 05). Resizing it would be work with no observed need.
+
+No tuning applied at the time. `vm.swappiness` was at the distribution default of 60; Phase 05
+lowered it to 10 when Docker arrived.
 
 ## Storage capacity note
 
@@ -162,6 +197,11 @@ workload needs, so this is **not a problem to fix** — but it is worth knowing:
 
 If the link ever proves unreliable — the risk ADR-016 actually cares about — the band is the first
 thing to examine, before deeper causes.
+
+**Observed 2026-09-14 (Phase 00.1):** the link was on **5 GHz** (5220 MHz, VHT 80 MHz, rx 292.5 /
+tx 866.7 Mbit/s, −57 to −60 dBm) on every check that day, before and after the upgrade. The band
+choice is the access point's and has evidently changed since 2026-09-08; nothing on the node was
+altered to cause it.
 
 ## Firmware age — open security observation
 

@@ -14,6 +14,11 @@ Use [`../templates/build-log-template.md`](../templates/build-log-template.md).
 
 ## Recent entries
 
+- [`2026-09-14-phase-00.1-ram-upgrade.md`](2026-09-14-phase-00.1-ram-upgrade.md) — 8 GB → 32 GB
+  on the M700 Tiny. Three problems: a cover that would not close (a slide-and-hook lid set down
+  too far back), a stability test that took a headless node off the network for ten minutes
+  (3-minute DHCP leases on the shared network, renewal failing under `memtester`), and a first boot
+  done without the console the plan asked for — which then had to be fetched for the second problem.
 - [`2026-09-09-phase-08-router-executors.md`](2026-09-09-phase-08-router-executors.md) — the
   escalation boundary. Five problems: a brief that specified a mechanism the runtime forbids
   (second phase running), a test that asked the admin to restart `tailscaled` and then reported a

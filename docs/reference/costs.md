@@ -8,7 +8,8 @@ Track actual reference-build costs first. Add rough reproduction estimates only 
 |---|---|---|---|---:|---:|---|
 | 2026-09 | Lenovo ThinkCentre M700 Tiny | Hardware | One-time | 700 | ~94 | Used; canonical orchestration node |
 | 2026-09-08 | DisplayPort→HDMI cable | Hardware | One-time | 199 | ~27 | Needed to attach a monitor for installation. The M700 Tiny outputs DisplayPort; most monitors take HDMI. |
-| | **Running total** | | | **899** | **~121** | |
+| 2026-09-14 | 2 × 16 GB Kingston ValueRAM `KVR26S19D8/16` (DDR4-2666 SO-DIMM) | Hardware | One-time | 700 | ~94 | Phase 00.1. Replaces the single 8 GB module; 32 GB is the M700 Tiny's two-slot ceiling. The 8 GB module is kept as a spare. |
+| | **Running total** | | | **1,599** | **~214** | |
 
 ### Phase 01 — Ubuntu Server
 
@@ -22,11 +23,11 @@ M700 Tiny with an HDMI monitor will face the same purchase.
 | Date | Item | Category | One-time / recurring / usage | Actual DKK | EUR equivalent | Notes |
 |---|---|---|---|---:|---:|---|
 | 2026-09-08 | USB flash drive for installer | Hardware | One-time | **0** | **0** | None — reused an existing stick |
-| 2026-09-08 | RAM upgrade | Hardware | One-time | **0** | **0** | **Not required.** Part A confirmed 1 × 8 GB with a free slot; 8 GB is sufficient for Phase 01. |
+| 2026-09-08 | RAM upgrade | Hardware | One-time | **0** | **0** | **Not required.** Part A confirmed 1 × 8 GB with a free slot; 8 GB is sufficient for Phase 01. *(Superseded 2026-09-14 — see Phase 00.1 below.)* |
 
 **Phase 01 actual spend: 199 DKK**, entirely the DisplayPort→HDMI cable. Ubuntu Server itself is
 free, and no subscription or usage-based cost was introduced.
-| 2026-09-08 | RAM upgrade | Hardware | One-time | **0** | **0** | **Not required.** Part A confirmed 1 × 8 GB with a free slot; 8 GB is sufficient for Phase 01. Upgrade to 16 GB deferred until real services justify it. |
+| 2026-09-08 | RAM upgrade | Hardware | One-time | **0** | **0** | **Not required.** Part A confirmed 1 × 8 GB with a free slot; 8 GB is sufficient for Phase 01. Upgrade to 16 GB deferred until real services justify it. *(Superseded 2026-09-14 — see Phase 00.1 below.)* |
 
 ### Phase 03 — Remote Access
 
@@ -252,3 +253,18 @@ nine decimals (row 12).
 unattended `$0.10/$0.40/$1.50/$3.00`, hour/day/week/month. **Gateway key control:** `homelab`,
 `$10/week`, recreated 2026-09-13 in the revocation rehearsal; the previous key is deleted.
 Weekly reconciliation procedure: `guide/15.1-gateway-and-spend-governor/README.md`.
+
+## Phase 00.1 — RAM upgrade (2026-09-14)
+
+**Phase 00.1 actual spend: 700 DKK (~94 EUR)**, one-time, for two 16 GB Kingston ValueRAM
+`KVR26S19D8/16` SO-DIMMs. This is the second hardware purchase of the project and the first since
+the machine itself, and it happens to cost exactly what the machine did. Reference-build running
+total **899 → 1,599 DKK (~121 → ~214 EUR)**.
+
+`memtester` (Ubuntu repository, free) was installed for the stability test. No subscription, no
+metered call, no new accessory: the monitor, keyboard and DisplayPort→HDMI cable from Phase 01 were
+reused when the console was needed mid-phase.
+
+**On the earlier zero rows.** Phase 01 recorded the RAM upgrade twice as "0 DKK — not required",
+with 16 GB as the deferred target. Both rows stay, annotated: the decision at the time was right for
+the time, and the ledger's job is to show the sequence, not the final number.

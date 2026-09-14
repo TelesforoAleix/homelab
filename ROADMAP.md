@@ -29,6 +29,25 @@ Planned/pre-development guides may include:
 - `00-budget-and-costs`
 - additional `00-*` topics as the project grows
 
+### Phase 00.1 — RAM upgrade
+
+A hardware sub-phase of Phase 00, inserted by the roadmap rule below rather than renumbering
+anything. Replace the single 8 GB module with 2 × 16 GB, prove the result on Linux, and update the
+documented configuration only after the checks pass.
+
+Status: **Complete** (2026-09-14). **32 GB** — 2 × 16 GB Kingston `KVR26S19D8/16` in both channels
+at 2133 MT/s; `memtester 20G 1` all tests `ok`; no MCE/EDAC; every service and both routes back as
+before. Cost 700 DKK. The 8 GB module is kept as a spare. Two lessons recorded: a memory-stress
+test is a network outage on this node (3-minute DHCP leases on the shared network — run it from the
+console), and the first POST after a memory change is slow. Nothing else in the running order moved;
+**Phase 23.1 remains next**.
+
+- Brief: [`docs/handovers/00.1-ram-upgrade.md`](docs/handovers/00.1-ram-upgrade.md)
+- Handover: [`docs/handovers/00.1-ram-upgrade-handover.md`](docs/handovers/00.1-ram-upgrade-handover.md)
+- Build log: [`docs/build-log/2026-09-14-phase-00.1-ram-upgrade.md`](docs/build-log/2026-09-14-phase-00.1-ram-upgrade.md)
+- Guide: [`guide/00.1-ram-upgrade/`](guide/00.1-ram-upgrade/README.md)
+- Reference: [`docs/reference/hardware.md`](docs/reference/hardware.md) §"RAM upgrade"
+
 ## Phase 01 — Ubuntu Server
 
 Install Ubuntu Server LTS on the reference node, establish a reproducible base installation, and verify the resulting server state.
@@ -1015,7 +1034,8 @@ second implementation. **Complete 2026-09-13; the interface is proved.**
 
 **6. Phase 15.1 — Gateway and spend governor.** Together, per ADR-033 §5. The first real money.
 **Complete 2026-09-13.** $0.0000422; the governor proved by refusal, by breaking it, and by
-reconciliation to nine decimals. **23.1 is next.**
+reconciliation to nine decimals. **23.1 is next.** *(Phase 00.1 — the RAM upgrade — ran on
+2026-09-14 between 15.1 and 23.1 as hardware work outside this order; it moved nothing.)*
 
 **7. Phase 23.1 — Decomposition and service routing.** Where ADR-044's client exposure becomes code.
 

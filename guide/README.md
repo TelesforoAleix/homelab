@@ -32,6 +32,8 @@ Current bootstrap topics:
 - [`00-hardware-selection`](00-hardware-selection/README.md)
 - [`00-reference-build`](00-reference-build/README.md)
 - [`00-budget-and-costs`](00-budget-and-costs/README.md)
+- [`00.1-ram-upgrade`](00.1-ram-upgrade/README.md) — 8 GB → 32 GB on the M700 Tiny: why the
+  ceiling, opening the Tiny, proving the result on Linux, and why the stress test runs from the console
 
 ## Out-of-phase guides
 

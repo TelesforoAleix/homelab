@@ -6,6 +6,17 @@ This project uses this file for meaningful repository-level milestones rather th
 
 ### Added
 
+- **Phase 00.1 — RAM upgrade, 8 GB → 32 GB (2026-09-14).** The node's single 8 GB module replaced
+  by 2 × 16 GB Kingston `KVR26S19D8/16` in both channels, running at the i5-6600T's 2133 MT/s.
+  Proved by `dmidecode` (two 16 GB devices, ChannelA/B-DIMM0, Rank 2), `free` (30 GiB), a full
+  `memtester 20G 1` loop (all tests `ok`) and a clean kernel log; boot, Wi-Fi, the watchdog notice,
+  the data-volume unlock and every service returned as before. 700 DKK; running total 1,599 DKK.
+  The old module is kept as a spare. Recorded on the way: `memtester` over SSH took the node off
+  the network — the shared network's DHCP leases are 3 minutes and the renewal failed under load —
+  so memory-stress tests are run from the console; the first POST with new modules took 17 s; and
+  the `poweroff` path classifies as `clean reboot` in the watchdog. Brief, build log, handover and
+  a short guide; no scripts, no config, no ADR.
+
 - **Phase 15.0 — Model registry and routing (2026-09-13).** The model helper's config is a registry
   (`providers → models`, `routes`, `default_route`); the caller asks by routing key (`role`) and can
   no longer send a field naming a model, binary or path (refused by name); `unattended` eligibility

@@ -27,7 +27,7 @@ Older business mini PCs can be strong candidates because they are inexpensive on
 
 For running more concurrent containers, databases, indexing/RAG services, monitoring, and development workloads, prioritize additional RAM and storage capacity rather than spending heavily on CPU alone.
 
-For this project, **16 GB RAM is a sensible working target**, while the exact minimum depends on the services introduced. The reference build begins with 8 GB and may be upgraded after actual usage is measured.
+For this project, **16 GB RAM is a sensible working target**, while the exact minimum depends on the services introduced. The reference build began with 8 GB and was upgraded to 32 GB — the M700 Tiny's two-slot ceiling — on 2026-09-14 ([`00.1-ram-upgrade`](../00.1-ram-upgrade/README.md)).
 
 ### Tier 3 — Local AI / GPU node
 

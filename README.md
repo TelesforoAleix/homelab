@@ -11,7 +11,7 @@ The canonical implementation uses a **Lenovo ThinkCentre M700 Tiny** as an alway
 Current known hardware:
 
 - Intel Core i5-6600T — 4 cores / 4 threads
-- 8 GB DDR4 RAM
+- 32 GB DDR4 RAM (2 × 16 GB; upgraded from 8 GB on 2026-09-14)
 - 256 GB SSD
 - Wi-Fi
 - Bluetooth

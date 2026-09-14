@@ -8,6 +8,7 @@ This file records the actual tested stack as phases are completed. Do not mark p
 | Linux kernel | **Active** | 7.0.0-31-generic | Ships with the release | x86_64 |
 | systemd | **Active** | 259 | Ships with the release | Socket activation used for SSH |
 | intel-microcode | **Active** | 3.20260210.1ubuntu2 | No | Mitigates the 2016-era firmware; see `hardware.md` |
+| memtester | **Temporary — to be removed** | 4.7.1-1build1 | No | Installed 2026-09-14 for Phase 00.1's stability test (`memtester 20G 1`, all tests `ok`). Not part of the running stack; removal is an owner step at phase close (`sudo apt remove -y memtester`). Run it from the console, never over SSH — it takes the node off the network (see `hardware.md`). |
 | unattended-upgrades | **Active** | — | No | Enabled; `apt-daily-upgrade.timer` confirmed scheduled |
 | OpenSSH server | **Active** | OpenSSH_10.2p1 Ubuntu-2ubuntu3.6 (OpenSSL 3.5.5) | Required for target workflow | Installed Phase 01 via socket activation (`ssh.socket` enabled). **Key-only since Phase 03** (ADR-018): passwords and keyboard-interactive disabled, `PermitRootLogin no`. Note `ssh.socket` uses `Accept=no`, so config changes need `systemctl reload ssh`. |
 | Git (MacBook) | **Active** | 2.39.5 (Apple Git-154) | Yes for repository workflow | Phase 04. Ships with macOS/Xcode CLT and is **behind upstream git** — relevant if a later phase needs a newer feature. Not a constraint today. |

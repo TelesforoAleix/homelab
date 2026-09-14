@@ -87,11 +87,12 @@ MacBook Pro  —  development / administration interface
                            separate, physical recovery route, available on demand (ADR-041)
     ▼
 Lenovo ThinkCentre M700 Tiny  —  "homelab"
+    i5-6600T · 32 GB DDR4-2133, 2 × 16 GB dual-channel (Phase 00.1, 2026-09-14; was 8 GB)
     Ubuntu Server 26.04.1 LTS, kernel 7.0.0-31-generic
     UEFI boot · LVM, root 64 GB unencrypted by decision (ADR-046) ·
     LUKS2 data volume 128 GB at /srv/homelab, unlocked over SSH (ADR-037,
     executed Phase 18.1) · 43.42 GB left free in the volume group
-    Wi-Fi wlp1s0, 2.4 GHz (ADR-016) · eno1 present, unused
+    Wi-Fi wlp1s0, 5 GHz as observed 2026-09-14 — 2.4 GHz at install (ADR-016) · eno1 present, unused
     SSH: publickey only. No passwords, no root login (ADR-018)
     Docker Engine 29.8.0 + Compose v5.5.1, rootful (ADR-022)
     Claude Code 2.1.236 + Codex CLI 0.153.4, interactive only (ADR-008)
