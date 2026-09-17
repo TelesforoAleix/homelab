@@ -1,468 +1,196 @@
-# Target Architecture — the Home Lab AI Operating System
+# Target Architecture — Home Lab execution and orchestration
 
-- **Written:** 2026-09-11
-- **Status:** Living document. It describes **the end state we are building toward** and the current
-  truth of each layer.
-- **Standing:** This is not an ADR and it does not decide anything. Where it disagrees with an
-  accepted ADR, the ADR wins and this document is wrong. It is the map every later phase is
-  measured against; a phase that changes a layer updates its section here.
+- **Written:** 2026-09-11; reconciled with ADR-050 and ADR-051: 2026-09-17
+- **Status:** Living target specification. It describes intended architecture, not a claim that every target capability is deployed.
+- **Standing:** Accepted ADRs govern this document. ADR-050 and ADR-051 govern their scoped successor decisions; ADR-045 remains authoritative for phase allocation.
 
-## What this document is for
+## Purpose and boundary
 
-The roadmap answers *what do we do next*. The ADRs answer *what did we decide, and why*. Neither
-answers **what is this system supposed to be when it is finished**, and without that answer the
-layers drift into each other and a phase can claim work that belongs to another.
+Home Lab is a generic, agent-agnostic AI work-execution and orchestration platform. It accepts work from clients, coordinates its lifecycle, assembles context, selects eligible execution paths, and returns structured outcomes under policy and service-enforced boundaries.
 
-Each layer below states its responsibility, what it must **not** do, what it receives and hands on,
-what exists today, what constrains it, how it behaves when something it depends on is missing, and
-what is still open. That is a map of intent and current truth, held separately from the decisions
-that produced it.
+Factory is a client/domain system, not part of the Home Lab core. It may own software-development roles, agents, teams, tickets, project workflows, Definition of Done, project graphs, and promotion/integration decisions. Other clients may use chats, scheduled triggers, command-line requests, automation, or no human interaction at all. If Factory disappeared, every core Home Lab primitive below would still make sense.
 
-## 1. The end state, in a paragraph
+Home Lab does not require persistent system agents or personas. Client actors, personas, roles and workflows may be supplied as client context where useful, but are neither Home Lab runtime primitives nor authority.
 
-**Home Lab is the central AI operating system.** It runs continuously and listens. A request arrives
-from one of several clients, and Home Lab decides what kind of request it is, whether it splits,
-which services handle each piece, what information is needed and where from, what the model actually
-sees, which model runs it, on which inference source, and what happens to the result — with budgets,
-approvals, identity and audit applying throughout. It holds the knowledge. It orchestrates the AI.
+## Core concepts
 
-It performs the work a coding agent such as Codex or Claude Code normally performs **internally**:
-context selection, task decomposition, retrieval decisions, per-call model selection and controlled
-execution. That is the measure of what belongs in it.
-
-## 2. Clients are not layers
-
-**The Factory is a consumer of this system, not a part of it.** It is an AI software-development
-platform that needs AI capabilities; the owner's primary use of it is coding. It sits beside the
-other clients, not above them.
-
-This matters more than it reads. If the harness is designed around Factory's needs it stops being
-general, and Factory's assumptions leak into the core where they cannot be removed later.
-
-| Client | State | Notes |
-|---|---|---|
-| **Telegram** | Built (Phases 07–09) | Long-polling, so no listening socket (ADR-023) |
-| **Scheduler** | Not built | A *client*, not a subsystem — a scheduled task is a request with no human waiting |
-| **Factory / Workbench** | Workbench built, provisional (Phase 20.0) | Runs **on the server** (ADR-038); reaches the harness as a local process through a configured adapter |
-| **Voice** | Not built (Phase 17) | A modality over an existing client, not a client of its own |
-
-**"Always running" is a requirement on the system, not a layer.** The server is up and listening;
-what varies is what wakes it.
-
-## 3. The layer map
-
-```text
-   Telegram    Scheduler    Factory    Voice          ← clients
-        └───────────┴───────────┴─────────┘
-                        │
-                        ▼
-   ┌──────────────────────────────────────────────┐
-   │ 1  Entry            accept, identify, normalise │
-   │ 2  Understanding    what kind of request is this│
-   │ 3  Decomposition    does it split, into what    │
-   │ 4  Service routing  who handles each piece      │
-   │ 5  Information      web · brain · repos · system│
-   │ 6  Context + cache  what the model actually sees│
-   │ 7  Model selection  which model for this call   │
-   │ 8  Execution        which inference source       │
-   │ 9  Result handling  to whom, recorded where     │
-   └──────────────────────────────────────────────┘
-        │                                    │
-   governance: identity · budgets ·     observability
-   approvals · audit · refusals · trust
-```
-
-Layers are not equal in size. 5, 6 and 8 are large enough to need sub-phases of their own; 1, 2 and 9
-are comparatively small. **Research required is a better splitting criterion than lines of code.**
-
----
-
-## Layer 1 — Entry
-
-**Responsibility.** Accept a request from a client, attach the runtime's own record of who and where
-it came from, and hand a normalised request onward.
-
-**Must not.** Interpret the request. Decide what to do with it. Hold a credential for anything
-downstream. Trust anything the client says about identity.
-
-**Receives** a client-shaped message. **Hands on** a normalised request plus an attached origin and
-identity that the request itself cannot set (ADR-034 §11).
-
-**Today.** The Telegram bot and its router/executor exist and work, with two allowlists and one
-privileged action. `Router.dispatch(user_id, text)` takes Telegram command text — it is a **command**
-router, not a request endpoint, and should not be mistaken for this layer.
-
-**Constraints.** Always listening. Never root, never a user-facing service as root. The harness
-binds **loopback only**, because every client is a local process on the same machine (ADR-038 §2).
-The measurable rule is *every listening socket is accounted for and bound to a stated interface* —
-ADR-023's no-socket property survives for the Telegram bot, which is outbound-only.
-
-**Degraded.** One client being unavailable must not affect the others. A scheduled trigger that fires
-while the system is busy queues; it does not double-execute, and a trigger fires once however many
-processes are running.
-
-**Open.** One endpoint with per-client adapters, or per-client endpoints? Whether the scheduler is a
-component here or a separate service that acts as a client.
-
----
-
-## Layer 2 — Understanding
-
-**Responsibility.** Decide what kind of request this is: a question, a task, a command, a project
-instruction, an ongoing conversation. Decide whether it needs decomposition at all.
-
-**Must not.** Execute anything. Choose a model. Gather information. Answer the request.
-
-**Receives** a normalised request. **Hands on** a classification plus a bounded restatement of what
-is being asked.
-
-**Today.** Nothing. This is a **gap** — no phase covers it.
-
-**Constraints.** It must be cheap and bounded, because it runs before any budget decision has been
-informed by what the work actually is. If classification itself needs a model call, that call is the
-first spend of the request and must be the smallest one.
-
-**Degraded.** Unclassifiable is a valid outcome and routes to a default path, not to a failure.
-
-**Open.** Deterministic rules, model-assisted, or both? What the taxonomy actually is — that list is
-a design exercise, not an implementation detail. Whether classification and decomposition are one
-step or two.
-
----
-
-## Layer 3 — Decomposition
-
-**Responsibility.** Split a request into steps, order them, and mark which need their own service,
-agent or context.
-
-**Must not.** Choose models. Assemble context. Execute.
-
-**Receives** a classified request. **Hands on** an ordered set of steps with dependencies.
-
-**Today.** Nothing.
-
-**Constraints.** Each step must be individually checkable, because a step that cannot be verified
-cannot be retried safely. Steps inherit the parent request's budget rather than each getting a fresh
-one — otherwise decomposition becomes a way to multiply spend.
-
-**Degraded.** A request that does not decompose is a single step. That must be the cheap common case,
-not a special case.
-
-**Open.** Deterministic, model-assisted, or both — the routing precedent (start deterministic, keep
-it as the fallback) is a strong prior but not a decision. What happens to later steps when an early
-one fails or is refused.
-
----
-
-## Layer 4 — Service routing
-
-**Responsibility.** Decide which service handles each step: web research, knowledge retrieval, code
-execution, a specialist agent, a direct model call.
-
-**Must not.** Choose the model — that is layer 7. Execute. Grant a capability that was not already
-approved.
-
-**Receives** steps. **Hands on** each step addressed to a service.
-
-**Today.** Nothing. The Telegram router dispatches *commands*, which is a different problem.
-
-**A distinction worth fixing now.** A **service** is a long-lived provider of a capability. A **tool**
-is a single callable action. Layer 4 routes to services; tools are what a service exposes. Conflating
-them is how a tool registry becomes a service registry by accident.
-
-**Constraints.** This is where ADR-034 §2's capability-to-tool mapping lives, and ADR-034 §10 makes
-each new mapping a human-approved security decision. A capability the backend cannot satisfy fails
-**before activation**, naming every missing requirement (ADR-034 §6).
-
-**Degraded.** A service being unavailable is a refusal with a reason, never a silent substitution.
-
-**Open.** Whether "capability" and "service" are the same granularity. How a specialist with its own
-narrow authority (ADR-034 §8) is addressed.
-
----
-
-## Layer 5 — Information gathering
-
-**Responsibility.** Obtain the material a step needs — **with provenance** — from the web, the
-knowledge base, project repositories, or system state.
-
-**Must not.** Decide what is relevant to the final answer (layer 6). Confer trust. Let retrieved text
-become an instruction.
-
-**Receives** an addressed step. **Hands on** material plus, for every item, where it came from, when,
-and at what revision.
-
-**Provenance is a first-class output, not metadata.** Everything downstream — the trust state in
-layer 6, the citation in layer 9, the audit record — depends on it existing from the start. It cannot
-be reconstructed later.
-
-**Today.** Nothing.
-
-| Source | State |
+| Concept | Target meaning |
 |---|---|
-| **Web / online research** | **Gap.** No phase covers it anywhere in the roadmap |
-| **Knowledge base (Brain)** | Phase 10 and its sketched sub-phases; unbuilt. Lives on the server in the encrypted volume (ADR-037 §5) |
-| **Project repositories** | On the server in the encrypted volume (ADR-037 §5). Unavailable while it is locked |
-| **System state** | Exists — the `/status` figures |
+| **Client** | A domain system, interface, or automated source that submits work through a client-specific ingress path |
+| **Request** | A proposed outcome with supplied facts/references, constraints, preferences and inputs |
+| **Run** | The durable Home Lab orchestration record and lifecycle for accepted work |
+| **Objective** | The immutable outcome a Run was accepted to pursue |
+| **Plan / step** | Outcome-oriented proposed work, dependencies, constraints and completion/verification expectations |
+| **Planner** | The logical responsibility that proposes what should happen |
+| **Orchestrator** | The deterministic logical responsibility that coordinates Run state and permitted dispatch |
+| **Capability** | An implementation-independent Home Lab runtime ability or outcome required by work |
+| **Service** | A stable, addressable provider of runtime capabilities with its own enforceable boundary |
+| **Tool / executor** | A concrete operation or execution implementation behind a service |
+| **Context / provenance** | Selected information and its source, time and revision where applicable |
+| **Result / artifact** | A structured outcome or produced material, often held by reference |
+| **Signal / concern** | Structured evidence, blocker or additional need for the orchestrator to evaluate; never authority |
 
-**Constraints.** Knowledge and project content live on the server **inside the encrypted volume**
-(ADR-037). ADR-032's content gate is discharged for that volume only — the unencrypted root still may
-not hold them. What may leave the machine is **ADR-039**'s policy, classified by whose data it is:
-the owner's own material may go to approved providers, third-party or personal data may not, secrets
-never, and selection must be deliberate.
+Interpretation, planning, context assembly, routing and orchestration are runtime responsibilities. They may be modules in the harness rather than agents or separately deployed services.
 
-**Degraded.** Missing embeddings, a dead search provider or an unreachable knowledge store removes a
-source and says so. It does not crash the request and does not silently answer from less. **A locked
-encrypted volume is the common case after any reboot** (ADR-037 §4): knowledge and project sources are
-simply unavailable, and that must be stated rather than answered around.
+## Canonical work flow
 
-**Open.** Whether the Brain specialist queries retrieval itself or delegates to a Brain-native agent —
-deliberately unresolved by the Phase 19 design review; do not invent an answer. How web content is
-bounded, since a fetched page is unbounded attacker-influenced text.
+~~~text
+client
+  -> client ingress / normalization
+  -> canonical request
+  -> semantic interpretation / WorkIntent
+  -> planner
+  -> outcome-oriented plan
+  -> orchestrator
+  -> capability resolution
+  -> policy, scope and service routing
+  -> service
+  -> tool / provider / executor
+  -> structured result / artifact references
+~~~
 
----
+A Run spans this flow. It is created when a new work request is accepted and is updated as work is interpreted, planned, dispatched, waits, resumes, produces evidence, or ends. The flow describes logical responsibilities, not a mandatory process topology. A simple request normally has a one-step plan and need not make a model call merely to create that plan.
 
-## Layer 6 — Context assembly and cache
+Client ingress normalizes client-specific shapes and attaches or attests identity through a trusted path. A persona description, model claim, or request body does not establish runtime identity. The mechanism for ingress attestation and the future wire contract are intentionally deferred.
 
-**Responsibility.** Decide what the model actually sees, and in what order.
+### Interpretation, planning and orchestration
 
-**Must not.** Gather (layer 5). Trust what it assembles. Reorder the stable prefix for convenience.
+Semantic interpretation identifies the proposed objective, relevant entities/resources, supplied facts and provenance, constraints, preferences, assumptions, information needs, verification needs and ambiguity. Structured client facts pass deterministically; AI may assist with unstructured language, but its output is proposal/evidence rather than authority.
 
-**Receives** material with provenance. **Hands on** an assembled context plus a trust state.
+The **planner** determines what work should happen and may propose or revise an outcome-oriented plan based on evidence. It may be AI-assisted. The accepted plan never authoritatively binds a step to a concrete service, tool, model or provider. Non-binding implementation observations or preferences cannot bypass later resolution or policy.
 
-**Two mechanisms this layer owns.**
+The **orchestrator** is the deterministic Run-state coordinator. It evaluates readiness, dependencies and waiting conditions; applies policy and scope checks; resolves eligible capabilities/services; records outcomes; and invokes planning or replanning when required. A planner does not directly commit a Run transition or dispatch an action.
 
-**The stable prefix.** Cache economics are *engineered, not inherited*. The favourable numbers
-observed in comparable harnesses are a property of their prefix discipline, not of the models they
-call — the invariant part first, the volatile part last, and never reordered to make an
-implementation simpler. This is the assumption most likely to be made silently and found false after
-the cost model has been built on it.
+Services and executors return structured results, blockers, concerns, or additional capability needs. They do not rewrite the Run objective or global plan, expand Home Lab's work graph, or create additional Runs independently. Their internal activity remains within dispatched scope.
 
-**Trust as a runtime state.** Retrieved content is untrusted data (ADR-034 §11) — text does not become
-an instruction because it uses imperative language. Beyond labelling it, **the arrival of untrusted
-content arms an action gate**: high-impact tool calls later in the same run require exact approval
-that they would not have required otherwise. Trust is therefore a runtime state that changes, not a
-fixed label — the marking does work rather than decorating a prompt.
+## Run lifecycle and ownership
 
-**Today.** Nothing.
+Every accepted **new work request** creates a Run, including simple one-step work. Information supplied specifically in response to a Run waiting for required input resumes that Run; a message or request envelope is not automatically unrelated new work.
 
-**Constraints.** **ADR-039** is the boundary — this layer decides what leaves the machine, so its
-classification and its deliberate-selection rule apply here first. The instruction hierarchy is
-fixed: homelab policy → agent definition → project policy → work-item instructions → retrieved
-context as untrusted data.
+The Run objective is immutable on acceptance. Evidence and clarification may refine the plan or Definition of Done only when consistent with the accepted objective, binding client requirements and applicable constraints. A Definition of Done change cannot redefine the requested outcome or remove a required acceptance condition because it became difficult. Material ambiguity requires clarification, replanning, partial completion, failure, or escalation rather than successful completion by reinterpretation. Materially different work creates a new Run, which may supersede the earlier Run while preserving its history.
 
-**Degraded.** Over-budget context is trimmed by a stated rule with the trimming recorded, never by
-dropping whatever was last.
+A Run may wait and resume, depend on other Runs, be cancelled, fail, complete partially or fully, or be superseded. Waiting and interruption are not success; partial outcome remains distinct from full completion. Run relationships use structured signals, results and artifact references, not unbounded inherited histories or direct mutation of another Run's state.
 
-**Open.** What the stable prefix contains. Whether compaction is summarisation (a model call, and
-therefore spend) or truncation.
+Runs are independent of the submitting transport connection, client conversation, and executor session. A Run may use several executor sessions and remains meaningful if one disappears. Client interaction continuity remains client-owned: Factory may be ticket/workflow-centric, Telegram may later have chats/threads/sessions, and automation may have none.
 
----
+Home Lab owns the durable orchestration record: client and immutable objective; scope and constraints; current plan, steps, dependencies and waits; signals/concerns; executor-session references; results/artifact references; lifecycle state; and telemetry references as needed. It does not thereby own canonical client/domain state. Factory project state remains Factory/project state; Brain knowledge remains in its knowledge domain; artifacts may remain in domain or service storage and be referenced by the Run.
 
-## Layer 7 — Model selection
+ADR-051 establishes one harness/orchestrator-owned Run lifecycle with split information placement. A content-minimized root-resident control record remains available while `/srv/homelab` is locked for Run/step identity, lifecycle state, restart/reboot recovery, correlation, opaque waiting/blocking visibility and protected references needed for later revalidation. It is not a second lifecycle authority or a general root content store.
 
-**Responsibility.** Choose which model serves this call.
+Richer or sensitive Run-linked material remains protected or domain-owned by reference: raw objectives/user content, project or Brain material, sensitive plans/Definition of Done, context/prompts, artifact bodies, concern/evidence bodies, rich scope/authorization information and executor-session internals. Root references themselves remain content-minimized where practical. The root lifecycle boundary gains no volume-unlock capability, provider credentials, bearer tokens, secrets or authority-granting material. If a protected reference is unavailable, materially changed or unverifiable as the accepted objective, the Run records the uncertainty rather than silently redefining the objective or claiming continuation/completion.
 
-**Must not.** Accept a model, provider, tier or path from an agent (ADR-034 §5). Let an agent's own
-assessment of its work reach a model tier. Bypass the pre-call budget check.
+Unlock or dependent-service recovery is a revalidation opportunity, not automatic permission to resume. The orchestrator revalidates applicable references/resources, identity/authority provenance, revocation, scope, policy, context/evidence and service availability before continuing. Active/waiting control state is durable operational state; completed lifecycle history is durable audit/provenance state. Persistence technology, exact path, schema, serialization, retention duration, detailed backup mechanism, retry/idempotency and process topology remain deferred.
 
-**Receives** the agent role, a bounded task summary, validated metadata, and capability/context
-characteristics. **Hands on** a chosen model and route.
+## Capabilities, services, tools and executors
 
-**Today.** `services/model-helper/` — 714 lines, a two-provider router with per-provider limits and
-automatic fallback, tested against a genuinely exhausted provider. What does not exist is models as
-**configuration** rather than two entries in Python.
+~~~text
+plan step -> required Home Lab runtime capability -> eligible service -> tool / provider / executor
+~~~
 
-**Constraints.** **ADR-026 §4 survives ADR-034**: the agent declares a need and the router selects —
-only the *form* changed. **The agent's role is its declaration of need.** Priority, severity and
-complexity are **hints, never selectors**: they cannot reach a tier on their own, because an agent's
-claim about its own work is data, not an instruction. Without that rule an agent routes itself to an
-expensive model by asserting its task is hard, and the governor notices after the money is spent.
+Home Lab owns the canonical runtime capability vocabulary. Capabilities describe stable, implementation-independent abilities or outcomes, such as language.reason, knowledge.retrieve, external.research, project.inspect, project.modify, tests.execute, and future modality abilities. Names advertise neither deployment nor authority. Dynamic service discovery is not decided here.
 
-**Degraded.** No eligible model is a refusal with a reason. Fallback is explicit and recorded, and
-once a route has produced substantive output it is **pinned** — mid-answer switching produces results
-nobody can reason about afterwards.
+A capability is not a permission, service or tool. A service implements/advertises capabilities; a tool is a more concrete operation behind a service; an executor is an implementation that performs bounded work accepted by a service. Capability-to-service/tool mappings are security decisions: new or changed mappings require the existing human approval path, while normal deterministic use of an already-approved mapping does not need fresh mapping approval on every dispatch. Applicable tool/action approvals still apply.
 
-**Open.** Whether the AI-assisted router is worth building at all. Deterministic selection from the
-role may be sufficient for a long time, and deterministic routing is the fallback regardless.
+Factory may independently own portable or domain-specific requirements/capabilities. When Factory uses the Home Lab adapter/runtime, its execution requirements translate to Home Lab runtime capabilities without forcing Factory's internal vocabulary to match Home Lab's. Validated Factory or project restrictions must survive translation as narrowing Run constraints. Factory's existing pre-activation compatibility contract remains its own: it must refuse activation before work begins when requirements cannot be met and report every missing requirement. Other clients need not adopt Factory's activation model.
 
----
+A service is a stable, addressable provider of capabilities, but logical responsibility separation alone does not justify a process or deployment boundary. A separate boundary is justified when it must independently hold or enforce credentials, privilege, filesystem/resource view, trust level, state with a different lifetime, machine placement, or an availability/failure boundary. Planner, interpreter, orchestrator and context assembly may remain modules in one harness when no such boundary exists. This preserves credential isolation without prescribing systemd, containers, RPC, sockets, or another mechanism.
 
-## Layer 8 — Execution
+## Context and knowledge
 
-**Responsibility.** Run the call against an inference source and normalise what comes back.
+Home Lab owns final context selection and assembly for the relevant step, not all source knowledge. Inputs may include client-supplied facts/references, scoped project/domain data, Brain/personal knowledge, external retrieved information, and derived/model-produced information. Planning may use the minimal relevant context needed before a full step context exists.
 
-**Must not.** Give any raw provider process ambient filesystem, shell, credential or OS tools
-(ADR-025). Dispatch model output. Make a metered call before the spend governor exists (ADR-033 §5).
+Project truth remains in the project/domain, and Brain remains its knowledge domain. Retrieved web, repository, API, log, and model-produced material is information with provenance, not authority. Step-specific context is assembled deliberately rather than dumping an entire project or Run history into each inference call. Provenance records source, time and revision where applicable; it supports classification, audit and later explanation while prompts carry only what is needed.
 
-**Receives** an assembled context and a chosen model. **Hands on** a normalised result with usage.
+Egress remains governed by ADR-039. An authorized Run/context-assembly path may select content only within authenticated client exposure, Run/project/resource scope, applicable privacy/egress policy and service-enforced boundaries. Secrets never leave; third-party/personal data requires the existing new-decision gate; providers must be approved. Logs, journals, unit files, configuration and allowlists are not automatically included merely because they can be read. AI can propose relevant context but cannot authorize egress or broaden scope.
 
-**Four inference sources, one selection problem:**
+Caching is an optimization, not memory. Where provider prompt caching is used, stable instructions/context should precede volatile request/step data when practical. Detailed cache and compaction mechanisms remain deferred.
 
-| Source | State |
+## Model routing and provider access
+
+Three distinct concepts must not be collapsed:
+
+| Concept | Meaning |
 |---|---|
-| **Subscription CLIs** (Claude, Codex) | Built. Interactive, `aleix`-scoped, neither is a service |
-| **Metered gateway** (Vercel AI Gateway) | Decided (ADR-033), unbuilt. **Governor first** |
-| **Cloud compute** | **Gap.** Named as a direction, in no phase |
-| **Own GPU node** | Phase 16, conditional |
+| **Client actor/persona** | Client/workflow context; not a runtime identity claim or universal model selector |
+| **Inference purpose/task requirements** | What an individual inference call needs |
+| **Provider/model route** | The eligible route selected by Home Lab policy |
 
-**Constraints.** Provider capability and **model** capability are different facts — a provider may
-support tools while a specific model it serves does not. Unknown cost stays `unknown` and is never
-replaced with a confident estimate.
+Role is not the future universal Home Lab routing abstraction. Inference requirements and AI-generated complexity assessments are advisory inputs. Deterministic policy selects an eligible provider/model using applicable quality, context-size, availability, privacy, cost/safety and latency constraints. A client, planner or model cannot select a route by naming a provider/model or asserting that work is difficult.
 
-**This is where the largest security change on the roadmap happens.** ADR-034 §13 converts ADR-025
-§10's *"the model's output is never an instruction"* from **inert by architecture** to **checked by
-runtime**: only a structured request enters the trusted runtime, and identity, assignment, scope,
-mapping, budget and approval all run before any action. Until that ships, §10 stands as written and
-the Phase 09 canary check applies.
+Provider abstraction, configured model registry, provider eligibility, credential isolation, fallback controls, and fail-closed spend controls remain binding under ADR-025, ADR-026 and ADR-033. The Vercel AI Gateway is the accepted metered-provider implementation behind that abstraction; callers above it do not name providers. Existing role-based routes are delivered compatibility behavior until a later versioned contract replaces them, not the target abstraction.
 
-**Degraded.** A provider being exhausted or unreachable is a normal operating state with a legible
-message, never an outage.
+## Authority, policy and service enforcement
 
-**Open.** Which real adapter first. Whether cloud compute is a provider or a deployment target.
+> **AI proposes. Policy decides. Services enforce.**
 
----
+~~~text
+authenticated/attested client + valid delegated/request authority + request constraints
+  -> Run
+  -> planner proposes
+  -> orchestrator validates
+  -> capability / scope / policy resolution
+  -> service
+  -> tool / executor
+~~~
 
-## Layer 9 — Result handling
+A Run cannot exercise more authority than the initiating client/human validly delegated for that request. Authentication and client exposure alone are not authority. Effective Run authority is bounded by the intersection of authenticated/attested client authority, explicit delegated/request authority, validated client/domain restrictions, Run/project/resource scope, Home Lab policy and service-enforced boundaries.
 
-**Responsibility.** Return the result to the right place and record what happened.
+Constraints only narrow downstream. No model, retrieved or supplied content, persona, other Run, planner output or executor can broaden authority, project/resource scope or policy. Required approval is a separate trusted decision; a plan, completion criterion, artifact, or dependency cannot manufacture it. Supplied content cannot rewrite runtime identity or authorization provenance, and logical Runs/personas/executors do not acquire OS accounts or credentials merely by existing.
 
-**Must not.** Let a result become an instruction for the next step without passing the trust rules.
-Store hidden chain-of-thought.
+Client exposure is the first authorization boundary: a client reaches only explicitly exposed services, default exposure is none, and system-control services remain unreachable from Factory and other project-work clients under ADR-044. Exposure refusal remains distinct from a subordinate capability/scope/policy refusal.
 
-**Receives** a normalised result. **Hands on** a reply to the client and durable records.
+Services enforce their own hard credential, privilege, filesystem, resource and trust boundaries. A narrowly privileged service may have an independently granted, bounded mandate, but invocation does not transfer that authority to a caller, planner, Run, model or another service. Its requests and returned information remain bounded by permitted operation and data-sharing scope.
 
-**Today.** The Telegram reply path. Nothing general.
+Only structured proposed operations enter checked dispatch. Identity, scope, approved mappings, tool/target policy, budgets and required approvals are checked before action. Replanning or resuming cannot reuse approval for a materially different action. Applicable policy revisions are recorded; ordinary additions do not widen in-flight work, while security revocation and emergency suspension apply immediately, including before resumption. Provider processes retain no ambient host tools, and untrusted content remains untrusted through every boundary.
 
-**Constraints.** Durable state is explicit (ADR-034 §12): agents are stateless between tasks, and
-anything needed later becomes a record in Factory definitions, project `ops/`, or Brain. Task history
-stores observable decisions, rationale, messages, tool requests and results, evidence, approvals,
-model usage, cost and outputs — **not** hidden reasoning.
+The checked-dispatch transition described by ADR-034 §13 requires a separately implemented and validated enforcement path. Until then, the current inert-output/canary property stands. This target architecture does not authorize unrestricted tool loops.
 
-**Degraded.** A result that cannot be delivered is still recorded.
+## Execution architecture and modalities
 
-**Open.** Where results live per client. What gets promoted into Brain, and by what rule.
+~~~text
+Home Lab Run / orchestrator
+  -> execution service
+  -> Claude Code | Codex | future NativeHomeLabExecutor
+~~~
 
----
+Mature coding harnesses may initially own bounded inner coding loops. Their sessions, micro-plans, compaction, local tool loops and prompt cache are executor implementation state, not canonical Home Lab Run state. Claude Code and Codex are executor implementations, not canonical Home Lab agents. A native executor can later use the same seam without changing the Run contract.
 
-## 4. Governance, which runs under every layer
+The architecture is modality-neutral. Text, code, structured data, images, audio and future modalities use the same request, Run, capability, service and result/artifact model rather than creating a separate orchestration architecture.
 
-These are not a layer. They apply at each one, and a design that bolts them on at the end will have
-the wrong shape.
+## Work plane, control plane and telemetry
 
-| Concern | Rule | State |
-|---|---|---|
-| **Identity** | Attached by the runtime, never claimed by the model (ADR-034 §11) | Implemented in Workbench |
-| **Budgets** | Two limits per task — monetary and model-call. First reached stops execution | Implemented in Workbench; **the system-wide governor does not exist** |
-| **Spend governor** | Four windows; attended and unattended separate; checked before the call; persists across restart; **fails closed** (ADR-033 §5) | **Does not exist. Precondition for any paid call** |
-| **Approvals** | Bound to one immutable action including its revision; changing a material input invalidates it | Implemented in Workbench |
-| **Audit** | Append-only, hash-chained, **records refusals too** | Implemented in Workbench |
-| **Refusals** | Structural, and proved by attempt against a planted positive control | Practised since Phase 08 |
-| **Trust** | Provenance attached at gathering; untrusted content arms the action gate | Not built |
-| **Observability** | The administration dashboard (Phase 22) | Not built |
-
-> **An authorisation check that has only ever permitted is unvalidated** — and one that has only ever
-> refused is broken. Every rule gets both tests.
-
-## 5. Constraints that shape the whole design
-
-- **ADR-037** — knowledge and project content live in an **encrypted volume** on the server, unlocked
-  over SSH after boot. ADR-032's gate is discharged for that volume only; root still may not hold
-  them. **Degraded-until-unlocked is a normal state.**
-- **ADR-038** — everything runs on the server; the harness binds **loopback only**; every listening
-  socket is accounted for and bound to a stated interface.
-- **ADR-039** — what may leave is classified **by whose data it is**, and selection must be
-  deliberate. Content chosen by whatever can write a log line never leaves.
-- **ADR-040** — autonomous calls are normal; **budget replaces attribution** as the control.
-- **ADR-025 §1, §10** — credential boundary and the dispatch lock; §10 changes only under ADR-034 §13.
-- **ADR-041** — the node is headless with a console on demand. Classify any change touching network,
-  boot, authentication or the admin account; **lockout-class means recovery needs physical access**.
-- **ADR-042** — `homelab` is public and readable, not packaged; **configuration is the seam**.
-- **ADR-044** — a declared capability grants nothing; **which services a client may reach is checked
-  first**.
-- **ADR-011** — privilege separation. No user-facing service runs as root.
-- **`AGENTS.md`** — prefer minimal, comprehensible implementations. Do not add Redis, PostgreSQL,
-  queues or gateways because they are common; add them when a phase has a concrete need.
-
-**Several of these constraints were written for a smaller system and are under review.** See
-[`constraint-review.md`](../reference/constraint-review.md), which tests each against what the layers above need.
-Until a successor ADR changes one, every constraint here remains in force.
-
-## 6. What we deliberately do not build
-
-Recorded so that a future phase does not quietly add them.
-
-- **A workspace product.** Email, calendars, notes, a document editor, image generation and media
-  libraries belong to a personal-AI-workspace thesis. Ours is infrastructure with Factory as a
-  consumer and coding as the primary use.
-- **One process holding everything.** Shell, filesystem, credentials, personal data and model
-  execution must not share a single trust boundary. Prompt-level defence is not a process boundary,
-  and a harness that conflates them cannot be reasoned about. Privilege separation is the design
-  (ADR-011, ADR-025), not a later hardening pass.
-- **A database, yet.** Relational plus JSON plus files plus a vector store means several sources of
-  truth, uneven atomicity, and divergence between canonical and derived state. Files stay canonical
-  until they demonstrably fail.
-- **A central registry of anything for other adopters.** Factory is fork-and-customise software.
-
-## 7. Failure modes this design rules out
-
-Stated as standing rules, because each is cheap to prevent now and expensive to remove later.
-
-1. **One definition per thing.** A tool's description, schema, aliases, handler, dispatch entry, UI
-   control and retrieval metadata are one definition with several views — never several definitions
-   kept in step by hand. Anything maintained in two places will diverge.
-2. **Discovery is not authorization.** Selecting a relevant subset of tools is a *context economy*
-   problem; permitting execution is a *security* problem. Separate mechanisms, and only the second is
-   a boundary.
-3. **Triggers fire once.** A scheduler must not double-execute because more than one process is
-   running.
-4. **Single-user is a decision, not a default.** Whether ownership is modelled from the start is
-   decided deliberately; retrofitting it later leaves null-owner edge cases permanently.
-5. **No parallel homes for one responsibility.** A migration finishes or is reverted; compatibility
-   shims do not become architecture by remaining.
-
-## 8. What this map says about the current roadmap
-
-Findings only. **Reshaping the roadmap is a separate step and requires an ADR** (`AGENTS.md`:
-changes affecting multiple phases are captured as ADRs, never applied silently).
-
-**Gaps — layers with no phase at all:**
-
-| Layer | |
+| Plane | Responsibilities |
 |---|---|
-| 2 — Understanding | nothing |
-| 4 — Service routing | nothing |
-| 5 — Web research | **nothing anywhere in the roadmap** |
-| 8 — Cloud inference | named as a direction only |
-| 9 — Result handling | nothing general |
+| **Work plane** | Requests, Runs, plans, context, capabilities, services and execution |
+| **Control plane** | Provider/model and routing configuration, capability/service configuration, client exposure, node/resource availability, system health and safety configuration |
 
-**Collisions — one layer, several phases:**
+Ordinary work-plane Runs cannot modify control-plane state merely because a planner proposes it. Configuration is evaluated at dispatch time; later or resumed work uses applicable current policy without silently broadening authority. This document does not design a control-plane UI.
 
-- **Layer 7** — Phase 15, Phase 15.0 and Phase 23 all claim model registry and routing, and which
-  one owns it is not settled.
-- **Layers 5 and 6** — Phase 10 (knowledge, retrieval) and Phase 23 (context assembly) overlap.
-- **Layer 4** — Phase 19 (concrete tools and mappings) and Phase 23 overlap.
+Telemetry is foundational to the work plane and later evaluation. Record, as applicable, Run/step correlation, capability/service, model/provider, latency, token and cache metrics, cost, retries/replans/waits, and final status. It may correlate with completed Run history, but is not the authoritative Run lifecycle record and need not share its retention or backup policy. Evaluation is a later use of this evidence; no evaluation framework is selected here.
 
-**Absorbed:** Phase 12 (Automation) is the scheduler, which is a **client** at layer 1, not a phase of
-its own.
+## Current delivered baseline and compatibility
 
-**Probably superseded:** Phase 11 (Agent Framework Experiments) asked what abstractions a framework
-would replace. ADR-034 and the Workbench answer most of that question already.
+This document is not the detailed deployed-state record; current-architecture.md, project state and phase handovers remain the source for that. The short compatibility baseline is:
 
-**Too large:** Phase 23 as briefed spans layers 3, 4, 6, 7 and 8 plus the governor. It is at least four
-phases.
+- The Phase 23.0 loopback harness endpoint and Factory adapter are delivered. Its required role, declared client label, content-free audit and return-and-forget behavior are historical delivered compatibility, not durable Run semantics or attested identity.
+- The model registry/configuration, metered gateway integration and fail-closed spend governor were delivered in Phase 15.0/15.1. Their provider abstraction, registry and governor controls remain binding; current route details are not target vocabulary.
+- Existing Telegram routing and subscription helper paths remain delivered compatibility. They are not the generic request/Run/orchestration contract.
+- ADR-045 resolved the earlier roadmap ownership collisions: Phase 15 owns routing, 15.0 registry, 15.1 gateway/governor, and Phase 23 is split into 23.0–23.3. ADR-050 does not reallocate phases.
 
-## 9. Open questions this document cannot answer
+Future migration must preserve version compatibility explicitly. It must not retroactively label Phase 15, Phase 20.0, Phase 23.0, or accepted ADR history as if they had already implemented the new Run contract.
 
-1. The taxonomy layer 2 classifies into.
-2. Whether decomposition and classification are one step or two.
-3. ~~Where the harness runs, and what the egress ADR must permit.~~ **Answered** — ADR-037, ADR-038
-   and ADR-039.
-4. Whether the AI-assisted router is worth building at all.
-5. Whether the Brain specialist queries retrieval itself or delegates.
-6. What the stable prefix contains.
-7. Whether single-user is a permanent decision or a current state.
-8. Whether Workbench's write engine and the harness converge on one implementation of the approval
-   contract, or stay two implementations of one specification (ADR-043 §2 says the latter; it has not
-   been tested with a second consumer).
-8. The numeric spend ceilings.
+## Cross-cutting constraints that survive
+
+- **ADR-025 / ADR-048:** credential access remains isolated at the helper/socket boundary; callers do not acquire provider credentials or the ability to name an arbitrary program.
+- **ADR-033:** provider abstraction, gateway routing, model registry/configuration and fail-closed spend controls remain; no paid call proceeds when the governor is unavailable.
+- **ADR-037 / ADR-046 / ADR-051:** canonical knowledge/project content stays on encrypted storage and degraded-until-unlocked is normal. The accepted Run boundary keeps content-minimized lifecycle control state root-resident without granting root volume-unlock capability; richer content remains protected or domain-owned by reference.
+- **ADR-038 / ADR-047–049:** component placement, loopback exposure, separate accounts and bounded operator access remain. A logical Run inherits no OS-account authority.
+- **ADR-039:** deliberate, attributable context selection and egress restrictions remain.
+- **ADR-040 / ADR-043 / ADR-044:** autonomous work remains governed; ADR precedence and scope boundaries remain; client exposure precedes subordinate authorization.
+- **ADR-045:** phase ownership and sequencing remain unchanged until a later decision says otherwise.
+
+## Deliberate deferrals
+
+This target establishes responsibility seams without choosing Run persistence technology, exact path, detailed Run schema/serialization, retention duration, detailed backup mechanism, ingress attestation mechanism, future request/wire version, retry/idempotency mechanism, dynamic service discovery, complex per-Run budgets, scheduler design, cache implementation, evaluation framework, physical process topology, or phase reallocation.
+
+Those questions must be settled only when concrete evidence and an owning bounded task require them. Their deferral does not weaken current exposure, egress, approval, credential-isolation, provider-governor, or service-boundary controls.

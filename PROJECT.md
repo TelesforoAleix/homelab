@@ -4,7 +4,7 @@ This file is the concise working contract for the Home Lab repository. Humans an
 
 ## 1. Purpose
 
-Home Lab is a learning-first, self-hosted AI infrastructure project. It progressively builds a modular platform where different interfaces can submit requests, different models or agents can process them, and controlled tools/services can execute work.
+Home Lab is a learning-first, self-hosted AI infrastructure project. It progressively builds a modular platform where different interfaces can submit requests, different models, executors or client-defined agents can process them, and controlled tools/services can execute work.
 
 The repository serves three purposes:
 
@@ -29,7 +29,7 @@ Canonical node:
 - Wi-Fi + Bluetooth
 - Purchased used for 700 DKK
 
-Role: orchestration, infrastructure, agents, databases/services, and project storage — not serious local LLM inference.
+Role: orchestration, infrastructure, execution, databases/services, and project storage — not serious local LLM inference.
 
 Primary development interface: MacBook Pro.
 
@@ -40,12 +40,13 @@ Remote workflow: SSH + SSH keys + Tailscale + VS Code Remote SSH.
 ## 4. Architecture principles
 
 - Remain model-agnostic.
-- Start with an explicit `interface -> router -> executor -> tool/model` architecture.
-- Build the simple mechanisms manually before evaluating large agent frameworks.
+- Start with simple deterministic `interface -> router -> executor -> tool/model` paths where they are sufficient. This is an initial learning model, not the complete current target architecture.
+- The accepted target is Run-centered: `client/interface -> ingress/canonical request -> Run -> semantic interpretation/WorkIntent -> planner -> orchestrator -> capability/policy/service resolution -> service -> tool/provider/executor` (ADR-050).
+- Build simple mechanisms manually and introduce abstractions progressively before evaluating large agent frameworks.
 - Keep storage/knowledge separate from the intelligence consuming it.
 - Increasingly containerize services where that improves reproducibility and isolation.
 - Do not make user-facing bot services root.
-- Separate privileged execution from interfaces and routers.
+- Separate privileged execution from interfaces and orchestration/control paths.
 - Gate destructive actions until an explicit safer control model exists.
 - Add infrastructure only when a concrete problem justifies learning/using it.
 

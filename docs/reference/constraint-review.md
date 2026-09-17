@@ -1,276 +1,111 @@
-# Constraint Review — do our accepted decisions still serve the target architecture?
+# Architectural Constraint Review
 
-- **Written:** 2026-09-11
-- **Status:** **Resolved 2026-09-11.** This review produced **ADR-037 – ADR-044**, all Accepted. It is
-  kept as the reasoning behind them, not as live analysis — the verdicts below are what was argued,
-  and the ADRs are what was decided. Where the two differ, the ADR is authoritative.
+- **Originally written:** 2026-09-11
+- **Reconciled:** 2026-09-17
+- **Purpose:** The forward-planning constraint set for roadmap reconciliation. It distinguishes
+  delivered facts, binding decisions, ADR-050/ADR-051 target requirements and deliberately deferred work.
+- **Authority:** Accepted ADRs govern. In their scoped successor areas, accepted
+  [ADR-050](../decisions/ADR-050-core-execution-contract.md) and
+  [ADR-051](../decisions/ADR-051-run-orchestration-state-boundary.md) take precedence over the historical
+  analysis below. [ADR-045](../decisions/ADR-045-roadmap-reshape.md) remains authoritative for phase
+  allocation until a later decision changes it.
 
-| Reviewed | Outcome |
+## How to use this review
+
+This is not a roadmap or implementation plan. A future roadmap/brief must respect every **still
+binding** and **binding but reinterpreted** constraint below. **Satisfied/delivered** entries are
+evidence and compatibility constraints, not missing work. **Historical** and **superseded** entries
+are retained to explain decisions but must not be used as present blockers. **Deferred/open** entries
+need an owning design/planning decision before implementation depends on them.
+
+The detailed deployed-state source is [current architecture](../architecture/current-architecture.md).
+The accepted destination is [target architecture](../architecture/target-architecture.md), governed
+by ADR-050 and ADR-051. [Project state](project-state.md) provides the concise delivery/planning summary.
+
+## Forward-planning constraints
+
+### Delivered system and compatibility
+
+| Status | Constraint future work must respect |
 |---|---|
-| A — ADR-032 content gate | **ADR-037** — encryption executed; gate discharged for an encrypted volume only |
-| B — ADR-025 §8 egress | **ADR-039** — a policy classified by whose data it is |
-| C — ADR-025 §9 owner-initiated | **ADR-040** — retired; budget replaces attribution |
-| D — ADR-020 console-less | **ADR-041** — premise corrected, rule kept, lockout-class redefined |
-| E — ADR-023 listening socket | **ADR-038 §5** — a bind policy; the bot's property survives |
-| F — ADR-031 §4 adoptability | **ADR-042** — readable, not packaged; configuration is the seam |
-| G — ADR-017 sequential phases | **ADR-043** — cross-cutting contracts and living specs |
-| H — ADR-033 §5 governor | Stands. Nested per-run envelopes at implementation |
-| I — ADR-034 services gap | **ADR-044** — capability grants nothing; client exposure checked first |
-
-The seven questions at the end were answered by the owner, and those answers are recorded in the
-ADRs' Decision and Alternatives sections rather than here.
-- **Companion to:** [`target-architecture.md`](../architecture/target-architecture.md)
-
-## Why this review exists
-
-The target architecture describes what the system should be. Most of our accepted decisions were
-taken for a smaller system — a node, a bot, a model helper — and several of them now constrain layers
-that did not exist when they were written.
-
-A constraint written for a bot is not automatically wrong for a harness. But it is not automatically
-right either, and the difference matters most now, while nothing has been built on top of it.
-
-**The test applied to each:** does this decision still protect what it was written to protect, and is
-that protection still worth what it costs the architecture?
-
----
-
-## A. ADR-032 §2 — the content gate
-
-**Says.** Until encryption is revisited and executed, the node must not hold the knowledge base, any
-project repository, product source or `ops/` record — *including a derived index or embedding*.
-
-**Costs the architecture.** Layers 5 and 6 cannot do their job on the node. And the collision is
-sharper than "one phase is blocked":
-
-> The target says Home Lab is **always running** and **holds the knowledge**.
-> The gate says the knowledge cannot be on the machine that is always running.
-
-Every workaround inherits that contradiction. Running the harness on the MacBook puts the knowledge
-on a laptop that is closed half the time, which is not an always-running central system — it is a
-personal tool with a server attached.
-
-**Is the protection still right?** The protection is real: an unencrypted disk in a shared building,
-on a machine with no attached monitor. Nothing about that has changed.
-
-**But "revisit" was deferred, not answered.** Phase 18 measured the ground and stopped:
-
-- the console exists and works, so **passphrase-at-boot is viable**;
-- the TPM is 2.0 and enrolment works, but only against the **SHA-1** bank;
-- the volume group has **zero free extents**, so an encrypted volume has nowhere to live.
-
-**Verdict: the gate is correctly placed and should not be loosened. The decision it defers should be
-taken.** Routing around it produces a system that contradicts its own definition. The honest options
-are a reinstall with full-disk encryption, adding storage for an encrypted volume, or accepting that
-the knowledge layer lives elsewhere permanently — and the third is a different architecture, not a
-workaround.
-
-**Question for the owner: 1, 2.**
-
----
-
-## B. ADR-025 §8 — what may leave the machine
-
-**Says.** The question, plus the literal output of `/status`. Nothing else. *"Widening this requires
-its own ADR."*
-
-**Costs the architecture.** Layer 6's entire job is deciding what the model sees, and under §8 the
-answer is "almost nothing". No retrieved document, no file, no repository content, no assembled
-context.
-
-**Is the protection still right?** Yes, and the reasoning is worth keeping: journal lines are written
-by other software, some of it network-reachable, so feeding them to a model means unbounded host data
-leaving, *selected by whatever can write a log line rather than by the owner*. That argument survives
-completely.
-
-**But §8 is an enumeration where the architecture needs a policy.** A list of two permitted items
-cannot express "project files the work item names, at a stated revision, with provenance, to an
-approved provider". Extending the list item by item would mean an ADR per content type forever.
-
-**Verdict: supersede, with a policy that preserves §8's reasoning.** The successor states *classes*
-of content, who selects them, to which providers, under what approval — and keeps the rule that
-content selected by something other than the owner or an approved agent never leaves. ADR-033 §6
-already names this as the immediate next decision.
-
-**Question for the owner: 3.**
-
----
-
-## C. ADR-025 §9 — owner-initiated only
-
-**Says.** Every model call traces to a message the owner just sent. Superseded by ADR-026 on
-2026-09-10: subscription providers may serve unattended calls **as an accepted risk**, per provider.
-
-**Costs the architecture.** Nothing directly — it is already lifted. But the thing it substituted for
-is still unanswered: **the licensing question**. §9 existed to keep subscription usage shaped like a
-human using their own subscription interactively.
-
-The scheduler makes this heavier, not lighter. "Always running, wakes on a schedule" is precisely the
-pattern §9 was written to avoid, and the accepted risk scales with how much autonomous work we do.
-
-**Verdict: not wrong, but the interim is load-bearing and should be made deliberate.** There is a
-clean rule available now that did not exist when §9 was written, because ADR-033 settled a metered
-provider:
-
-> **Unattended work runs on metered inference. Subscription inference serves attended work.**
-
-A paid API has no licensing ambiguity. That converts an accepted risk into a routing rule the model
-selector can enforce structurally — and it gives layer 7 a real input it does not currently have.
-
-**Question for the owner: 4.**
-
----
-
-## D. ADR-020 — change safety on a "console-less node"
-
-**Says.** The node has no console, so any change touching network, remote access, authentication,
-boot or the admin account must be classified before it is made.
-
-**The premise is now false.** Phase 18 found the node always had a console — `getty@tty1` active,
-connectors present, login authenticated at `seat0/tty1`. The monitor and keyboard were then removed,
-so the node is physically headless, but the console *capability* exists and has been tested as the
-recovery path.
-
-`AGENTS.md` still states flatly: *"The reference node has no console."*
-
-**Costs the architecture.** Little directly, but it distorts risk judgement in every phase that reads
-it. A change that is lockout-class with no recovery path is a different decision from one where
-recovery means walking to the machine with a monitor.
-
-**Verdict: the rule stands; the premise must be corrected.** Classification before change is right for
-a headless node regardless. Amend the premise and `AGENTS.md` so the recovery path is stated
-accurately, and keep the classification requirement exactly as it is.
-
----
-
-## E. ADR-023 — the bot has no listening socket
-
-**Says.** The Telegram bot long-polls, so it opens no listening socket. `ss -tln` was byte-identical
-to phase start.
-
-**Costs the architecture.** The harness is an **always-listening endpoint**. It will be the node's
-first real listening service, and the property ADR-023 protected cannot be preserved as stated.
-
-**Is the protection still right?** The intent was to add no network-facing surface. That intent is
-right and achievable; the specific mechanism — never listen — is not, once other machines and clients
-must reach the system.
-
-**Verdict: extend, do not discard.** The successor states a **bind policy**: loopback by default,
-tailnet-only where remote access is needed, never the shared LAN, never public. It interacts with
-ADR-019 (tailnet), the `ufw` rules already in place, and Phase 13. The measurable property becomes
-"every listening socket is accounted for and bound to a stated interface" rather than "there are
-none".
-
-**Question for the owner: 5.**
-
----
-
-## F. ADR-031 §4 — homelab must be independently adoptable
-
-**Says.** *"Someone else must be able to take `homelab` alone"* and run it on their own
-infrastructure. Made a validation criterion: each public repository needs a standalone quickstart.
-
-**Costs the architecture.** This is the least examined constraint and possibly the most expensive.
-Adoptability is an abstraction tax paid at every layer: configuration for things we have exactly one
-of, indirection around our own inference sources, and a knowledge layer that must work for a
-knowledge base that is not ours.
-
-For **Factory** the requirement is clearly right — it is method, it is fork-and-customise, and
-Phase 20.0 proved it by running from a clean clone.
-
-For **homelab** the case is much weaker. A personal AI operating system that holds *your* knowledge,
-routes to *your* inference sources and enforces *your* budgets is not a thing a stranger installs.
-
-**Verdict: challenge it.** The defensible version is narrower — **the method is public and
-readable; the system is not packaged for adoption.** That keeps ADR-021's publication decision and
-ADR-029's method/output boundary intact while removing an abstraction tax on every layer.
-
-**Question for the owner: 6.**
-
----
-
-## G. ADR-017 — self-contained sequential phases
-
-**Says.** Phases are self-contained and sequential. There is no separate planning context. Each phase
-writes its own brief and records cross-phase changes as ADRs.
-
-**Costs the architecture.** Governance — identity, budgets, approvals, audit, trust state — runs under
-all nine layers. In a strictly sequential model a cross-cutting concern is either built once and early
-against requirements nobody has yet, or rebuilt in every phase that needs it.
-
-There is already evidence of the strain: approvals, budgets, audit and identity were implemented in
-Phase 20.0 inside Factory Workbench, and the same concerns appear again in the Phase 23 brief for the
-harness. Two implementations of "what an approval is" is the same failure as two YAML parsers.
-
-**Verdict: amend, narrowly.** Sequential phases stay. Add that **cross-cutting concerns are built once
-as a shared contract and consumed by later phases**, and that a standing architecture document is a
-legitimate artifact rather than the separate planning context ADR-017 abolished. This review and the
-target architecture are already that artifact; the rule should catch up with the practice.
-
-**Question for the owner: 7.**
-
----
-
-## H. ADR-033 §5 — the spend governor
-
-**Says.** Four windows (hour, day, week, month), separate attended and unattended budgets, checked
-before the call, persisted, failing closed.
-
-**Costs the architecture.** Nothing — it is a floor, not a ceiling. But it was specified before
-decomposition existed, and **decomposition multiplies calls**: one request becoming nine steps is nine
-calls against a budget shaped for one.
-
-**Verdict: stands; extend at implementation.** Add per-request and per-step envelopes that nest inside
-the global windows, so a decomposed request cannot consume a day's budget by splitting itself. That is
-an extension of §5, not a contradiction of it.
-
----
-
-## I. ADR-034 — agents, capabilities and tools, but not services
-
-**Says.** Factory agents declare portable capabilities; backends provide concrete tools; mappings
-between them are human-approved security decisions.
-
-**Costs the architecture.** Layer 4 routes to **services** — web research, knowledge retrieval, code
-execution, a specialist agent. A service is a long-lived provider of a capability; a tool is a single
-callable action. ADR-034 covers agents, capabilities and tools, and is silent on services.
-
-**Verdict: a gap, not an error.** It will be filled correctly by whichever phase builds layer 4,
-provided the distinction is stated before then rather than discovered by conflating the two. The risk
-is a tool registry quietly becoming a service registry.
-
----
-
-## Summary
-
-| | Constraint | Verdict |
+| **Still binding** | Provider credentials remain in the model-helper. The harness, bot and operator account do not acquire them; socket-group and account boundaries remain enforcement boundaries (ADR-025, ADR-048, ADR-049). |
+| **Still binding** | The model registry/provider abstraction, configured eligibility, subscription caps, metered Vercel AI Gateway and persistent fail-closed spend governor are delivered controls. Callers do not select arbitrary providers or programs (ADR-026, ADR-033). |
+| **Still binding** | Listening sockets are accounted for and bound to their approved interface. Workbench and harness are loopback-only; Telegram remains outbound long-polling (ADR-038). |
+| **Still binding** | The Workbench runs as `aleix`; its systemd sandbox—not a dedicated account—is its accepted trust boundary. Its `ProtectHome`, strict root protection, restricted writable volume and no-`AF_UNIX` properties remain load-bearing (ADR-047). |
+| **Still binding** | Canonical project/knowledge content is on the encrypted `/srv/homelab` volume. Degraded-until-unlocked is normal. The root-resident harness audit and helper ledgers do not make root a canonical content store (ADR-037, ADR-046). |
+| **Satisfied/delivered compatibility** | Phase 23.0 provides a version-1, synchronous harness endpoint: closed-schema validation, declared client label, deterministic classification, required role key for served questions, forwarding, content-free audit and return-and-forget behavior. Telegram still calls the helper directly. These are current compatibility mechanisms, not the target contract. |
+| **Satisfied/delivered compatibility** | Factory Workbench owns project/workflow records and uses the delivered `homelab` adapter. The adapter proof remains valid. Factory’s existing pre-activation compatibility checks, including reporting missing requirements, remain its domain contract. |
+
+### Accepted target requirements not yet implemented
+
+| Status | Constraint future work must respect |
+|---|---|
+| **Binding but reinterpreted by ADR-050** | Home Lab core is agent-agnostic. Persistent agents, personas, teams, roles and workflows belong to clients/domains such as Factory; they may be context, never automatic runtime identity or authority. |
+| **Binding but reinterpreted by ADR-050** | Existing role-key routing remains compatibility. The future model-routing vocabulary separates client actor/persona, inference purpose/task requirements and provider/model route. Model or AI-derived complexity assessments are advisory only. |
+| **Binding but reinterpreted by ADR-050** | Home Lab owns the generic runtime capability vocabulary between planned work and eligible services. Capabilities describe implementation-independent abilities, are not permissions, and are distinct from tools and services. Factory may retain an independent portable/domain requirement vocabulary; its adapter maps it only when executing through Home Lab. |
+| **Binding but reinterpreted by ADR-050** | Factory restrictions validated at its adapter boundary continue to narrow the resulting Run. Factory workflow semantics, tickets, roles and Definition of Done do not become Home Lab primitives. |
+| **Binding, not yet delivered** | Every accepted new work request creates a durable Home Lab Run with an immutable objective. A waiting Run resumes on its required input; materially different work creates a new Run. Plan and Definition of Done may refine only within the accepted objective and binding requirements. |
+| **Binding, not yet delivered** | ADR-051 fixes the Run persistence/trust/availability boundary: the harness/orchestrator owns one generic Run lifecycle; content-minimized control state remains root-resident and available while `/srv/homelab` is locked; richer/sensitive content remains protected or domain-owned by reference. Root gains no volume-unlock capability, provider credential, bearer token, secret or authority-granting material. Unlock or dependency recovery requires revalidation, not automatic resume. Active/waiting control state is durable operational state; completed lifecycle history is durable audit/provenance state distinct from telemetry. |
+| **Binding, not yet delivered** | Planner and orchestrator are distinct logical responsibilities. The planner proposes outcome-oriented work; the orchestrator deterministically manages Run state, readiness, policy/scope checks, capability/service dispatch and replanning. They need not be separate processes. |
+| **Binding, not yet delivered** | An accepted plan does not authoritatively bind a concrete service, tool, model or provider. Resolution is `plan step -> runtime capability -> eligible service -> tool/provider/executor`. A service/process boundary needs an independent credential, privilege, resource/filesystem view, trust, state-lifetime, placement or availability/failure reason—not merely separation of code responsibilities. |
+| **Binding, not yet delivered** | The authority invariant is **AI proposes. Policy decides. Services enforce.** Initiating/delegated authority is a ceiling; validated client/domain restrictions and all downstream constraints only narrow it. Supplied/retrieved/model content, personas, planners, executors and other Runs cannot grant authority or rewrite provenance. Independently privileged services do not transfer their authority to callers. |
+| **Binding, not yet delivered** | Context selection remains within client exposure, Run/resource scope, egress/privacy policy and service boundaries. Retrieved/model-produced content remains untrusted. The current endpoint's client-supplied context pass-through is not the target context/provenance system. |
+| **Binding, not yet delivered** | Model-proposed operations remain inert until the separately implemented ADR-034 §13 checked-dispatch transition validates identity, scope, mappings, policy, target, budget and approvals. Immediate revocation and existing egress/provider controls survive. |
+
+### Phase and governance constraints
+
+| Status | Constraint future planning must respect |
+|---|---|
+| **Still binding** | ADR-043 preserves accepted-ADR precedence and permits living architecture specifications without treating them as a separate implementation phase. Completed handovers remain historical evidence. |
+| **Still binding** | ADR-045 retains phase numbers and assigns Phase 15 to routing, 15.0 to registry, 15.1 to gateway/governor, and Phase 23.0–23.3 to the former endpoint/understanding-result, decomposition-service-routing, context, and governance scopes respectively. No phase may silently claim another phase's scope. |
+| **Still binding** | ADR-050 and ADR-051 do not reallocate phases. The reconciled roadmap retains ADR-045's 23.1/23.2/23.3 ownership: 23.1 implements the minimal Run/orchestrator, planning and capability-routing seams; 23.2 owns context/provenance; 23.3 owns trusted authority and checked dispatch. Any changed allocation still requires an explicit successor decision, not a brief-level rewrite. |
+| **Satisfied/delivered** | The earlier collision over model routing, registry and gateway/governor was resolved by ADR-045 and delivered through Phases 15.0 and 15.1. It is not a roadmap blocker. |
+
+## Persistence mechanics and ingress decisions intentionally open
+
+The following are architectural seams, not permission to improvise an implementation:
+
+| Status | Open decision |
+|---|---|
+| **Deferred/open decision** | Persistence technology, exact path, detailed Run schema/serialization, retention duration and detailed backup mechanism. ADR-051 fixes the information-placement, ownership and locked-volume boundary without choosing these mechanics. |
+| **Deferred/open decision** | Trusted ingress/client attestation and the next request/wire/correlation version. The delivered `X-Homelab-Client` label is not identity or delegated authority. |
+| **Deferred/open decision** | Retry/idempotency, scheduler design, dynamic discovery, complex per-Run budgets, caching, evaluation, physical process topology and phase reallocation. These must preserve existing exposure, egress, approval and spend constraints. |
+
+## Historical resolution register
+
+The original 2026-09-11 review produced ADR-037–ADR-044. The table preserves each material
+conclusion and its current classification so an old premise is not reused as a future blocker. The
+accepted ADRs and completed handovers retain the contemporaneous detailed reasoning and evidence.
+
+| Original topic | Current classification | Current interpretation |
 |---|---|---|
-| A | ADR-032 §2 — content gate | **Correctly placed. Take the deferred decision** rather than routing around it |
-| B | ADR-025 §8 — egress | **Supersede** with a policy that preserves its reasoning |
-| C | ADR-025 §9 — owner-initiated | Lifted already; **make the interim deliberate** — unattended runs metered |
-| D | ADR-020 — console-less node | **Rule stands, premise is false.** Correct it, and `AGENTS.md` |
-| E | ADR-023 — no listening socket | **Extend** to a bind policy |
-| F | ADR-031 §4 — homelab adoptable | **Challenge.** Likely narrow to "public and readable, not packaged" |
-| G | ADR-017 — sequential phases | **Amend** for cross-cutting concerns and a standing architecture document |
-| H | ADR-033 §5 — spend governor | Stands; **extend** with nested per-request envelopes |
-| I | ADR-034 — services | **Gap.** State the service/tool distinction before layer 4 is built |
+| ADR-032 content gate | **Satisfied/delivered; still binding boundary** | ADR-037 delivered encrypted volume storage for canonical project/knowledge content. Do not treat the old absence of encrypted storage as a blocker; do keep encrypted-content and locked-volume constraints. |
+| ADR-025 §8 egress enumeration | **Binding but reinterpreted** | ADR-039's egress restrictions survive. ADR-050 generalizes the selection subject from an approved agent to an authorized Run/context-assembly path; content never grants egress authority. |
+| ADR-025 §9 owner-initiated calls | **Superseded** | ADR-026/ADR-040 replaced attribution with governed autonomous work. The delivered provider eligibility, caps and spend governor remain binding; complex per-Run allocation is deferred. |
+| ADR-020 console-less premise | **Superseded; safety rule still binding** | ADR-041 records the console-on-demand reality and retains the headless safe-change classification rule. |
+| ADR-023 no-listening-socket rule | **Satisfied/delivered and generalized** | ADR-038's bind/accounting policy governs listeners. The bot remains outbound-only; loopback Workbench and harness listeners are delivered. |
+| ADR-031 standalone adoptability | **Superseded/narrowed** | ADR-042 makes `homelab` public and readable rather than packaged for standalone adoption; Factory's clean-clone/workflow boundary remains meaningful. |
+| ADR-017 phase model | **Binding but reinterpreted** | ADR-043 retains sequential self-contained phases while recognizing cross-cutting contracts and living specifications. |
+| ADR-033 §5 governor | **Satisfied/delivered; still binding** | The Phase 15.1 governor is active. The old absence of a gateway/governor is not a blocker; governor failure remains fail-closed. |
+| ADR-034 agent/capability/service gap | **Binding but reinterpreted** | ADR-044 preserves exposure-before-subordinate-authorization. ADR-050 supersedes the generic agent/capability subject with agent-agnostic Runs, Home Lab runtime capabilities and meaningful service boundaries, while retaining Factory activation/compatibility obligations. |
 
-**Unchanged and not challenged:** ADR-011 (privilege separation), ADR-025 §1 (credential boundary),
-ADR-026 §4 (the agent declares a need), ADR-013, ADR-021, ADR-029 §2, ADR-030.
+## Concise checklist for roadmap replanning
 
-## Questions this review could not answer — all since answered
+Any new roadmap proposal must demonstrate that it:
 
-Kept as written. The answers are in ADR-037 – ADR-044.
+1. preserves current credential, account, socket, egress, encrypted-content, provider and spend
+   boundaries;
+2. distinguishes delivered Phase 23.0 compatibility from ADR-050 target behavior;
+3. implements no Home Lab system-agent, universal-role or Factory-owned-generic-capability premise;
+4. preserves Factory's workflow independence and restriction-narrowing when it uses Home Lab;
+5. treats durable Runs, trusted authority, implementation-neutral planning and capability-mediated
+   service resolution as target requirements, not existing components;
+6. allocates work consistently with ADR-045 or raises the required successor decision; and
+7. leaves deferred persistence mechanics, attestation, protocol and process decisions open until an owning,
+   evidence-based design task resolves them.
 
-1. **Encryption.** Reinstall with full-disk encryption, add storage for an encrypted volume, or accept
-   that knowledge lives off the node permanently? The third is a different architecture.
-2. If knowledge must live off the node for now, **is "always running" still a requirement**, or does it
-   become a target for after encryption?
-3. **What classes of content may leave the machine**, to which providers, under what approval?
-4. **Should unattended work run exclusively on metered inference**, leaving subscriptions for attended
-   work?
-5. **Which interface should the harness listen on** — loopback only with clients tunnelling, or
-   tailnet?
-6. **Does homelab need to be adoptable by anyone else**, or only public and readable?
-7. Should **cross-cutting governance be built once as a shared contract**, and where does it live —
-   given one implementation already exists inside Factory Workbench?
+## Historical questions
+
+The original review's seven owner questions were answered by ADR-037–ADR-044 and later delivery.
+They are not open questions now. The remaining open decisions are those listed in the storage,
+ingress and lifecycle section above.
