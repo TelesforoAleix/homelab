@@ -134,7 +134,9 @@ Use [`../templates/adr-template.md`](../templates/adr-template.md) for new recor
   attached by the runtime and never claimed by the model. **Changes ADR-025 §10** — a model's tool
   request becomes an untrusted request checked by the runtime rather than something architecturally
   inert — but only when tool-using agents are implemented. Records the reversal honestly: the review
-  first recommended homelab own the portable names, and the owner overruled it.
+  first recommended homelab own the portable names, and the owner overruled it. **ADR-050 later
+  scopes and qualifies ADR-034's generic Home Lab agent, role-routing and capability-ownership
+  clauses; ADR-034 remains accepted for the portions ADR-050 explicitly preserves.**
 
 - **[ADR-035](ADR-035-factory-workbench-and-execution-adapters.md) — Factory Workbench: Factory
   executes project operations, backends execute AI** (2026-09-11). **Refines ADR-031 rather than
@@ -289,3 +291,18 @@ were decided as one, and several only make sense together.
   `homelab-agent` account, its own key and alias, one `sudoers.d` file granting routine operator
   commands on `homelab-*` services and denying every lockout-class, secret and volume path by
   explicit line. Runbooks split into AGENT and OWNER blocks.
+
+- **[ADR-050](ADR-050-core-execution-contract.md) — The core Home Lab execution contract: durable
+  Runs, capabilities and client boundaries** (2026-09-16). **Accepted.** Defines an
+  agent-agnostic runtime, immutable Run objectives, separate planning and deterministic
+  orchestration, Home Lab runtime capabilities with independent client catalogues,
+  and policy-controlled execution/context selection. Partially supersedes specified clauses of
+  ADR-034/035/044, ADR-033's role-derived routing clause and ADR-039's selection subject. Preserves
+  delivered compatibility, infrastructure/security boundaries and ADR-045's phase allocation.
+
+- **[ADR-051](ADR-051-run-orchestration-state-boundary.md) — Run orchestration-state boundary:
+  split lifecycle control and protected content** (2026-09-17). **Accepted.** Defines one
+  harness-owned Run lifecycle with content-minimized root-resident control state and protected or
+  domain-owned content retained by reference. Preserves encrypted-content, no-unlock-capability and
+  Workbench sandbox boundaries while requiring safe restart, locked-volume and restore behavior;
+  persistence technology, schema and retention remain open.

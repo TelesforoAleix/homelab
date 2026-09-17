@@ -4,6 +4,61 @@ The roadmap is intentionally progressive. Phase numbers should remain stable. If
 
 Multiple `00-*` guides may exist for pre-development documentation.
 
+## Current planning checkpoint — architecture reconciliation
+
+**Status: planning only (2026-09-17).** ADR-050 and ADR-051 are Accepted; the target architecture, current
+architecture, project-state and constraint references have been reconciled. This roadmap records the
+approved future direction before implementation resumes. No future phase below has begun merely
+because its architecture is now specified.
+
+ADR-045 remains authoritative for phase ownership. In particular, Phase 23.1 remains one numbered
+phase, followed by 23.2 (context) and 23.3 (governance). ADR-050 refines their terminology and
+dependencies; it does not reallocate their scope.
+
+The next required planning artifact is a fresh Phase 23.1 brief. It must implement the accepted
+ADR-051 boundary without selecting more than the minimal persistence mechanics it needs. Completed
+handovers remain historical evidence; current delivered behavior is described
+in [`docs/architecture/current-architecture.md`](docs/architecture/current-architecture.md).
+
+### Forward dependencies and parallel branches
+
+```text
+23.1 Part A: minimal Run/orchestrator foundation
+  -> Part B: interpretation and planning
+    -> Part C: capabilities and deterministic service routing
+       -> 23.2: context/provenance
+       -> Phase 24: generic research service
+    -> Phase 15: target inference-requirement routing
+
+23.1 + 23.3: governed effectful execution
+  -> Phase 19 execution adapters
+    -> Home Lab execution integration in Phase 20
+
+Phase 10 ingestion/indexing -> 23.2 knowledge-context integration
+                             -> Phase 21 restructuring as appropriate
+Phase 22 follows real Run, routing, telemetry and governance state.
+Phases 14, 16 and 17 remain evidence-driven parallel branches.
+```
+
+This is not a complete serial order. It names architectural prerequisites only; independent data,
+client and infrastructure work may proceed when its own brief and boundaries permit.
+
+### Compatibility migration obligations
+
+Future briefs must preserve delivered contracts until explicitly versioned replacements exist:
+
+| Delivered compatibility | Future replacement/evolution |
+|---|---|
+| v1 synchronous request/response | Durable Run-aware request contract, beginning with Phase 23.1 Part A |
+| Declared client label | Trusted identity/attestation in Phase 23.3 |
+| Role route | Inference-purpose/task-requirement routing in Phase 15 after 23.1 Part B |
+| Factory v1 adapter and request-ID side channel | Versioned Run-aware adapter/correlation design when the compatibility path is replaced |
+| Factory agent-shaped requirements | Adapter translation to Home Lab runtime capabilities in 23.1 Part C; Factory retains its own vocabulary |
+| Client-supplied context pass-through | Scoped context/provenance assembly in 23.2 |
+| Inert model output | Checked executable operations only after Phase 23.3 permits them |
+
+Historical completed interfaces remain truthful while these migrations are pending.
+
 ## Phase 00 — Pre-development and repository bootstrap
 
 Purpose: establish project scope, hardware rationale, governance, repository structure, budget tracking, architecture baseline, and documentation standards before implementation.
@@ -40,7 +95,8 @@ at 2133 MT/s; `memtester 20G 1` all tests `ok`; no MCE/EDAC; every service and b
 before. Cost 700 DKK. The 8 GB module is kept as a spare. Two lessons recorded: a memory-stress
 test is a network outage on this node (3-minute DHCP leases on the shared network — run it from the
 console), and the first POST after a memory change is slow. Nothing else in the running order moved;
-**Phase 23.1 remains next**.
+the then-current next-phase wording is superseded by the architecture-reconciliation checkpoint
+above. No Phase 23.1 implementation has started.
 
 - Brief: [`docs/handovers/00.1-ram-upgrade.md`](docs/handovers/00.1-ram-upgrade.md)
 - Handover: [`docs/handovers/00.1-ram-upgrade-handover.md`](docs/handovers/00.1-ram-upgrade-handover.md)
@@ -243,7 +299,9 @@ Phase 02.
 
 ## Phase 10 — Knowledge / Second Brain
 
-Introduce file ingestion/indexing/retrieval while keeping source storage separate from agent intelligence. Begin with a simple RAG-style architecture before comparing more complex retrieval systems.
+Introduce file ingestion/indexing/retrieval while keeping source storage separate from runtime
+intelligence. Begin with a simple RAG-style architecture before comparing more complex retrieval
+systems.
 
 **Amended 2026-09-10.** The knowledge base has already recorded its own retrieval architecture
 decision, independently of this project, and this phase should **adopt it rather than re-derive
@@ -258,9 +316,9 @@ machine. **ADR-039 has since superseded ADR-025 §8** with a policy classified b
 the separate decision this anticipated has been taken — what leaves is now a classification question,
 not a per-feature ADR.
 
-**The Knowledge Contract ADR** is written in this phase, not before it: specifying how an agent
-queries the knowledge base before retrieval exists would be guessing. It implements ADR-010 as a
-queryable interface returning provenance, never raw filesystem access.
+**The Knowledge Contract ADR** is written in this phase, not before it: specifying how the runtime
+retrieves knowledge before retrieval exists would be guessing. It implements ADR-010 as a queryable
+interface returning provenance, never raw filesystem access.
 
 **Corrected 2026-09-10 (ADR-031).** This paragraph previously reserved the number ADR-030 for that
 contract. ADR-030 was subsequently used for the four-layer workspace, so the reservation was wrong.
@@ -285,6 +343,13 @@ example and never filled in:
 
 **All of it depends on 18.1 and 18.2**, not on ADR-032's gate being lifted — the gate is discharged
 for the encrypted volume, and that volume is where knowledge lives.
+
+**Reconciled 2026-09-17 (ADR-050).** Ingestion, indexing, canonical knowledge organization and the
+Phase 21 repository/storage work can proceed on their own data boundary when selected. Home Lab
+runtime integration is separate: `knowledge.retrieve` becomes a runtime capability/service exposed
+through Phase 23.1 Part C, and its selected information, provenance and step-context integration
+follow Phase 23.2. Do not serialize all knowledge work behind Phase 23, and do not make a Run the
+owner of canonical Brain data.
 
 **Inherited from Phase 01 — must be addressed, not inherited silently:**
 
@@ -316,8 +381,8 @@ a **notifier** that reports.
 Phase 18.1 is closed:** a clean reboot and a real power cut both produced the correct Telegram
 message, including the `LOCKED` state, unprompted; the failure alert fired on a real crash and not on
 a clean stop; nothing regressed (`1.3 OK`, `id homelab-bot` unchanged, 6 listeners). The scheduler
-**cannot reach a model** — `RestrictAddressFamilies` omits `AF_UNIX` — until Phase 15.1's two
-preconditions are met.
+**cannot reach a model** — `RestrictAddressFamilies` omits `AF_UNIX`. Phase 15.1 subsequently
+delivered gateway/governor controls but did not change this scheduler/watchdog boundary.
 
 - Handover: [`docs/handovers/12-scheduling-monitoring-notifications-handover.md`](docs/handovers/12-scheduling-monitoring-notifications-handover.md)
 - Guide: [`guide/12-scheduling-monitoring-notifications/`](guide/12-scheduling-monitoring-notifications/README.md)
@@ -374,7 +439,9 @@ Workbench account (**ADR-047**), rootless Docker, `fail2ban`, key expiry. **ADR-
 `docs/standards/service-security-baseline.md` is what Phase 15.0's units must meet. Two rows stay
 PREDICTED and are named in the handover: the ACL's other-device negative (no second tailnet device)
 and the published-port LAN negative (the building Wi-Fi isolates clients, so no host of ours can
-reach the node at L2 to test it). ~~**Phase 15.0 is next.**~~ ~~Phase 15.0 complete 2026-09-13; **Phase 23.0 is next**~~ Phase 23.0 complete 2026-09-13; **Phase 15.1 is next** (ADR-045 order: 15.0 → 23.0 → 15.1 → 23.1), once the owner has created the Vercel AI Gateway account and key. Handover:
+reach the node at L2 to test it). The sequence recorded in this completed handover is historical:
+15.0, 23.0 and 15.1 subsequently completed. Current future planning is the architecture-
+reconciliation checkpoint above. Handover:
 `docs/handovers/13-security-hardening-handover.md`.
 
 ### Phase 13.1 — Agent operator access
@@ -389,20 +456,24 @@ sudo-rs allows no wildcard inside an argument, which the installer's pre-landing
 by refusing the first draft before anything landed. The last phase run by owner-paste; from here
 runbooks are AGENT/OWNER. Handover: `docs/handovers/13.1-agent-operator-access-handover.md`.
 **Phase 15.1 resumed at S3 and completed the same day** — see its row under Phase 15 and
-`docs/handovers/15.1-gateway-and-spend-governor-handover.md`. **Phase 23.1 is next.**
+`docs/handovers/15.1-gateway-and-spend-governor-handover.md`. Its “23.1 is next” conclusion is a
+historical completion record; current planning is stated at the top of this roadmap.
 
 ## Phase 14 — Reproducibility / Infrastructure as Code
 
 Move toward rebuilding/replacing the M700 with minimal manual configuration using appropriate provisioning and deployment automation.
 
+**Status: Future.** Backup, restore validation and headless recovery work are already delivered in
+Phases 12, 13 and 18; this phase must not duplicate them. It remains an evidence-driven
+reproducibility branch, not a prerequisite for durable Runs or the core runtime.
+
 ## Phase 15 — Model Gateways & Routing
 
 Experiment intentionally with direct APIs, multiple hosted providers, unified gateways, cost/latency/quality routing, fallbacks, and observability.
 
-**Amended 2026-09-10 — promoted, and it has already accidentally started.**
-`services/model-helper/providers.py` is already a two-provider router with independent per-provider
-limits and fallback proved against a genuinely exhausted provider. What does not exist is models as
-*configuration* rather than two entries hardcoded in Python.
+**Historical starting point, amended 2026-09-10.** The model-helper then had a two-provider router
+with independent limits and fallback, but not models as configuration. Phase 15.0 subsequently
+delivered the registry/configuration; do not treat its former absence as future work.
 
 ADR-026 makes this phase load-bearing rather than exploratory: it is where the model registry, the
 `unattended` eligibility field, and task-class routing are built. **A sub-phase 15.0 can run before
@@ -413,8 +484,11 @@ configuration change rather than a rewrite.
 The refusal path must be proved with a fixture provider set to `unattended: false`, against a
 positive control. An eligibility check that has only ever permitted is unvalidated.
 
-**Layer 7 belongs to this phase (ADR-045 §4).** Phase 23 consumes it and does not rebuild it. Three
-pieces, in running order:
+**Layer 7 belongs to this phase (ADR-045 §4).** Phase 23 consumes the delivered provider
+infrastructure—provider abstraction, registry, gateway, governor, credentials/caps and current
+compatibility routing—and does not rebuild it. This does not make Phase 15's future
+inference-purpose/task-requirements routing evolution a prerequisite for Phase 23.1. Three pieces,
+in running order:
 
 | | Scope |
 |---|---|
@@ -425,29 +499,32 @@ pieces, in running order:
 **Cloud inference** is a provider question and belongs here rather than in Phase 16, which is about
 local GPU hardware.
 
-**Amended 2026-09-11, on ADR-034 §5.** The registry, the `unattended` field, the caps, the fallback
-and *"callers never name a model"* are all retained. What changes is the **router's input**, because
-ADR-034 removed `model_policy` from agents entirely. The statement this replaces is preserved:
+**Reconciled 2026-09-17 (ADR-050).** The registry, `unattended` eligibility, caps, fallback,
+provider abstraction and caller prohibition on naming a model remain. Phase 15.0/15.1 delivered
+those infrastructure controls; their role routes remain compatibility.
 
-> ~~it is where the model registry, the `unattended` eligibility field, and **task-class routing**
-> are built.~~
+The remaining Phase 15 work follows the minimal inference-purpose/task-requirements contract from
+Phase 23.1 Part B:
 
-The router instead receives the **agent role**, a **bounded task summary** rather than the full
-private task, **validated task metadata**, and capability/context characteristics. The role *is* the
-declaration of need, so **ADR-026 §4 is unchanged** — only its form is.
+```text
+inference purpose / task requirements
+  -> deterministic eligibility and routing policy
+  -> provider / model
+```
 
-**Priority, severity and complexity are hints, never selectors.** They cannot reach a model tier on
-their own and cannot bypass the pre-call budget check (ADR-033). An agent's claim about its own work
-is data, not an instruction; without this rule an agent routes itself to an expensive model by
-asserting that its task is hard.
-
-**Routing starts deterministic and keeps deterministic routing as the fallback.** The AI-assisted
-router is the *target*, and Phase 15.0 must not pretend to complete it. The
-[Phase 15.0 brief](docs/handovers/15.0-model-registry.md) predates this amendment and inherits it.
+Client actor/persona and provider/model route are separate concepts. AI-generated complexity or task
+assessments are advisory inputs: they cannot select a route or bypass eligibility, caps or the
+governor. Routing starts deterministic and retains deterministic fallback; AI assistance is a later
+improvement, not this phase's completion criterion. Phase 15 is not a prerequisite for Phase 23.1,
+and requires a refreshed brief before this target-routing work starts.
 
 ## Phase 16 — Local AI / CUDA Node
 
 If justified, add a separate NVIDIA/CUDA-capable node and experiment with local inference, quantization, serving, and potentially fine-tuning without forcing the orchestration node to become a GPU workstation.
+
+**Status: Future, evidence-driven.** If built, local inference is another provider/service path
+behind the existing provider boundary and future routing policy; it is not required for Runs or a
+reason to change the orchestration model.
 
 ## Roadmap rule
 
@@ -474,6 +551,10 @@ top of the interface, not the interface itself: it becomes worth having once the
 executor to talk to. Running order is expected to be after the foundations work (backup and the
 ADR-015 encryption decision), because voice notes and transcripts are the first data on this node
 that would be painful to lose or to have read.
+
+**Reconciled 2026-09-17 (ADR-050).** Voice is a future client/modality using the same
+request/Run/capability/result architecture when integrated. It does not create a universal Home Lab
+conversation/session primitive; any chat or thread continuity remains client-owned.
 
 ## Phase 18 — Foundations
 
@@ -577,65 +658,38 @@ under `NoNewPrivileges` on `127.0.0.1:8765`, tied to the volume by the pattern n
 All sixteen validation rows observed, including a locked reboot, a crash loop and the socket table
 (7, each named). The one real finding: `WorkingDirectory=` on the volume adds an implicit
 `RequiresMountsFor=` that runs before the Condition and fired a false alert — fixed, and in the
-standard. Docker's `data-root` stays on root. **Phase 13 is now next.** Handover:
+standard. Docker's `data-root` stays on root. The Phase 13-next wording is historical; Phase 13 is
+complete. Handover:
 `docs/handovers/18.2-migration-to-the-server-handover.md`.
 
-## Phase 19 — Tool Vocabulary & Capability Levels
+## Phase 19 — Bounded execution adapters and concrete tools
 
-Publish homelab's **named tool vocabulary and its capability levels** as a stable public interface,
-so a Factory manifest has something real to compose against.
+**Status: Future.** The earlier fixed five-tool vocabulary was rejected before implementation; its
+brief and review remain historical evidence. Home Lab now owns generic runtime capabilities under
+ADR-050, while concrete tools and executor adapters are designed only when observed runtime needs
+justify them. Factory's independent requirement vocabulary does not become this phase's vocabulary.
 
-**Added 2026-09-10 (ADR-031).** New numbers rather than a renumbering, per the roadmap rule above and
-the Phase 18 precedent.
+After the Phase 23.1 Part C capability/service seam exists, harmless or read-only bounded execution
+adapters may be explored where current boundaries permit. Examples of software execution may delegate
+bounded inner loops to Claude Code or Codex behind an execution adapter. This is separate from the
+existing model-helper provider-CLI path, which remains Phase 15 inference infrastructure.
 
-ADR-027 §3 already places the vocabulary in homelab, because homelab is what enforces it, and ADR-027
-§5 makes an unknown tool name a **hard load failure** rather than a warning. Together those make this
-phase the prerequisite for Phase 20 and Phase 22: a manifest written before the vocabulary exists
-either names tools that cannot load, or invents a vocabulary in the wrong repository.
-
-ADR-027's own validation list applies here — each item proved against a positive control, not
-observed to pass. **An authorisation check that has only ever permitted is unvalidated.**
-
-**Superseded and deferred, 2026-09-11.** The brief's design was rejected before implementation —
-see [`docs/handovers/19-tool-vocabulary-design-review-outcome.md`](docs/handovers/19-tool-vocabulary-design-review-outcome.md).
-Factory agents declare **portable capabilities**; Homelab maps them to concrete tools. A manifest
-naming Homelab tools could not load without Homelab, which contradicted ADR-031 §4.
-
-**This phase is no longer a prerequisite for anything.** The statement it replaces is preserved
-here as history rather than deleted (`PROJECT.md` §11):
-
-> ~~**Prerequisite for:** Phase 20, and through it Phase 22.~~
-
-**Tools are now designed only when concrete operational needs appear.** This phase resumes after
-real Factory workflows and the Homelab foundations produce those needs, and a **fresh brief must be
-written and committed first**.
-
-**Restated 2026-09-11, after ADR-034 and ADR-035.** The successor ADRs are now written and accepted,
-and they settle what this phase becomes. **ADR-034 §2** replaces the premise: Factory declares
-portable capabilities, homelab owns concrete tools and the approved capability-to-tool mappings, and
-homelab **publishes no concrete tool until it implements one for a real need**. **ADR-035 §8** voids
-ADR-031 §7's prerequisite outright.
-
-**The dependency inverts.** This phase no longer precedes Phase 20 — it follows the capability gaps
-that Phase 20.0 and Phase 23 actually observe. Publishing a vocabulary before a consumer existed to
-shape it is the failure this phase already demonstrated once, and the two tool names that could not
-run on the node (`read_repo`, `post_review`) came from ADR-027's own *example* manifest rather than
-from any workflow.
-
-When it resumes, its fresh brief defines concrete homelab tools and their mappings under ADR-034 §7's
-independent **effect / minimum approval / availability / target scope** properties — not the scalar
-`READ`/`PRIVILEGED` level — plus capability advertisement, the pre-activation compatibility check
-(ADR-034 §6), and planted refusal controls against **real** consumers.
-
-- Brief: [`docs/handovers/19-tool-vocabulary.md`](docs/handovers/19-tool-vocabulary.md) — committed
-  before implementation per ADR-017. Proposes a **five-name** vocabulary (`read_host_status`,
-  `ask_model`, `restart_service`, `read_repo`, `post_review`), keeps ADR-025's two locks shut, and
-  specifies the planted positive control that proves the refusal actually fires.
+Generic effectful or project-modifying execution requires Phase 23.3's trusted-authority and
+checked-dispatch transition. A fresh brief must identify the observed capability need, concrete
+effect, resource scope, approval/policy requirements, service boundary and planted refusal controls.
+Dynamic tool discovery and a native Home Lab coding loop are non-goals initially.
 
 ## Phase 20 — Factory Rewrite
 
 Rewrite The Factory: **keep the content, discard the markdown-heavy format** (ADR-031 §7). The format
 was designed for a different environment than the one Factory now has to run in.
+
+**Reconciled 2026-09-17 (ADR-050).** Factory-internal workflow, catalogue, personas/agents, tickets,
+UI and project-specific semantics may proceed when their own dependencies permit. Home Lab execution
+integration is distinct: Factory maps its requirements at the adapter boundary and uses governed
+Home Lab runtime execution only after the applicable capability and Phase 23.3 authority boundary
+exist. Do not move Factory semantics into Home Lab or make Factory's internal model depend on Home
+Lab capability names.
 
 **Nothing is to be written into the current format** in the meantime.
 
@@ -659,12 +713,14 @@ the first half becomes **Phase 20.0** below rather than a renumbering.
 | | Phase 20.0 | Phase 20 |
 |---|---|---|
 | Deliverable | Minimal Factory Workbench + the synthetic acceptance project | Intensive Workbench development + full catalogue/content migration |
-| Prerequisite | ADR-034, ADR-035 — **both accepted, so this is unblocked now** | Phase 23, the homelab AI foundation |
+| Prerequisite | ADR-034, ADR-035 — **both accepted, so this is unblocked now** | Factory-internal work follows its own dependencies; governed Home Lab execution integration requires the relevant Phase 23.1 capability seam and Phase 23.3 authority boundary |
 | Proves | That Factory stands alone (ADR-031 §4) | That Factory's content survives the format change (ADR-031 §7) |
 
-**Phase 20 proper is the larger half and it now runs late**, after the homelab AI foundation exists.
-Converting ten thousand lines of prose into a loadable operating model before the harness that
-consumes it is built would shape the conversion around a guess.
+**The Home Lab-integration-heavy portion of Phase 20 proper is the larger half and runs late**, after
+the homelab AI foundation exists. Factory-internal workflow, catalogue, UI, personas/agents,
+tickets and project-specific semantics may proceed independently when their own dependencies are
+satisfied. Converting ten thousand lines of prose into a loadable operating model before the harness
+that consumes it is built would shape the integration around a guess.
 
 **Also in scope: retiring Factory's parallel plan.** Everything is managed through one internal
 system — homelab. One `ROADMAP.md`, one progress record. Factory's own `roadmap.md` V0–V4 series and
@@ -702,9 +758,10 @@ committed to. Phase 20 proper redesigns it once homelab is further developed, an
 something currently works is not a reason to keep its shape — the same standing the pre-Workbench
 dashboard had when this sub-phase started.
 
-**Carried forward, and not to be silently inherited:** the **adapter interface is unproved** — it has
-one implementation, the deterministic fake, so ADR-036's second-adapter equivalence check has not
-run. Phase 23 builds the first real backend and is where that is discovered.
+**Historical Phase 20.0 limitation, not to be silently inherited:** at that phase's close, the
+**adapter interface was unproved** — it had one implementation, the deterministic fake, so
+ADR-036's second-adapter equivalence check had not run. Phase 23.0 later delivered and proved the
+first real `homelab` adapter; this limitation is therefore historical, not a current interface gap.
 
 **Added 2026-09-11.** Unblocked now: its only prerequisites are ADR-034 and ADR-035, both accepted.
 
@@ -718,9 +775,10 @@ where ADR-031 §1's reason survives, and it is the one thing this phase may not 
 acceptance test, the development fixture, the learning example, and the environment where refusals
 are planted and proved. Its fourteen accepted steps are enumerated in the brief's §4.1.
 
-**Only the deterministic fake adapter is fixed.** Which real adapter ships first is deliberately open
-(ADR-035 §4). The fake comes first regardless, because an acceptance test that needs a live model is
-not repeatable.
+**At the Phase 20.0 close, only the deterministic fake adapter was fixed.** Which real adapter
+would ship first was deliberately open (ADR-035 §4). Phase 23.0 later delivered and proved the first
+real `homelab` adapter. The fake nevertheless remains the repeatable acceptance baseline because a
+test that needs a live model is not repeatable.
 
 **This is the phase that discharges ADR-031 §4's outstanding criterion** — *"each public repository
 needs a standalone quickstart. None currently has one."* The proof is the synthetic project running
@@ -768,6 +826,11 @@ is its sequencing, and the earlier statement of it is left in place rather than 
 
 **Until this phase runs, the private `brain` stays as it is, under its current name, in active use.**
 No rename, no extraction, no content migration in the meantime.
+
+**Reconciled 2026-09-17 (ADR-050).** Repository/storage restructuring remains coupled to Phase 10's
+knowledge organization, not to generic Run implementation. Later Home Lab runtime use of
+`knowledge.retrieve` is a capability/service concern from Phase 23.1 Part C, with selected
+provenance and step-context integration in Phase 23.2. Canonical Brain data remains Brain-owned.
 
 `aleix-brain`'s history is **not** rewritten and its visibility does **not** change. Extraction is
 done with git operations, never by copying — the ADR-029 and ADR-030 §5 precedent.
@@ -824,8 +887,10 @@ requires it to serve. **The ADR this phase was waiting for now exists** — ADR-
 deployment: Tailscale-only, with application authentication and secure sessions, and **public
 exposure is out of scope** (ADR-035 §7).
 
-**Depends on Phase 23** for the runtime state it displays, and on **Phase 20.0** for the project
-record schema. Building against the pre-rewrite schema would be work done twice.
+**Depends on real runtime state**, including Runs/step correlation, routing and service telemetry,
+node state, and applicable governance/configuration state, plus **Phase 20.0** for the project record
+schema. It is downstream of execution rather than its prerequisite. Structured telemetry begins with
+Phase 23.1 Part A and grows with the runtime phases; automated evaluation remains later work.
 
 **Factory's `roadmap.md` plans the same deliverable itself** — V1.5, *"Read-Only Local Management
 Dashboard"*, and V3, *"Local Dashboard Control Plane"*. **Both are superseded by this phase**
@@ -836,92 +901,97 @@ was closed: there is one plan, and it is homelab's. Retiring the V-series entrie
 
 ## Phase 23 — Homelab AI Foundation
 
-Build the **AI execution harness** — the thing that makes homelab more than a gateway with a router
-in front of it.
+Build the generic Home Lab execution and orchestration foundation. ADR-045's ownership remains:
+23.0 is delivered endpoint compatibility; 23.1 owns decomposition/service routing; 23.2 owns
+context; 23.3 owns governance. ADR-050 supplies the accepted terminology and target contract, and
+ADR-051 supplies the accepted Run persistence/trust/availability boundary.
 
-**Added 2026-09-11. A new number rather than a renumbering**, per the roadmap rule above and the
-Phase 18 precedent. **This is the one genuinely new structural entry in the post-ADR-034/035
-reconciliation**; everything else was a rewrite of an existing phase. It exists because the design
-review's dependency outline contains a block of work with no home on this roadmap, and leaving it
-unplaced would leave Phase 20 and Phase 22 depending on something unnamed.
-
-The owner's defining sentence for homelab's scope, recorded in the design review:
-
-> **Homelab is an AI execution harness.** It performs the context selection, task decomposition,
-> retrieval decisions, per-call model selection and controlled execution that a tool such as Codex or
-> Claude Code normally performs *internally*.
-
-That is the measure of what belongs here. When Claude Code decides which files to read, whether to
-search the repository for a sub-question, how to break a request into steps, and which model serves
-each one — those decisions are homelab's.
-
-Scope, and **where each piece already has a home**, so this phase adds rather than duplicates:
-
-| Piece | Home |
+| Part / phase | Status and scope |
 |---|---|
-| Provider/gateway integration and the spend governor | **ADR-033**; Phase 15 |
-| Model registry, eligibility, caps, fallback | **Phase 15.0** — already briefed |
-| Deterministic routing, then AI-assisted, deterministic retained as fallback | **Phase 15** (amended above) |
-| Retrieval and the Brain specialist's project-facing contract | **Phase 10**; content lives in the encrypted volume (ADR-037) |
-| **Task decomposition** | **here** — no existing phase |
-| **Context assembly and cache-prefix discipline** | **here** — no existing phase |
-| **Budgets, audit, approvals as runtime machinery** | **here** — no existing phase |
+| **23.0** | **Complete.** The loopback v1 endpoint, Factory adapter and content-free audit are delivered compatibility. They are not durable Run semantics, trusted identity, generic planning or service routing. |
+| **23.1** | **Future.** One phase with Parts A–C below. It owns the minimal Run/orchestrator foundation, interpretation/planning, capability resolution and deterministic service routing. |
+| **23.2** | **Future.** Context assembly, provenance and safe continuity for planning/replanning. |
+| **23.3** | **Future.** Trusted authority, governance, approvals/revocation where applicable, and checked dispatch before new effectful generic execution. |
 
-**The cache economics are engineered, not inherited.** The favourable numbers observed in the owner's
-measured week are a property of *those harnesses'* stable-prefix discipline, not of the models they
-call. A homelab harness earns them only by designing for them deliberately — recorded here because it
-is the assumption most likely to be made silently and found false late.
+Layer 7 remains Phase 15. Knowledge data/retrieval remains Phase 10 and web research Phase 24; this
+phase provides their runtime service/context seams rather than duplicating their data work.
 
-**Budgets are two limits, not one** (design review): a monetary limit for metered providers and a
-model-call limit for subscriptions and unknown-cost providers. The first limit reached stops
-execution and raises a project-inbox request. Unknown cost stays `unknown` and is never replaced with
-a confident estimate.
+### Phase 23.1 — decomposition and service routing
 
-**This phase is where ADR-034 §13 takes effect** — a model's tool request becoming an untrusted
-request checked by the runtime rather than something architecturally inert. Until then ADR-025 §10
-stands as written and the Phase 09 canary check still applies. **It is the single largest security
-change on this roadmap** and its validation list is ADR-034's, each item proved against a planted
-positive control.
+**Status: Future.** A fresh brief is required before implementation. The existing v1 `task` refusal,
+declared client label, required role key and synchronous return remain compatibility until a versioned
+migration replaces them. Phase 23.1 proceeds through three internal parts, not new numbered phases.
 
-**Split into four sub-phases, 2026-09-11 (ADR-045 §5).** It spanned five layers plus the spend
-governor, which is not a phase — it cannot write one brief, hold one Definition of Done, or hand over.
-Split by layer, because that is where the research boundaries fall:
+#### Part A — minimal Run/orchestrator foundation
 
-| | Layers | Scope |
-|---|---|---|
-| **23.0** | 1, 2, 9 | The always-running endpoint; entry from every client; request classification; result handling. **Includes the Workbench→homelab adapter**, which finally tests the adapter interface Phase 20.0 left unproved. **Complete 2026-09-13** — `homelab-harness.service` as its own account on `127.0.0.1:8766` (eighth socket, 1.3, up after a locked reboot); ADR-048 accepted; **the adapter interface is proved** (§8.1.3 run locally and on the node). Five real calls, 0 €. Brief `docs/handovers/23.0-endpoint.md`; handover `docs/handovers/23.0-endpoint-handover.md` |
-| **23.1** | 3, 4 | Decomposition and service routing, with **ADR-044**'s client exposure policy — a declared capability grants nothing. **Inherits from 23.0:** the refused `task` class (`needs_decomposition`, rules T1–T4) as its seam — work-shaped instructions are refused until decomposition exists; `client` as a label; `role` required at the endpoint; the Telegram deferral and what would change it |
-| **23.2** | 6 | Context assembly and the stable-prefix discipline, under **ADR-039**'s egress policy |
-| **23.3** | governance | Identity, budgets, approvals and audit as harness machinery, and the **ADR-034 §13 transition** — the largest security change on this roadmap |
+The Run persistence/trust/availability boundary is **resolved by ADR-051**. One
+harness/orchestrator-owned lifecycle uses content-minimized root-resident control state for identity,
+lifecycle, restart/reboot recovery, correlation and opaque waiting/blocking visibility while the
+encrypted volume is locked. Richer/sensitive content remains protected or domain-owned by reference;
+root gains no volume-unlock capability. Unlock or dependency recovery requires revalidation rather
+than automatic resume. This does **not** select persistence technology, exact path, schema,
+serialization, retention duration, retry/idempotency or process topology.
 
-**Layer 7 is not here** — it is Phase 15's (ADR-045 §4). **Layer 5 is not here** — knowledge is
-Phase 10's and web research is Phase 24.
+The first slice chooses the minimal persistence mechanism consistent with ADR-051, defines the
+bounded Run control representation, and accepts every new work request as a durable Home Lab Run
+with immutable objective, minimal Run/step identity and correlation, and a deterministic orchestrator
+for a single-step lifecycle. It implements recovery across harness/server restart, locked-volume
+waiting/blocking and safe revalidation before resume. Minimal telemetry correlation begins here;
+telemetry is not the authoritative lifecycle record. Information supplied to a waiting Run resumes
+that Run; a materially different objective requires another Run.
 
-**Depends on Phase 20.0**, which is **complete** and produces the first real consumer, and on
-**Phase 18.2** for a Workbench that runs where the harness does. **Feeds Phase 19**, whose concrete
-tools should follow the capability gaps these sub-phases actually observe.
+Non-goals: multi-Run dependency graphs, sophisticated retry/idempotency, distributed workflow
+infrastructure, advanced autonomy and complex budgeting.
 
-- Brief: [`docs/handovers/23-homelab-ai-foundation.md`](docs/handovers/23-homelab-ai-foundation.md)
-  — committed before implementation per ADR-017, 2026-09-11.
+#### Part B — semantic interpretation and planning
 
-**Both gates that constrained this phase are now resolved** (2026-09-11). ADR-037 puts knowledge and
-project content in an encrypted volume on the server, ADR-038 places every component there and binds
-the harness to loopback, and ADR-039 replaces ADR-025 §8's enumeration with a policy. The brief's
-§0.1 and §0.2 — which framed *where the harness runs and what may leave* as an open checkpoint — are
-**superseded in part**; the brief predates the ADRs and is due to be rewritten with this phase's
-split.
+Interpret requests into WorkIntent or explicit ambiguity/missing-information states. The planner
+produces the smallest sufficient, outcome-oriented plan; one-step plans are normal. Plan/step
+contracts state work, constraints and completion expectations. Concern-driven replanning remains
+within the immutable objective and binding requirements.
 
-The statement they replace is preserved rather than deleted:
+The planner does not authoritatively choose a service, tool, model or provider. This part establishes
+the minimal inference-purpose/task-requirements contract that later Phase 15 routing consumes.
 
-> ~~**Two accepted gates constrain this phase's own core capability**: **ADR-032 §2** keeps project
-> content off the node, and **ADR-025 §8** permits only the question and the `/status` figures to
-> leave. Neither blocks the phase; both shape it.~~
+#### Part C — runtime capabilities and deterministic service routing
 
-**The spend governor comes first** (ADR-033 §5) — no metered call is possible before it exists.
+Establish Home Lab's generic runtime capability vocabulary and an initial static/configured registry.
+The orchestrator resolves plan-step requirements through capabilities to eligible services and accepts
+structured service results, blockers and concerns. Capability remains distinct from authority,
+service and tool. Dynamic service discovery is out of scope.
+
+### Phase 23.2 — context assembly
+
+Assemble only the minimal planning context where needed and step-scoped execution context thereafter.
+Record provenance for client/project/domain references and retrieved, external or derived information.
+Retrieved/model-produced information remains non-authoritative; context continuity need only support
+the Run and replanning, not persistence or injection of complete project/conversation histories into
+every prompt.
+
+Knowledge and research can develop independently on their own data/service boundaries. Their Run
+integration uses this phase's context/provenance contract. Cache implementation remains deferred.
+A fresh brief is required before implementation.
+
+### Phase 23.3 — governance and checked authority transition
+
+Establish the generic authority boundary: trusted client identity/attestation, delegated-authority
+ceiling, validated client/domain restrictions, Run scope/policy checks, authorization provenance,
+and revocation/approval semantics where applicable. It also implements the checked transition from a
+proposed operation to executable operation.
+
+Until this boundary is delivered, newly introduced generic Home Lab paths remain read-only,
+no-effect or text-returning within existing safe boundaries. Generic project modification must not
+precede this checked authority transition. A bounded trusted-ingress/delegated-authority design and a
+fresh brief are required before implementation.
+
+Phase 23 depends on the delivered Phase 20.0 adapter proof and Phase 18.2 placement. It feeds Phase
+19 from observed runtime needs; its future v1 replacement requires a versioned Run-aware
+request/Factory-adapter migration design.
 
 ## Phase 24 — Web Research Service
 
-A service that searches the web, fetches pages, and returns extracted content **with provenance**.
+A generic Home Lab `external.research` capability/service that searches the web, fetches pages and
+returns extracted content **with provenance**.
 
 **Added 2026-09-11 (ADR-045 §6). A new number, because this had no phase anywhere on the roadmap** —
 the gap was found by mapping the layers, and it is a layer 5 source the architecture names explicitly.
@@ -935,10 +1005,11 @@ Scope:
   arms the action gate (target architecture, layer 6), and URL safety, size limits and explicit
   degraded responses are part of the service rather than of its callers.
 - Reached through layer 4, so **ADR-044**'s client exposure applies: which clients may run research at
-  all is a policy decision, not an agent capability.
+  all is a policy decision, not a client capability grant.
 
-**Depends on 23.1** for service routing. Independent of the knowledge work — this is the *other*
-information source.
+Service work depends on Phase 23.1 Part C's capability/service seam. Full selection into Run context
+and provenance continuity align with Phase 23.2. It remains independent of Phase 10's knowledge data
+work and is not client-specific.
 
 ## Repository split (not a numbered phase)
 
@@ -989,6 +1060,10 @@ exist today — it is the *target* it no longer describes.
 edits — the rule that note set for itself. It is superseded by **ADR-045**, which reshaped the roadmap
 around the [target architecture](docs/architecture/target-architecture.md)'s nine layers.
 
+**Historical running-order record.** The completed/future statements below describe the 2026-09-11
+plan and later completion annotations. The current ADR-050-aware dependency map is the architecture
+reconciliation checkpoint at the top of this roadmap; this note does not name the next phase.
+
 Like its predecessors, this is an assessment of **running order**, not a decision about scope.
 
 ### What changed
@@ -1034,8 +1109,9 @@ second implementation. **Complete 2026-09-13; the interface is proved.**
 
 **6. Phase 15.1 — Gateway and spend governor.** Together, per ADR-033 §5. The first real money.
 **Complete 2026-09-13.** $0.0000422; the governor proved by refusal, by breaking it, and by
-reconciliation to nine decimals. **23.1 is next.** *(Phase 00.1 — the RAM upgrade — ran on
-2026-09-14 between 15.1 and 23.1 as hardware work outside this order; it moved nothing.)*
+reconciliation to nine decimals. The then-planned successor was 23.1. *(Phase 00.1 — the RAM
+upgrade — ran on 2026-09-14 between 15.1 and 23.1 as hardware work outside this order; it moved
+nothing.)*
 
 **7. Phase 23.1 — Decomposition and service routing.** Where ADR-044's client exposure becomes code.
 
@@ -1076,7 +1152,8 @@ with key-only SSH and Docker, a read-only Telegram bot behind a two-allowlist bo
 executor behind that, a console and a verified backup, and Factory Workbench running a fourteen-step
 project loop from a clean clone.
 
-They did **not** build the AI system. The node runs one read-only status bot, holds zero repositories,
-and **no agent has ever executed anything through the harness, because there is no harness**. Twelve
-complete phases can read as most of the way there; the phases carrying the system's purpose — 18.1,
-23.0–23.3, 15.x, 10.x — are all still ahead.
+They did **not** build the ADR-050 target runtime. This historical sentence predates the delivered
+harness, encrypted-volume migration, registry and governor: the node now has those compatibility
+and infrastructure components, but does not yet have durable Runs, generic planning/orchestration,
+context assembly, trusted authority or generic execution. The current architecture and checkpoint
+above are authoritative for what remains.

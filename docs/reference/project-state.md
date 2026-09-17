@@ -2,198 +2,81 @@
 
 - **Project:** Home Lab
 - **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
-- **Architecture decisions, 2026-09-11 (ADR-037 – ADR-044, all Accepted).** Eight decisions taken as
-  one set after the constraint review. **Encryption is executed, not deferred** — root stays
-  unencrypted and a LUKS volume holds knowledge and projects, unlocked over SSH via Tailscale, which
-  removes the TPM and its SHA-1 weakness from the design; root is **ext4**, verified on the node, so
-  the shrink path exists. **Everything runs on the server**; the MacBook is a client, and the harness
-  binds loopback only because every client is local. **Egress becomes a policy** classified by whose
-  data it is. **Autonomous calls are normal**, with budget replacing attribution and the licensing
-  position recorded as an accepted judgement. **The node has a console on demand** — ADR-020's premise
-  was false and `AGENTS.md` asserted it; both corrected. **`homelab` is readable, not packaged**, with
-  configuration as the seam and `brain` holding the knowledge. **Cross-cutting concerns are specified
-  once and implemented per scope**, and living specs are legitimate artifacts that decide nothing.
-  **A declared capability grants nothing** — which services a client may reach is checked first.
-- **Target architecture:** [`target-architecture.md`](../architecture/target-architecture.md) (2026-09-11) — what the
-  system is meant to **be** when finished: nine request layers, governance under all of them, clients
-  (Telegram, scheduler, Factory, voice) that are **not** layers. Written because the roadmap answers
-  *what next* and the ADRs answer *what was decided*, and neither answered *what is this*. It records
-  **five gaps** — request understanding, service routing, **online research (in no phase anywhere)**,
-  cloud inference, result handling — and **three collisions**, chiefly Phases 15/15.0/23 all claiming
-  model routing. **Reshaped 2026-09-11 by ADR-045**: every layer now names exactly one owning phase,
-  the five gaps have homes — including **Phase 24, web research, which had no phase anywhere** —
-  Phase 23 is split into 23.0–23.3, Phase 12 is repurposed rather than absorbed, and Phase 11 is
-  superseded. **Phase 18.1 — encryption execution — was first and needed the owner at the machine.
-  Complete 2026-09-12.** See [`constraint-review.md`](constraint-review.md), which produced ADR-037 –
-  ADR-044, and **ADR-046** (Accepted 2026-09-12), which closes the credentials-on-root gap ADR-037 §6
-  recorded and did not close.
-- **Current phase:** 00.1 — RAM upgrade (**complete**, 2026-09-14). A hardware sub-phase inserted
-  out of the running order; nothing else is reordered. **The node has 32 GB**: 2 × 16 GB Kingston
-  `KVR26S19D8/16` in both channels at 2133 MT/s, the 8 GB module removed and kept as a spare.
-  Proved by `dmidecode`, `free` (30 GiB), `memtester 20G 1` (all 16 tests `ok`, 2 h 07 min) and a
-  clean kernel log; boot, Wi-Fi, the watchdog notice, the unlock and every service back as before.
-  **Cost 700 DKK**; running total 1,599 DKK. Two things learned: a memory-stress test takes this
-  node off the network (3-minute DHCP leases on the shared network; run such tests from the
-  console), and the first POST after a memory change is slow (17.0 s, memory training). The
-  `poweroff` path, never before observed by the watchdog, classifies as `clean reboot`. **Phase
-  23.1 remains next.** Handover:
-  [`00.1-ram-upgrade-handover.md`](../handovers/00.1-ram-upgrade-handover.md).
-- **Previous phase:** 15.1 — The metered provider and the spend governor (**complete**, 2026-09-13).
-  **Metered access exists and costs are no longer zero.** The Vercel AI Gateway is reached by
-  `GatewayProvider` with a key under `LoadCredential=` (root, `0600`, revocable in one click —
-  revoked and replaced during the phase); one route, `utility` → `openai/gpt-5.6-luna`; `/ask` and
-  the endpoint's `execution-agent` route stay on the subscriptions, free. **The governor exists and
-  is proved on the node**: refusal before egress in every window, attended/unattended independent,
-  fail-closed twice for real (a 403 and a 400 each settled at the reserved maximum), persistent,
-  releasing on provider refusal. **Reconciled to the dashboard to nine decimals: $0.0000422** for
-  four provider-reaching calls; the ledger's fail-closed total (`$0.002615850`) is shown beside it.
-  ADR-033's holding check re-run and passing; ADR-046 row 7 OBSERVED; ADR-049 §4 amended — *a step
-  that spends money is OWNER-fired even when AGENT-runnable* (the permission layer refused the
-  executor's paying call; the owner fired the staged script). Debts to Phase 15 by name: the 400
-  mapping, price drift. **Phase 23.1 is next** (ADR-045 order). Handover:
-  [`15.1-gateway-and-spend-governor-handover.md`](../handovers/15.1-gateway-and-spend-governor-handover.md).
-- **Previous phase:** 13.1 — Agent operator access (**complete**, 2026-09-13). **The executor runs
-  the node's routine steps itself.** `homelab-agent` (uid 994): its own key, `ssh homelab-agent`,
-  `/bin/bash`, no password, own group only, `AllowUsers aleix homelab-agent`; `/etc/sudoers.d/homelab-agent`
-  is a `NOPASSWD` **list** of 172 entries — sudo-rs allows no wildcard inside an argument, which the
-  installer's pre-landing `visudo` proved by refusing the first draft — covering seven `homelab-*`
-  units, the read set, two configs, two ledgers, `data-volume.sh status`, with every lockout-class
-  and credential path denied by name. Sixteen rows OBSERVED; **row 12 by the executor in its own
-  session**, including the refused `cat gateway-key`. Backup PASS with the two new paths. Runbooks
-  are now AGENT/OWNER (`service-security-baseline.md` §7); landing a sudoers file has its own row in
-  `safe-changes-headless.md`. Phase 15.1 resumed at S3 with its runbook rewritten in that form.
-  Handover: [`13.1-agent-operator-access-handover.md`](../handovers/13.1-agent-operator-access-handover.md).
-- **Before that:** 23.0 — The endpoint (**complete**, 2026-09-13). `homelab-harness.service` — its
-  own account on `127.0.0.1:8766`, the eighth socket, score 1.3, up after a locked reboot. Layer 1
-  attaches origin and refuses identity claims by name; layer 2 classifies deterministically into four
-  classes and serves one; layer 9 forwards with `role` as the only routing key and writes a
-  content-free audit line. **ADR-048 accepted**: the helper's socket belongs to the group
-  `homelab-model`, members the bot and the harness. **The adapter interface is proved** — Phase
-  20.0's `§8.1.3` check run on the fake and on the `homelab` adapter, locally and on the node, records
-  differing only in `Result` fields (2026-09-13). Five real calls, 0 €. **Phase 15.1 is next**
-  (ADR-045 order), with one dependency: the owner creates the Vercel AI Gateway account and key before
-  its brief is written. Handover addressed to 15.1, 23.1, 23.2, 23.3, 19 and 14:
-  [`23.0-endpoint-handover.md`](../handovers/23.0-endpoint-handover.md).
-- **Previous phase:** 15.0 — Model registry and routing (**complete**, 2026-09-13). Models are
-  configuration: `config.json` is `providers → models`, a `routes` table and a `default_route`; the
-  caller asks by routing key (`role`), never by model; `unattended` eligibility per provider is
-  enforced before the cap reservation and **proved by refusal against a positive control**, on the
-  MacBook and on the node; an owner floor (`caps.owner_reserve`, half) that unattended work cannot
-  spend; hints on the wire logged and provably unable to select. `/ask` unchanged from Telegram,
-  captured live, including with the volume locked. No new listener, account, group, dependency or
-  unit-file change (score 3.8). **Phase 23.0 is next** (ADR-045 order). Handover addressed to 15.1,
-  23.0 and 14:
-  [`15.0-model-registry-handover.md`](../handovers/15.0-model-registry-handover.md).
-- **Earlier:** 13 — Security hardening (**complete**, 2026-09-13). See
-  [`13-security-hardening-handover.md`](../handovers/13-security-hardening-handover.md) and the
-  Phase 13 section below.
-- **Earlier:** 18.2 — Migration to the server (**complete**, 2026-09-12). **The four layers are
-  on the node inside the encrypted volume, and the Factory Workbench runs there as a service on
-  loopback, reached only through `ssh homelab-workbench`.** Five clones at `/srv/homelab`, one
-  node-side GitHub key, one new listening socket (`127.0.0.1:8765`, named); the 18.1 probe is
-  retired and `homelab-workbench.service` is the canary of
-  [`docs/standards/volume-dependent-services.md`](../standards/volume-dependent-services.md). All
-  sixteen validation rows observed, including a locked reboot and a crash loop. **Phase 13 is next**
-  — the node now runs a web service. See the Phase 18.2 status table below.
-- **Previous phase:** 12 — Scheduling, monitoring and notifications (**complete**, 2026-09-12). **The node
-  reports its own recovery, and the unlocked-at-boot gap Phase 18.1 opened is closed.**
-  `homelab-watchdog.timer` fires one oneshot unit 90 s after every boot; it classifies the previous
-  stop from PID 1's journal (`Shutting down.` present → clean reboot, absent → unplanned — not `last
-  -x`, which this Ubuntu no longer ships), computes downtime from `journalctl --list-boots`, reads the
-  volume's lock state unprivileged, and sends exactly one of four literal messages to Telegram through
-  `homelab-notify.sh`. `OnFailure=` drop-ins on the bot and the model helper (and on the watchdog
-  itself) page the owner through the same script when a unit dies — the *"nothing reports the bot
-  dying"* line in `current-architecture.md` is struck. **Observed 2026-09-12:** three boots (enable,
-  `sudo reboot`, mains pulled), three correct messages including `LOCKED`, both classifier branches
-  live; the alert fired on a real crash (15 `SIGKILL`s, seven alerts — one per crash, not one at the
-  start limit) and not on a clean `stop`; the model helper refused at the kernel (`Errno 97`, no
-  `AF_UNIX`); nothing regressed (`1.3 OK`, `id homelab-bot` unchanged, 6 listeners, `running`). Zero
-  cost, no package, no ADR. The scheduler **cannot reach a model** until Phase 15.1's governor lands
-  and a new ADR names it a client (ADR-044 §4). Handover:
-  [`12-scheduling-monitoring-notifications-handover.md`](../handovers/12-scheduling-monitoring-notifications-handover.md).
-- **Previously:** 18.1 — Encryption execution (**complete**, 2026-09-12). **ADR-037 is true on the
-  machine, not only on paper.** Root shrunk to 64 GiB; a 128 GiB LUKS2 volume (`ubuntu-vg/data` →
-  `homelab-data` → `/srv/homelab`) exists in the freed extents, opens with the passphrase, refuses
-  without it; **11,116 extents (43.42 GiB) deliberately left free** in the volume group, closing the
-  zero-free-extents item Phase 02 found; a real power-cut test passed — the node returned unattended,
-  reachable, locked, and the bot answered `/status` while it was; a volume-dependent unit started
-  while locked was skipped, not failed, with the reason in the journal; nothing regressed (`1.3 OK`,
-  `id homelab-bot` unchanged, 6 listeners). **ADR-046** (Accepted) decides the gap ADR-037 §6 left
-  open: the credentials still on root stay there, an accepted risk, constrained so none of them can
-  open the volume. **ADR-032's content gate is discharged for this volume** — Phase 18.2 and Phase 10
-  may now put knowledge and project content there; the unencrypted root still may not hold it. Handover:
-  [`18.1-encryption-execution-handover.md`](../handovers/18.1-encryption-execution-handover.md).
-- **Previously:** 20.0 — Minimal Factory Workbench (**complete**, 2026-09-11). **Factory
-  Workbench executes.** The deliverable is in the public `factory` repository — the first phase whose
-  code lands outside this one. A CLI write engine, a loopback-only server in front of it, and the
-  existing read-only dashboard turned writable. Proved from a **clean clone with no homelab
-  installed**, which discharges **ADR-031 §4** by demonstration. Produces **ADR-036**. ~~**The adapter
-  interface is unproved** — one implementation only; Phase 23 inherits that risk.~~ **Proved by Phase
-  23.0, 2026-09-13**: the `homelab` adapter is the second implementation, and the §8.1.3 check run
-  on the node showed records byte-identical apart from `Result` fields.
-- **Previously:** 18 — Foundations (**complete**, 2026-09-11). The node now has a tested
-  console as its recovery path, a verified backup, and **ADR-032**, which reaffirms ADR-015 and
-  turns its "no sensitive data at rest" premise into an explicit gate: **no knowledge base, no
-  project content and no private repository on the node** until encryption is revisited and
-  executed. Phase 21 and Phase 10 inherit that as a hard precondition. The Definition of Done is
-  satisfied in full, `guide/18-foundations/` included.
-- **Previously:** 09 — Model Executor, subscription-backed (complete, 2026-09-09). **Next,
-  restated 2026-09-10 after ADR-031 added Phases 19-22:** the pending work runs on two parallel
-  tracks. The **node track** needs the owner at the keyboard; **Phase 18 is complete**, leaving Phase 13
-  and Phase 14 (backup, the ADR-015 encryption decision, an SSH recovery path); nothing reaches the
-  node until it lands. The **architecture track** needs no node access. **Restated 2026-09-11:** Phase 19 was
-  **superseded before implementation** and is on no critical path — see
-  `docs/handovers/19-tool-vocabulary-design-review-outcome.md`. **Restated 2026-09-11:** the
-  successor ADRs are **written and accepted** — **ADR-034** replaces ADR-027 in full and **ADR-035**
-  refines ADR-031 — and **the roadmap reconciliation they required is done**. Phase 20 split into
-  **Phase 20.0** (minimal Factory Workbench, unblocked today) and Phase 20 (intensive development and
-  catalogue migration, now late); **Phase 22** became the homelab administration dashboard rather
-  than a move; **Phase 19** inverted to follow observed capability gaps; **Phase 15** was amended off
-  `model_policy`; and **Phase 23 — Homelab AI Foundation** was added, the one new structural entry,
-  for harness work that had no home. The Sequencing note of 2026-09-11 supersedes its predecessor in
-  full. **Phase 20.0 is complete** (2026-09-11) and the
-  **Phase 23 brief is committed**, so Phase 23 is ready to start. Its §0.1 records that two accepted
-  gates constrained the harness's own core capability. **Both are now resolved** — ADR-037 puts
-  knowledge and projects in an encrypted volume on the server, ADR-038 places every component there,
-  and ADR-039 replaces the egress enumeration with a policy. **The brief predates those ADRs and is
-  superseded in part.** **ADR-033 §5's spend governor does not exist and no metered
-  call is possible until it does.** Its deliverable lands in `factory`, not
-  here. Reading Factory at `97ccb86` found the read half already built — an 864-line **read-only**
-  `dashboard/` — and found that a browser page cannot create a worktree, commit, run tests or open a
-  pull request, which is the brief's §6.1 decision. **ADR-033** settled the metered
-  provider (Vercel AI Gateway), and its spend governor is a precondition for any paid call. The repository split is **done on the development
-  machine**; its node half is gated by Phase 18 and its brain half is deferred into Phase 21. See
-  the Sequencing note at the end of `ROADMAP.md`, which supersedes this summary if they disagree.
-  Voice was **moved out of Phase 09 to Phase 17** at the owner's request; the roadmap records the
-  reason rather than being quietly rewritten.
-- **Architecture decisions taken 2026-09-10**, ahead of Phase 18 and carried into its brief per
-  ADR-017: ADR-026 (multi-provider model access), ADR-027 (the agent contract — **superseded in full
-  by ADR-034** on 2026-09-11), ADR-028 (the project contract) and ADR-029 (repository topology). These define how this repository — the **AI OS** —
-  relates to a separate public `factory` repository holding agent, skill and workflow definitions,
-  and to private repositories holding knowledge and products. **ADR-030 (2026-09-10) implemented
-  the split on the development machine and added a fourth layer, `projects/`** — see below. The node
-  is untouched: no repository has been cloned onto it, because that is gated by Phase 18.
-  **ADR-031 (2026-09-10, amended the same day)** then made privacy a per-artifact rather than a
-  per-repository decision, stated the layer boundary as *Factory declares, homelab enforces, projects
-  accumulate, brain supplies*, put **one plan and one progress record in homelab**, and fixed agent
-  manifests as **JSON**. Its repository change — a new public `brain` holding knowledge-base method —
-  is **deferred and coupled to Phase 10**, so the repositories that exist today are unchanged by it.
-  **ADR-035 (2026-09-11) refines it in part**: Factory is no longer specification-only, because
-  Factory Workbench executes project operations while the configured backend executes AI. Nine of
-  ADR-031's eleven sections are untouched.
-- **Repository:** [`github.com/TelesforoAleix/homelab`](https://github.com/TelesforoAleix/homelab) —
-  **public** since 2026-09-09 (ADR-021). MIT for code, CC BY-SA 4.0 for documentation.
-- **Reference node:** Lenovo ThinkCentre M700 Tiny
-- **Target OS:** Ubuntu Server 26.04.1 LTS (ADR-014)
-- **Current implementation state:** Ubuntu Server 26.04.1 LTS on the reference node, administered
-  entirely remotely. `ssh homelab` reaches it over Tailscale by MagicDNS name, authenticated by an
-  Ed25519 key; passwords, keyboard-interactive and root login are all refused. VS Code Remote SSH
-  works. Docker Engine and Compose are installed, with no persistent containers running. Claude Code
-  and Codex are installed as interactive `aleix`-scoped tools and authenticated through existing
-  subscriptions; neither is a service. **The node now runs its first service**: a read-only Telegram
-  status bot as the unprivileged `homelab-bot` account, long-polling so it opens **no listening
-  socket**. **The monitor and keyboard have been physically removed** — the node is genuinely
-  headless and cold-boots to a reachable state in 24.4s.
+
+## Current delivered state
+
+The reference node runs the delivered Home Lab and Factory system. The concise operational source
+of truth is [current architecture](../architecture/current-architecture.md); completed handovers
+remain the evidence for each delivery.
+
+- Factory Workbench runs on loopback under `aleix` and uses the Phase 23.0 harness endpoint. ADR-047
+  deliberately retains this account because its systemd sandbox is the Workbench trust boundary; a
+  dedicated Workbench account is neither accepted nor currently planned.
+- The harness is a version-1, synchronous compatibility endpoint: it validates a closed schema,
+  labels a declared client origin, deterministically classifies the request, forwards supported
+  questions by role key, and keeps a content-free audit record. It does not own durable Home Lab
+  Runs or generic planning/orchestration.
+- Telegram remains a separate, direct model-helper client. It has not been migrated through the
+  harness.
+- The model-helper owns the delivered registry/role routing, Claude and Codex provider adapters,
+  Vercel AI Gateway support, count caps and the persistent fail-closed spend governor. Provider
+  credentials remain isolated there. Docker is installed, but is not the core runtime path and has
+  no persistent containers.
+- Persistent operational state exists: Factory project/workflow records, harness audit records,
+  provider count/spend ledgers, and encrypted-volume project/Brain data. These records are not the
+  generic durable Run lifecycle defined for the target.
+
+## Accepted target and architecture governance
+
+[ADR-050](../decisions/ADR-050-core-execution-contract.md) and
+[ADR-051](../decisions/ADR-051-run-orchestration-state-boundary.md) are **Accepted** and govern
+their scoped successor decisions. ADR-050 defines an agent-agnostic Home Lab target in which a canonical request
+creates a durable Run; planner and orchestrator are distinct logical responsibilities; and an
+implementation-neutral plan resolves through Home Lab runtime capabilities to eligible services.
+Factory remains a client/domain system that owns its own workflow semantics and may retain an
+independent requirement vocabulary.
+
+ADR-051 completes the Run persistence-boundary architectural gate: one harness/orchestrator-owned
+lifecycle uses content-minimized root-resident control state while richer/sensitive content remains
+protected or domain-owned by reference. Root gains no volume-unlock capability; unlock or dependency
+recovery requires revalidation rather than automatic resume. This is accepted target architecture,
+not a deployed durable-Run implementation.
+
+These are accepted target decisions, not claims that they are deployed. Existing role routing and
+Phase 23.0's return-and-forget behavior remain compatibility mechanisms until later work replaces
+them. [Target architecture](../architecture/target-architecture.md) is the living specification;
+ADR-045 remains authoritative for phase allocation.
+
+## Current planning status
+
+The project is in documentation/design reconciliation; implementation of the ADR-050/ADR-051 architecture
+is out of scope. The current sequence is:
+
+```text
+accepted ADR-050 + ADR-051
+  -> reconciled target architecture
+  -> reconciled current architecture
+  -> current-state/reference reconciliation
+  -> roadmap and phase replanning
+  -> reconciled ADR-051 propagation into living planning/reference documents
+  -> fresh Phase 23.1 brief
+  -> implementation later
+```
+
+The fresh Phase 23.1 brief is the next required planning artifact; implementation has not begun.
+
+Persistence technology, exact path/schema, retention duration, retry/idempotency, process topology,
+trusted ingress/client attestation, a future request/wire correlation version, and any phase
+reallocation remain unresolved design/planning matters. This reference does not select their
+implementation or ordering; ADR-050, ADR-051, the living architecture documents and ROADMAP govern
+the applicable decisions.
+
+## Historical snapshots and phase records
+
+The sections below preserve completed-phase evidence, dated decisions and prior planning context.
+Their dated "next", gap and risk statements describe the point at which they were written; they do
+not override the current summary above, ADR-050, the living architecture documents or future
+roadmap reconciliation.
 
 ## Phase 01 status
 
@@ -275,9 +158,11 @@ pipeline and the RAG system, not before them. **Until then the existing private 
 is, under its current name, in active use** — no rename, no method extraction, no content migration.
 That work is Phase 21.
 
-## Accepted high-level decisions
+## Historical high-level decisions (2026-09-11 snapshot)
 
-See `docs/decisions/` for full ADRs. Current direction includes:
+This snapshot records the accepted direction at that point. It does not override the current
+summary, later accepted ADRs or the living architecture documents. See `docs/decisions/` for the
+full records.
 
 - used budget hardware as the reference platform;
 - M700 as orchestration/infrastructure node;
@@ -311,7 +196,11 @@ See `docs/decisions/` for full ADRs. Current direction includes:
   properties; and **ADR-027's human ceiling is reversed for service specialists**, which may hold
   narrow independent authority and run unattended — safe only because delegation does not transfer
   access and the *receiving* agent validates every agent-to-agent request. **ADR-034 §13 changes
-  ADR-025 §10** when tool-using agents are implemented, and not before;
+  ADR-025 §10** when tool-using agents are implemented, and not before. **Later qualification:**
+  ADR-050 supersedes or qualifies this snapshot's generic Home Lab agent, role-routing and
+  capability-ownership assumptions. The current target separates client actor/persona from
+  inference purpose/task requirements and policy-selected provider/model routes; Factory's domain
+  requirements and activation rules remain Factory concerns;
 - **Factory Workbench executes Factory project operations; the configured backend executes AI and
   concrete tools** (ADR-035, 2026-09-11, refining ADR-031 §1 — nine of its eleven sections are
   untouched). Workbench lives in Factory, holds **no homelab credential, model registry or tool
@@ -531,7 +420,11 @@ executed on branch `phase/12-work` in a separate worktree.
 | Cost | 0 DKK |
 | Residual | `homelab-notify@.service`'s own failure is unwatched (recursion guard, by decision); multi-recipient delivery untested (one owner); ~~`systemctl poweroff` path untested (only `reboot` was)~~ — **observed 2026-09-14 (Phase 00.1): `clean reboot. Down ~41m`**, the marker is written on a power-off too |
 
-## Open risks carried forward
+## Historical risk register
+
+The following is the accumulated risk record from completed phases. It preserves the original
+findings and closures; current architectural status is summarized above and in
+[`current-architecture.md`](../architecture/current-architecture.md).
 
 > **The repository is now public.** Everything below is publicly documented. That is intentional for
 > a reference implementation, and the controls are real — SSH is key-only with `PermitRootLogin no`
@@ -799,9 +692,13 @@ The block is retained as the record of what was expected, not as an outstanding 
 3. Sequencing is the owner's call. Phase 02 (Linux Fundamentals) is next by number; Phase 03 (Remote
    Access) closes Phase 01's principal open risk — SSH password authentication.
 
-## Starting state for the next phase
+## Historical deployment snapshot (through Phase 23.0)
 
-Re-verified 2026-09-09 at the close of **Phase 09**; the socket, harness and services rows updated at the close of **Phase 23.0** (2026-09-13).
+Re-verified 2026-09-09 at the close of **Phase 09**; the socket, harness and services rows were
+updated at the close of **Phase 23.0** (2026-09-13). This snapshot is retained as evidence for that
+point in time. It predates Phase 15.1's delivered gateway/governor state and is not the current
+topology reference; use [`current-architecture.md`](../architecture/current-architecture.md) for
+current deployed state.
 
 | Fact | Value |
 |---|---|
