@@ -22,6 +22,30 @@ documentation-only close-out. Phase 23.1 was not delivered. Work toward it exist
 unpublished local branch, had not completed its node proof or handover, and was deliberately
 discarded rather than merged or described as partial delivery.
 
+### Final architecture and overengineering review
+
+On 2026-09-17, immediately before closure, a read-only review compared the repository—including the
+in-flight Phase 23.1 Part A branch—with contemporary agent frameworks and retrieval/tooling
+ecosystems. Its conclusion was not that version one had already reinvented LangGraph or another
+agent framework. The delivered credential boundary, registry, fail-closed governor, systemd
+sandboxing, encrypted-volume design, egress policy and audit controls were appropriately custom
+platform/control-plane work. The in-flight Part A Run-store design also addressed a project-specific
+locked-volume and recovery boundary that generic framework checkpointing did not satisfy.
+
+The review located the reinvention risk ahead: implementing Parts B/C, context, tools and research
+literally as a generic graph runtime, custom tool protocol and custom retrieval stack. It proposed
+keeping policy, lifecycle, routing, provenance and checked dispatch custom while placing in-step
+workflow and retrieval machinery behind framework/library adapters, with MCP considered as a future
+tool/service boundary. It also identified the documentation effort as the project's present
+overhead: extensive ADR, roadmap, brief and contract material governed a comparatively small
+standard-library implementation.
+
+The review recommended finishing Part A before drawing that framework boundary. The owner later
+chose a different stopping point: close version one, discard the unpublished branch and evaluate
+what belongs in version two separately. This ADR records that reversal rather than implying the
+review recommended abandonment. Its framework and MCP proposals are evidence available to version
+two, not accepted v1 decisions or automatic successor requirements.
+
 ## Decision
 
 1. This repository is **Home Lab version one**. Active development ended on 2026-09-18.
@@ -49,9 +73,11 @@ discarded rather than merged or described as partial delivery.
 
 ### Complete Phase 23.1 before closing
 
-Rejected. Completion would require deployment, disruptive recovery proofs, documentation and a
-handover for functionality the owner no longer intends to develop in this repository. Calling the
-existing branch complete would violate the Definition of Done.
+Rejected after the final architecture review had recommended it. Completion would require
+deployment, disruptive recovery proofs, documentation and a handover for functionality the owner no
+longer intends to develop in this repository. Calling the existing branch complete would violate
+the Definition of Done. The owner preferred a clean v1 boundary and a separately designed version
+two over finishing code solely to reach the previously planned stopping point.
 
 ### Merge the unfinished Phase 23.1 work for preservation
 

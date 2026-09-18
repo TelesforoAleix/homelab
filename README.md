@@ -63,6 +63,14 @@ particular, v1 does **not** contain durable Home Lab Runs, general decomposition
 context assembly, capability-based service routing or governed generic tool dispatch. Phase 23.1
 was not delivered.
 
+A final read-only architecture and overengineering review did **not** find that the delivered v1
+system was needlessly rebuilding an agent framework. Its credential isolation, provider registry,
+fail-closed spend controls, systemd boundaries, encrypted storage and local policy enforcement solve
+Home Lab-specific platform problems. The review found the larger reinvention risk in the unbuilt
+roadmap—generic workflow graphs, tool protocols and retrieval machinery—and identified the weight of
+the documentation/governance process itself as the cost already being paid. Closing v1 preserves
+the useful platform work without committing version two to that future complexity.
+
 Use these documents to distinguish fact from intent:
 
 | Question | Source |
