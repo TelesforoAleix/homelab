@@ -1,5 +1,10 @@
 # Instructions for AI Agents
 
+> **Repository status:** Home Lab version one closed on 2026-09-18 (ADR-052). There is no current
+> phase and no next roadmap item. Read `docs/handovers/project-closure.md` before proposing any
+> change; do not resume unfinished phases or treat the target architecture as an implementation
+> instruction.
+
 Read these files before material work:
 
 1. `PROJECT.md`

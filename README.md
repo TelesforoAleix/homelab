@@ -1,5 +1,13 @@
 # Home Lab
 
+> [!IMPORTANT]
+> **Version 1 closed on 2026-09-18.** This repository is preserved publicly as a historical,
+> educational and reproducible reference; it is no longer under active development. The completed
+> system, guides, decisions and failures remain useful, while future roadmap items and the target
+> architecture were not all implemented. Version two is being developed as a separate project; a
+> link will be added when it has a stable public location. Start with the
+> [closure handover](docs/handovers/project-closure.md).
+
 **Home Lab** is a learning-first, self-hosted AI systems laboratory built on inexpensive hardware.
 
 The project explores how interfaces, agents, model providers, tool execution, knowledge retrieval, automation, infrastructure, security, and eventually local AI fit together. The goal is not to rush toward a single finished assistant. The goal is to understand the layers by building them progressively, replacing components intentionally, and documenting the trade-offs.
@@ -17,7 +25,8 @@ Current known hardware:
 - Bluetooth
 - Purchase price: **700 DKK used**
 
-This machine is intentionally **not** a local-LLM workstation. Hosted AI models are used first. A separate NVIDIA/CUDA node may be added later if local inference becomes relevant.
+This machine is intentionally **not** a local-LLM workstation. Version one used hosted AI models;
+a separate NVIDIA/CUDA inference node was considered but not added.
 
 ## Who this project is for
 
@@ -27,8 +36,8 @@ This repository is aimed at people with a business and some technical background
 
 - [`guide/`](guide/) — explanation-first material for people reproducing and learning from the project.
 - [`docs/`](docs/) — concise operational truth about the reference implementation: architecture, decisions, build history, costs, state, and handovers.
-- [`PROJECT.md`](PROJECT.md) — the working contract for humans and AI agents contributing to the repository.
-- [`ROADMAP.md`](ROADMAP.md) — planned implementation phases.
+- [`PROJECT.md`](PROJECT.md) — the historical working contract used to govern version one.
+- [`ROADMAP.md`](ROADMAP.md) — completed phases and unfinished historical plans.
 
 ## Project philosophy
 
@@ -41,49 +50,48 @@ This repository is aimed at people with a business and some technical background
 7. Keep `main` in a known-working state.
 8. Optimize the reference build for affordability and learning, not maximum compute.
 
-## Current status
+## Final version-one status
 
-**Phases 00–09 complete.** Next: **foundations** — backup, plus the disk-encryption decision left
-open in ADR-015.
+Version one closed with a real reference system running on the node. It includes the Linux and
+remote-administration foundation, Docker conventions, a Telegram control surface, credential-
+isolated model access, multiple configured providers, fail-closed spend controls, encrypted project
+storage, backup and recovery evidence, monitoring and notifications, security hardening, Factory
+Workbench, and a loopback Home Lab harness endpoint.
 
-| Phase | State |
+The project stopped before the accepted Run-centered target architecture was implemented. In
+particular, v1 does **not** contain durable Home Lab Runs, general decomposition and planning,
+context assembly, capability-based service routing or governed generic tool dispatch. Phase 23.1
+was not delivered.
+
+Use these documents to distinguish fact from intent:
+
+| Question | Source |
 |---|---|
-| 00 — Repository bootstrap & planning | ✅ Complete |
-| 01 — Ubuntu Server on the reference node | ✅ Complete |
-| 03 — Remote access (SSH keys, Tailscale, VS Code) | ✅ Complete — run ahead of 02 by choice |
-| 02 — Linux fundamentals | ✅ Complete |
-| 04 — Git & GitHub fundamentals | ✅ Complete |
-| 05 — Docker & Docker Compose | ✅ Complete |
-| 06 — AI CLI Access | ✅ Complete |
-| 07 — Telegram interface | ✅ Complete |
-| 08 — Router & executors | ✅ Complete |
-| 09 — Model executor (subscription-backed) | ✅ Complete |
-
-The reference node runs Ubuntu Server 26.04.1 LTS, is administered entirely remotely over Tailscale
-with key-only SSH, and has **no monitor or keyboard attached**. Docker Engine and Compose are
-installed, with no persistent containers running.
-
-You can message the node from a phone and get an answer: host status, one allowlisted service
-restart, or a question passed to a model. See [`ROADMAP.md`](ROADMAP.md) for what comes next and
-[`docs/reference/project-state.md`](docs/reference/project-state.md) for the verified current
-state — which is written from live output, never from intent.
+| What did v1 achieve and why did it close? | [`docs/handovers/project-closure.md`](docs/handovers/project-closure.md) |
+| What was actually delivered? | [`docs/architecture/current-architecture.md`](docs/architecture/current-architecture.md) |
+| What was planned but unfinished? | [`docs/architecture/target-architecture.md`](docs/architecture/target-architecture.md) and the historical [`ROADMAP.md`](ROADMAP.md) |
+| What was observed on the reference node? | [`docs/reference/project-state.md`](docs/reference/project-state.md) |
+| Why was the project closed? | [`ADR-052`](docs/decisions/ADR-052-close-version-one-and-preserve-the-repository.md) |
 
 ## How it works
 
-Everything the node does for its owner runs through one chain, built one layer per phase:
+Version one ended with two principal request paths, built progressively across the phases:
 
 ```text
-Telegram  →  Router  →  Executor  →  /proc, systemctl, or a model
-(interface)  (one          (one job     (the thing that
-             auth check)    each)        actually does it)
+Factory Workbench → loopback harness endpoint → model-helper → configured provider
+Telegram bot --------------------------------→ model-helper → configured provider
 ```
 
-**The interface** is a Telegram bot — a systemd service running as its own account, `homelab-bot`,
-which owns nothing and can log in nowhere. It uses long polling, so **the node opens no listening
-socket for it**: the connection is outbound. `ss -tln` reports the same six listeners it did before
-the bot existed, and `:22` is the only one reachable off-box.
+The harness is a synchronous v1 compatibility endpoint, not the Run-centered orchestrator described
+by the unfinished target architecture. Telegram remains a separate direct client of the model
+helper.
 
-**The router** holds the single authorisation check. Every privileged action in the project passes
+**The Telegram interface** is a systemd service running as its own account, `homelab-bot`,
+which owns nothing and can log in nowhere. It uses long polling, so **the node opens no listening
+socket for it**: the connection is outbound. The Workbench and harness listeners bind to loopback;
+remote administration uses the Tailscale path.
+
+**The Telegram router** holds its authorization check. Every privileged Telegram action passes
 through one `if` statement, and nothing else is allowed to decide entitlement. Executors register
 themselves in a registry, so `/help` — and the command menu on your phone — are *generated* from the
 code rather than maintained by hand.
@@ -118,9 +126,9 @@ Telegram → homelab-bot ──socket──▶ homelab-model-helper → Claude /
 ```
 
 Who may ask is decided by three directives in a systemd `.socket` unit — owner `aleix`, group
-`homelab-bot`, mode `0660` — enforced by the kernel before the helper process exists. Note the
-direction: **the bot was never added to a group; the socket was given the group the bot already
-had.** A rule in a unit file cannot be bypassed by a bug in the program it protects.
+`homelab-model`, mode `0660` — enforced by the kernel before the helper process exists. The bot and
+harness are the two allowed socket consumers. A rule in a unit file cannot be bypassed by a bug in
+the program it protects.
 
 ### How changes reach the machine
 
@@ -160,14 +168,15 @@ generalised rules live in [`scripts/README.md`](scripts/README.md).
 |---|---|
 | **Understand a topic and reproduce it** | [`guide/`](guide/) — explanation-first: one directory per phase, plus `00-*` for hardware, budget and overview |
 | **Know the current, verified state of the node** | [`docs/reference/project-state.md`](docs/reference/project-state.md) |
-| **Understand why something is the way it is** | [`docs/decisions/`](docs/decisions/) — 25 ADRs |
+| **Understand why something is the way it is** | [`docs/decisions/`](docs/decisions/) — the complete ADR history |
 | **See what went wrong and how it was fixed** | [`docs/build-log/`](docs/build-log/) |
 | **See the architecture as it stands today** | [`docs/architecture/current-architecture.md`](docs/architecture/current-architecture.md) |
 | **Read the actual code** | [`services/`](services/), [`scripts/`](scripts/), [`config/`](config/) |
 | **See what it cost** | [`docs/reference/costs.md`](docs/reference/costs.md) — every entry, including the zeroes |
 
-If you are reproducing the project, begin with [`guide/README.md`](guide/README.md) and work through
-the phases in the order given in [`ROADMAP.md`](ROADMAP.md).
+If you are reproducing parts of version one, begin with [`guide/README.md`](guide/README.md), then
+use completed phase handovers to identify what was actually validated. `ROADMAP.md` is preserved as
+historical planning and must not be read as an active sequence.
 
 If you are contributing or using an AI coding agent, read [`PROJECT.md`](PROJECT.md) and [`AGENTS.md`](AGENTS.md) before making changes.
 

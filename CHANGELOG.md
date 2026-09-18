@@ -2,6 +2,16 @@
 
 This project uses this file for meaningful repository-level milestones rather than logging every commit.
 
+## Version 1 closure — 2026-09-18
+
+- Active development ended by owner decision. The repository remains public as a historical,
+  educational and reproducible reference; version two is a separate project.
+- Added ADR-052 and the closure handover, and marked the README, project contract, roadmap, current
+  state and architecture documents with the final v1 boundary.
+- Phase 23.1 was not delivered. Its unpublished local-only branch was deliberately discarded rather
+  than merged into known-working `main`.
+- No code, node configuration, running service, credential or data changed during closure.
+
 ## Unreleased
 
 ### Added

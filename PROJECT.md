@@ -1,6 +1,12 @@
 # Home Lab — Project Contract
 
-This file is the concise working contract for the Home Lab repository. Humans and AI agents should read it before making material changes.
+> **Closed version-one contract.** Active development ended on 2026-09-18 under ADR-052. This file
+> is preserved to explain how the project was governed; it no longer starts new phases or commits
+> the owner to the unfinished roadmap. Version two is a separate project and does not automatically
+> inherit this contract. See `docs/handovers/project-closure.md`.
+
+This file was the concise working contract for the Home Lab repository. Humans and AI agents should
+still read it before interpreting or making any exceptional correction to the version-one record.
 
 ## 1. Purpose
 

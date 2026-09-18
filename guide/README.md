@@ -1,5 +1,9 @@
 # Home Lab Guide
 
+> **Version one closed on 2026-09-18.** These guides are preserved because they explain and
+> reproduce work that was actually performed. Check each guide's completion note and the
+> [closure handover](../docs/handovers/project-closure.md); unfinished roadmap phases were not built.
+
 This directory contains the human-facing, explanation-first guide to building and understanding Home Lab.
 
 ## Intended reader

@@ -1,7 +1,21 @@
 # Current Project State
 
 - **Project:** Home Lab
-- **Governance:** Self-contained sequential phases; the repository is the sole authority (ADR-017)
+- **Status:** **Version one closed 2026-09-18**; preserved as a public reference (ADR-052)
+- **Governance:** Historical self-contained sequential phases (ADR-017); no new phase is scheduled
+
+## Closure boundary
+
+Active version-one development has ended. The sections below remain the operational and historical
+record of what was built. Future-looking material is retained because it explains the design at the
+stopping point, but it is not a current plan and does not claim deployment.
+
+Phase 23.1 was not delivered. An unpublished local branch existed through deployment preparation,
+but it had no completed node proof, handover, pull request or merge and was deliberately discarded
+at closure. Public `main` at `26ce1c0` is the last pre-closure known-working repository state.
+
+Version two is being developed separately. No v1 ADR, target or open roadmap item transfers to it
+automatically. See the [closure handover](../handovers/project-closure.md).
 
 ## Current delivered state
 
@@ -43,14 +57,14 @@ recovery requires revalidation rather than automatic resume. This is accepted ta
 not a deployed durable-Run implementation.
 
 These are accepted target decisions, not claims that they are deployed. Existing role routing and
-Phase 23.0's return-and-forget behavior remain compatibility mechanisms until later work replaces
-them. [Target architecture](../architecture/target-architecture.md) is the living specification;
-ADR-045 remains authoritative for phase allocation.
+Phase 23.0's return-and-forget behavior are the final v1 compatibility mechanisms. The
+[target architecture](../architecture/target-architecture.md) is frozen unfinished design; ADR-045
+records how its work would have been allocated.
 
-## Current planning status
+## Final planning status
 
-The project is in documentation/design reconciliation; implementation of the ADR-050/ADR-051 architecture
-is out of scope. The current sequence is:
+At the stopping point, the project had reconciled ADR-050/ADR-051 into its architecture and was
+about to write and implement a fresh Phase 23.1 brief. That sequence is now closed:
 
 ```text
 accepted ADR-050 + ADR-051
@@ -59,24 +73,22 @@ accepted ADR-050 + ADR-051
   -> current-state/reference reconciliation
   -> roadmap and phase replanning
   -> reconciled ADR-051 propagation into living planning/reference documents
-  -> fresh Phase 23.1 brief
-  -> implementation later
+  -> fresh Phase 23.1 brief (cancelled at project closure)
+  -> no further v1 implementation
 ```
 
-The fresh Phase 23.1 brief is the next required planning artifact; implementation has not begun.
+There is no next required v1 artifact. The architecture reconciliation remains useful design work,
+but Phase 23.1 and its successors were not delivered.
 
 Persistence technology, exact path/schema, retention duration, retry/idempotency, process topology,
-trusted ingress/client attestation, a future request/wire correlation version, and any phase
-reallocation remain unresolved design/planning matters. This reference does not select their
-implementation or ordering; ADR-050, ADR-051, the living architecture documents and ROADMAP govern
-the applicable decisions.
+trusted ingress/client attestation and a future request/wire correlation version were unresolved v1
+design matters. They are recorded for context, not transferred to version two as requirements.
 
 ## Historical snapshots and phase records
 
 The sections below preserve completed-phase evidence, dated decisions and prior planning context.
 Their dated "next", gap and risk statements describe the point at which they were written; they do
-not override the current summary above, ADR-050, the living architecture documents or future
-roadmap reconciliation.
+not override the closure boundary or create a post-closure backlog.
 
 ## Phase 01 status
 

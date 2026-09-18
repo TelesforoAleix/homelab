@@ -1,5 +1,9 @@
 # Phase Handovers
 
+> **Version one closed on 2026-09-18.** No next phase is scheduled. Read
+> [`project-closure.md`](project-closure.md) first for the delivered/unfinished boundary and final
+> operational observation.
+
 This directory keeps cross-context project memory inside the repository.
 
 Phases are **self-contained and sequential** (ADR-017). Each phase context writes its own brief,
@@ -32,6 +36,7 @@ Use `docs/templates/phase-brief-template.md` at phase start and `docs/templates/
 
 | File | Kind | Status |
 |---|---|---|
+| `project-closure.md` | Version-one closure handover | **Closed** 2026-09-18 by owner decision. Summarizes what v1 achieved, distinguishes delivered architecture from unfinished targets, records the final read-only node observation and leaves operational decommissioning outside repository closure |
 | `project-planning.md` | Master governance context | **Historical** — retired 2026-09-08 by ADR-017. Retained unrewritten as the record of how Phase 00 and Phase 01 were actually run |
 | `01-ubuntu-server.md` | Phase 01 brief | **Ratified** 2026-09-08, subject to six amendments (recorded in its §0.1) — all reconciled |
 | `01-ubuntu-server-handover.md` | Phase 01 completion handover | **Returned to Project Planning** 2026-09-08 — outcome Complete |
