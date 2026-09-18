@@ -15,6 +15,14 @@ Do not rewrite an accepted ADR to erase project history. If the architecture cha
 
 Use [`../templates/adr-template.md`](../templates/adr-template.md) for new records.
 
+## Project closure
+
+- **[ADR-052](ADR-052-close-version-one-and-preserve-the-repository.md) — Close Home Lab version
+  one and preserve the repository** (2026-09-18). Ends active v1 development, preserves the public
+  repository as a historical and educational reference, leaves future roadmap material as
+  unfinished design history, and separates repository closure from operational decommissioning.
+  Version two is a separate project and inherits nothing automatically.
+
 ## Recent records
 
 - [`ADR-022-docker-runtime-conventions.md`](ADR-022-docker-runtime-conventions.md) — Docker runtime

@@ -1,7 +1,9 @@
 # Target Architecture — Home Lab execution and orchestration
 
 - **Written:** 2026-09-11; reconciled with ADR-050 and ADR-051: 2026-09-17
-- **Status:** Living target specification. It describes intended architecture, not a claim that every target capability is deployed.
+- **Status:** Frozen version-one design at project closure (2026-09-18). It describes intended
+  architecture that was not fully implemented, not deployed behavior or a commitment for version
+  two. See ADR-052 and the closure handover.
 - **Standing:** Accepted ADRs govern this document. ADR-050 and ADR-051 govern their scoped successor decisions; ADR-045 remains authoritative for phase allocation.
 
 ## Purpose and boundary

@@ -1,6 +1,11 @@
 # Contributing
 
-Home Lab is currently a reference implementation and learning project. Contributions should preserve its clarity and reproducibility.
+> **Version one closed on 2026-09-18 and is no longer accepting routine feature or documentation
+> contributions.** The repository remains public as a reference. A critical security or factual
+> correction should first explain why the historical repository must be reopened; see ADR-052.
+
+Home Lab is a reference implementation and learning project. Any exceptional correction should
+preserve its clarity, reproducibility and historical accuracy.
 
 ## Before contributing
 

@@ -1,24 +1,30 @@
 # Home Lab Roadmap
 
+> **Historical version-one roadmap — closed 2026-09-18.** No next phase is scheduled in this
+> repository. Completed phase entries remain evidence of delivered work; future phases and the
+> architecture-reconciliation checkpoint preserve what was planned but are not commitments or
+> claims of implementation. Phase 23.1 was not delivered. See
+> [`docs/handovers/project-closure.md`](docs/handovers/project-closure.md) and ADR-052.
+
 The roadmap is intentionally progressive. Phase numbers should remain stable. If new work must be inserted, use a sub-phase such as `5.1-<phase-name>` rather than renumbering everything.
 
 Multiple `00-*` guides may exist for pre-development documentation.
 
-## Current planning checkpoint — architecture reconciliation
+## Final planning checkpoint — architecture reconciliation
 
-**Status: planning only (2026-09-17).** ADR-050 and ADR-051 are Accepted; the target architecture, current
-architecture, project-state and constraint references have been reconciled. This roadmap records the
-approved future direction before implementation resumes. No future phase below has begun merely
-because its architecture is now specified.
+**Status at the time: planning only (2026-09-17); closed without implementation on 2026-09-18.**
+ADR-050 and ADR-051 were Accepted; the target architecture, current architecture, project-state and
+constraint references were reconciled. This checkpoint records the approved direction before the
+owner closed version one. It is preserved design history, not an active plan.
 
 ADR-045 remains authoritative for phase ownership. In particular, Phase 23.1 remains one numbered
 phase, followed by 23.2 (context) and 23.3 (governance). ADR-050 refines their terminology and
 dependencies; it does not reallocate their scope.
 
-The next required planning artifact is a fresh Phase 23.1 brief. It must implement the accepted
-ADR-051 boundary without selecting more than the minimal persistence mechanics it needs. Completed
-handovers remain historical evidence; current delivered behavior is described
-in [`docs/architecture/current-architecture.md`](docs/architecture/current-architecture.md).
+Had development continued, the next required artifact would have been a fresh Phase 23.1 brief
+implementing the ADR-051 boundary. Project closure cancelled that work. Completed handovers remain
+historical evidence; final delivered behavior is described in
+[`docs/architecture/current-architecture.md`](docs/architecture/current-architecture.md).
 
 ### Forward dependencies and parallel branches
 
@@ -43,9 +49,10 @@ Phases 14, 16 and 17 remain evidence-driven parallel branches.
 This is not a complete serial order. It names architectural prerequisites only; independent data,
 client and infrastructure work may proceed when its own brief and boundaries permit.
 
-### Compatibility migration obligations
+### Historical compatibility migration obligations
 
-Future briefs must preserve delivered contracts until explicitly versioned replacements exist:
+The planned future briefs would have preserved these delivered contracts until explicitly versioned
+replacements existed:
 
 | Delivered compatibility | Future replacement/evolution |
 |---|---|
@@ -909,18 +916,19 @@ ADR-051 supplies the accepted Run persistence/trust/availability boundary.
 | Part / phase | Status and scope |
 |---|---|
 | **23.0** | **Complete.** The loopback v1 endpoint, Factory adapter and content-free audit are delivered compatibility. They are not durable Run semantics, trusted identity, generic planning or service routing. |
-| **23.1** | **Future.** One phase with Parts A–C below. It owns the minimal Run/orchestrator foundation, interpretation/planning, capability resolution and deterministic service routing. |
-| **23.2** | **Future.** Context assembly, provenance and safe continuity for planning/replanning. |
-| **23.3** | **Future.** Trusted authority, governance, approvals/revocation where applicable, and checked dispatch before new effectful generic execution. |
+| **23.1** | **Undelivered at closure.** It would have owned the minimal Run/orchestrator foundation, interpretation/planning, capability resolution and deterministic service routing. |
+| **23.2** | **Undelivered at closure.** Context assembly, provenance and safe continuity for planning/replanning. |
+| **23.3** | **Undelivered at closure.** Trusted authority, governance, approvals/revocation where applicable, and checked dispatch before new effectful generic execution. |
 
 Layer 7 remains Phase 15. Knowledge data/retrieval remains Phase 10 and web research Phase 24; this
 phase provides their runtime service/context seams rather than duplicating their data work.
 
 ### Phase 23.1 — decomposition and service routing
 
-**Status: Future.** A fresh brief is required before implementation. The existing v1 `task` refusal,
-declared client label, required role key and synchronous return remain compatibility until a versioned
-migration replaces them. Phase 23.1 proceeds through three internal parts, not new numbered phases.
+**Status: Undelivered when version one closed.** The public plan required a fresh brief before
+implementation. Unpublished local work was discarded at closure and never became delivered v1
+state. The existing v1 `task` refusal, declared client label, required role key and synchronous
+return are therefore the final compatibility behavior.
 
 #### Part A — minimal Run/orchestrator foundation
 

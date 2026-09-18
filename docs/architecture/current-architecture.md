@@ -1,6 +1,8 @@
 # Current Architecture
 
-- **State:** Delivered system through Phase 23.0 and Phase 15.1. This document records deployed behavior; accepted ADR-050 describes a later target contract and is not presented here as implemented.
+- **State:** Final delivered version-one architecture through Phase 23.0 and Phase 15.1. Version one
+  closed on 2026-09-18 (ADR-052). This document records deployed behavior at closure; accepted
+  ADR-050 describes an unfinished target contract and is not presented here as implemented.
 - **Evidence:** Completed Phase 15.0, 15.1, 20.0 and 23.0 handovers, plus ADR-047 through ADR-049 and the established storage, placement and credential decisions.
 
 ## Current topology
@@ -138,4 +140,3 @@ These are target gaps, not instructions to replan or implement them here. Their 
 - Existing role routing, closed schema behavior, task/command refusal, synchronous return-and-forget behavior and the Factory adapter remain delivered compatibility mechanisms until a later contract replaces them.
 - Credential isolation, socket-group access, loopback placement, encrypted-volume separation, provider registry/governor controls, egress policy and structural refusals remain active constraints.
 - Model, retrieved and client-supplied content does not currently gain authority or tool dispatch. The accepted target’s fuller authority/Run contract is not implemented merely by accepting ADR-050.
-
