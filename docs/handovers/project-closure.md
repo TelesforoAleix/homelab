@@ -43,6 +43,35 @@ how it was built:
 - A public learning guide, operational references, ADR history, build logs and explicit records of
   failed checks, reversals and lessons.
 
+## What the final architecture review concluded
+
+The last read-only architecture and overengineering review was performed on 2026-09-17 against
+public `main` and the then-in-flight Phase 23.1 Part A work. It matters to the interpretation of this
+closure because it did **not** conclude that the working v1 system was an unnecessary reinvention.
+
+It classified these areas as justified custom platform work:
+
+- the credential-isolating model helper and provider adapters;
+- the registry, unattended-eligibility controls, count caps and fail-closed spend governor;
+- egress policy, content-free audit and runtime-owned identity boundaries;
+- systemd sandboxing, loopback placement, encrypted storage, locked-boot behavior and monitoring;
+- Factory's revision-bound approvals and refusal tests;
+- the proposed Part A split between content-minimized lifecycle state and protected content.
+
+The risk was primarily in what had **not** been delivered. A literal implementation of later
+planning, replanning, capability, tool and retrieval phases could have become a bespoke graph
+runtime, tool protocol and RAG stack. The review's proposed boundary was that Home Lab own Runs,
+policy, routing, provenance and checked dispatch, while mature libraries or framework adapters own
+in-step workflows and retrieval machinery; it identified MCP as a candidate service/tool boundary.
+Those recommendations are useful input to version two, but this repository never accepted or
+implemented them.
+
+The review also made the repository's principal cost explicit: documentation and governance effort
+had become large relative to the production implementation. It recommended completing Part A and
+then narrowing the future architecture. The owner subsequently chose to stop sooner. The local
+branch was discarded not because its design had been disproved, but because finishing it no longer
+served the decision to close v1 and redesign the successor independently.
+
 ## Final delivered architecture
 
 The final v1 topology has two principal request paths:
