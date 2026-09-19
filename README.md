@@ -4,8 +4,8 @@
 > **Version 1 closed on 2026-09-18.** This repository is preserved publicly as a historical,
 > educational and reproducible reference; it is no longer under active development. The completed
 > system, guides, decisions and failures remain useful, while future roadmap items and the target
-> architecture were not all implemented. Version two is being developed as a separate project; a
-> link will be added when it has a stable public location. Start with the
+> architecture were not all implemented. Version two is
+> [`homelab-v2`](https://github.com/TelesforoAleix/homelab-v2), a separate repository. Start with the
 > [closure handover](docs/handovers/project-closure.md).
 
 **Home Lab** is a learning-first, self-hosted AI systems laboratory built on inexpensive hardware.

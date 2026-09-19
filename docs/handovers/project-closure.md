@@ -9,7 +9,7 @@
 
 Home Lab version one is closed. This repository remains public because its guides, implementation,
 decisions and failure records are useful, but it is no longer an active roadmap. Version two is
-being developed separately; this repository does not yet name its permanent public location.
+[`homelab-v2`](https://github.com/TelesforoAleix/homelab-v2), developed separately.
 
 The correct boundary is:
 
